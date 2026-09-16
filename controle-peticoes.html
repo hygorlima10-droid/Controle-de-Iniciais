@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Controle de Petições</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --bg:#F4F6FC;
+    --surface:#FFFFFF;
+    --surface-2:#EAEEFB;
+    --border:#DEE3F2;
+    --ink:#12172A;
+    --ink-soft:#6C7593;
+    --accent:#4453D6;
+    --accent-2:#6C7BFF;
+    --accent-ink:#FFFFFF;
+    --urgente:#DC2F2F;
+    --tutela:#B7791E;
+    --normal:#1F8A4C;
+    --success:#1F8A4C;
+    --danger:#DC2F2F;
+    --info:#1D7FBF;
+    --overlay:rgba(15,20,38,0.45);
+    --shadow:0 16px 40px rgba(20,30,70,0.14);
+    --radius-lg:16px;
+    --radius-md:12px;
+    --radius-sm:9px;
+    --font-display:'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+    --font-sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0A0E1A;
+      --surface:#131A2C;
+      --surface-2:#1C2540;
+      --border:#262F4C;
+      --ink:#F2F4FA;
+      --ink-soft:#8890AC;
+      --accent:#5468F5;
+      --accent-2:#8C9AFF;
+      --accent-ink:#FFFFFF;
+      --urgente:#F0524F;
+      --tutela:#F2A93B;
+      --normal:#22C55E;
+      --success:#22C55E;
+      --danger:#F0524F;
+      --info:#38BDF8;
+      --overlay:rgba(4,6,14,0.65);
+      --shadow:0 18px 44px rgba(0,0,0,0.55);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A0E1A;
+    --surface:#131A2C;
+    --surface-2:#1C2540;
+    --border:#262F4C;
+    --ink:#F2F4FA;
+    --ink-soft:#8890AC;
+    --accent:#5468F5;
+    --accent-2:#8C9AFF;
+    --accent-ink:#FFFFFF;
+    --urgente:#F0524F;
+    --tutela:#F2A93B;
+    --normal:#22C55E;
+    --success:#22C55E;
+    --danger:#F0524F;
+    --info:#38BDF8;
+    --overlay:rgba(4,6,14,0.65);
+    --shadow:0 18px 44px rgba(0,0,0,0.55);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-sans);
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:100px;
+  }
+  ::selection{background:var(--accent);color:var(--accent-ink);}
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px;}
+
+  /* ============ HEADER ============ */
+  header.top{
+    position:sticky;top:0;z-index:20;
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+    padding-top:18px;
+  }
+  .top-row{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:11px;background:var(--accent);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-display);font-weight:800;font-size:1.05rem;
+  }
+  .brand h1{
+    font-family:var(--font-display);
+    font-size:1.32rem;
+    font-weight:800;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .brand h1 .accent-word{color:var(--accent);}
+  .brand p{margin:2px 0 0;color:var(--ink-soft);font-size:0.86rem;}
+  .top-actions{display:flex;gap:8px;align-items:center;}
+  .icon-btn{
+    width:38px;height:38px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;
+  }
+  .icon-btn:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .btn{
+    font-weight:700;font-size:0.88rem;border-radius:var(--radius-sm);border:1px solid transparent;
+    padding:9px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .btn-primary{background:var(--accent);color:var(--accent-ink);}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--border);}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-text{background:transparent;color:var(--ink-soft);border:none;padding:6px 4px;}
+  .btn-text:hover{color:var(--ink);}
+  .btn-danger-text{background:transparent;color:var(--danger);border:none;padding:6px 4px;}
+
+  /* floating action button */
+  .fab{
+    position:fixed;right:20px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:40;
+    width:56px;height:56px;border-radius:50%;border:none;
+    background:var(--accent);color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    box-shadow:0 10px 26px rgba(68,83,214,0.4);
+  }
+  .fab:hover{filter:brightness(1.08);}
+
+  /* count badge, notification-style */
+  .count-badge{
+    display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;
+    border-radius:10px;background:var(--urgente);color:#fff;font-size:0.68rem;font-weight:700;margin-left:7px;
+  }
+  .count-badge:empty{display:none;}
+  .count-badge.amber{background:var(--tutela);}
+
+  /* stats */
+  .stats{display:flex;gap:10px;margin:16px 0 14px;overflow-x:auto;padding-bottom:2px;}
+  .stat{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+    padding:12px 14px;min-width:150px;flex:1;display:flex;align-items:center;gap:10px;
+  }
+  .stat-icon{
+    width:34px;height:34px;border-radius:10px;background:var(--surface-2);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .stat.pendente .stat-icon{color:var(--tutela);}
+  .stat.recebido .stat-icon{color:var(--success);}
+  .stat .lbl{font-size:0.76rem;color:var(--ink-soft);margin-bottom:2px;}
+  .stat .val{font-family:var(--font-sans);font-variant-numeric:tabular-nums;font-weight:700;font-size:1.1rem;}
+  .stat.pendente .val{color:var(--tutela);}
+  .stat.recebido .val{color:var(--success);}
+
+  /* filters */
+  .filters{
+    display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;
+  }
+  .search{
+    flex:1;min-width:160px;position:relative;
+  }
+  .search input{
+    width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    background:var(--surface);color:var(--ink);
+  }
+  select.filter-select{
+    padding:9px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    background:var(--surface);color:var(--ink);
+  }
+  .chip-toggle{
+    display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--ink-soft);
+    padding:9px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;
+    user-select:none;
+  }
+  .chip-toggle input{accent-color:var(--accent);}
+
+  /* ============ UPCOMING PAYMENTS ============ */
+  .upcoming{margin-bottom:18px;}
+  .upcoming h2{
+    font-family:var(--font-display);font-size:1.02rem;font-weight:700;margin:0 0 8px;display:flex;align-items:center;
+  }
+  .upcoming-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .up-chip{
+    flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--tutela);
+    border-radius:var(--radius-md);padding:9px 13px;cursor:pointer;min-width:180px;
+  }
+  .up-chip.tipo-prazo{border-left-color:var(--info);}
+  .up-chip.atrasado{border-left-color:var(--urgente);}
+  .up-chip .up-top{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:0.88rem;}
+  .up-chip .up-when{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+  .up-chip.atrasado .up-when{color:var(--urgente);font-weight:700;}
+
+  /* ============ CASOS PARADOS ============ */
+  .stall-section{margin-bottom:18px;}
+  .stall-section h2{font-family:var(--font-display);font-size:1.02rem;font-weight:700;margin:0 0 8px;display:flex;align-items:center;}
+  .stall-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .stall-chip{
+    flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--urgente);
+    border-radius:var(--radius-md);padding:9px 13px;cursor:pointer;min-width:190px;
+  }
+  .stall-chip .up-top{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:0.88rem;}
+  .stall-chip .up-when{font-size:0.78rem;color:var(--urgente);font-weight:700;margin-top:2px;}
+  .stall-chip.tipo-murilo{border-left-color:var(--tutela);}
+  .stall-chip.tipo-murilo .up-when{color:var(--tutela);}
+
+  /* ============ CASE CARDS ============ */
+  .list{display:flex;flex-direction:column;gap:10px;}
+  .empty{
+    text-align:center;padding:56px 20px;color:var(--ink-soft);
+    border:1px dashed var(--border);border-radius:var(--radius-lg);
+  }
+  .empty strong{display:block;color:var(--ink);font-family:var(--font-display);font-size:1.15rem;margin-bottom:6px;font-weight:700;}
+
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--normal);
+    border-radius:var(--radius-md);padding:14px 16px;transition:background .15s;
+  }
+  .card.p-urgente{border-left-color:var(--urgente);}
+  .card.p-tutela{border-left-color:var(--tutela);}
+  .card.p-normal{border-left-color:var(--normal);}
+  .card.concluido{opacity:0.6;}
+  .card.flash{background:var(--surface-2);}
+
+  .card-main{
+    display:grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr auto;
+    gap:12px;align-items:center;cursor:pointer;
+  }
+  .cliente-cell .nome{font-weight:600;font-size:0.98rem;}
+  .cliente-cell .sub{font-size:0.78rem;color:var(--ink-soft);margin-top:2px;}
+  .cliente-cell .processo-num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.72rem;color:var(--ink-soft);margin-top:2px;}
+  .status-chip{display:inline-flex;align-items:center;gap:5px;font-size:0.76rem;color:var(--ink-soft);margin-top:4px;}
+  .status-chip.stalled{color:var(--urgente);font-weight:600;}
+  .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .status-dot.st-pendente{background:var(--ink-soft);}
+  .status-dot.st-aguardando_documentacao{background:var(--accent);}
+  .status-dot.st-aguardando_cliente{background:var(--info);}
+  .status-dot.st-protocolado{background:var(--success);}
+  .status-chip.stalled .status-dot{background:var(--urgente);}
+  .badge{
+    display:inline-block;font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:20px;
+    background:var(--surface-2);color:var(--ink-soft);white-space:nowrap;
+  }
+  .badge.origem-murilo{background:var(--surface-2);color:var(--ink);}
+  .prio-tag{display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;}
+  .prio-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .prio-dot.p-urgente{background:var(--urgente);}
+  .prio-dot.p-tutela{background:var(--tutela);}
+  .prio-dot.p-normal{background:var(--normal);}
+  .valor-cell{text-align:right;font-variant-numeric:tabular-nums;}
+  .valor-cell .v{font-weight:700;}
+  .valor-cell .status{font-size:0.76rem;color:var(--ink-soft);margin-top:2px;}
+  .valor-cell .status.pendente{color:var(--tutela);}
+  .valor-cell .status.pago{color:var(--success);}
+  .chev{color:var(--ink-soft);transition:transform .15s;}
+  .card.open .chev{transform:rotate(180deg);}
+
+  .card-detail{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .card.open .card-detail{display:block;}
+  .parcela-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:7px 0;border-bottom:1px solid var(--border);font-size:0.88rem;
+  }
+  .parcela-row:last-child{border-bottom:none;}
+  .parcela-row label{display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .parcela-row input[type=checkbox]{width:17px;height:17px;accent-color:var(--success);}
+  .parcela-row .p-info{color:var(--ink-soft);}
+  .obs{font-size:0.86rem;color:var(--ink-soft);margin:10px 0;white-space:pre-wrap;}
+  .detail-actions{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;}
+  .prazo-line{font-size:0.86rem;margin:2px 0 10px;color:var(--ink);}
+  .prazo-line.atrasado{color:var(--urgente);font-weight:600;}
+  .mini-status{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .mini-status-label{font-size:0.76rem;color:var(--ink-soft);width:100%;margin-bottom:2px;}
+  .mini-status button{
+    padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--ink-soft);
+    font-size:0.76rem;cursor:pointer;
+  }
+  .mini-status button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;}
+
+  @media (max-width:720px){
+    .card-main{grid-template-columns:1fr auto;grid-template-areas:"cliente chev" "prio prio" "valor valor";row-gap:8px;}
+    .cliente-cell{grid-area:cliente;}
+    .chev{grid-area:chev;align-self:start;}
+    .prio-tag{grid-area:prio;}
+    .valor-cell{grid-area:valor;text-align:left;}
+    .origem-cell{display:none;}
+  }
+
+  /* ============ MODAL ============ */
+  .overlay{
+    position:fixed;inset:0;background:var(--overlay);display:none;align-items:flex-start;justify-content:center;
+    padding:24px 16px;overflow-y:auto;z-index:100;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--surface);border-radius:var(--radius-lg);max-width:600px;width:100%;
+    box-shadow:var(--shadow);margin:auto 0;border:1px solid var(--border);
+  }
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border);}
+  .modal-head h2{font-family:var(--font-display);font-size:1.2rem;margin:0;font-weight:700;}
+  .modal-body{padding:20px;display:flex;flex-direction:column;gap:16px;max-height:70vh;overflow-y:auto;}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 20px;border-top:1px solid var(--border);}
+
+  .field label.field-label{display:block;font-size:0.82rem;color:var(--ink-soft);margin-bottom:6px;}
+  .field input[type=text], .field input[type=number], .field input[type=date], .field textarea{
+    width:100%;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:64px;}
+
+  .segmented{display:flex;gap:6px;flex-wrap:wrap;}
+  .seg-btn{
+    padding:8px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--ink);
+    cursor:pointer;font-size:0.86rem;display:flex;align-items:center;gap:6px;
+  }
+  .seg-btn.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;}
+  .seg-btn .prio-dot{opacity:0.9;}
+  .seg-btn.active .prio-dot{background:var(--accent-ink);}
+
+  .parcelas-editor{display:flex;flex-direction:column;gap:8px;}
+  .parcela-edit-row{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:center;}
+  .parcela-edit-row .pnum{font-size:0.82rem;color:var(--ink-soft);width:20px;}
+  .rm-parcela{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:1.1rem;line-height:1;padding:4px;}
+  .rm-parcela:hover{color:var(--danger);}
+  .add-parcela{align-self:flex-start;}
+  .parcela-sum{font-size:0.8rem;color:var(--ink-soft);}
+  .parcela-sum.mismatch{color:var(--urgente);}
+
+  .subgroup{display:flex;flex-direction:column;gap:16px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);}
+  .form-error{font-size:0.84rem;color:var(--danger);min-height:1.2em;}
+  .banner{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:9px 13px;font-size:0.82rem;color:var(--ink-soft);margin:14px 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <div class="brand-mark">CP</div>
+        <div>
+          <h1>Controle<span class="accent-word"> Jurídico</span></h1>
+          <p id="subtitle">Carregando…</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="exportBtn" title="Exportar CSV">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        </button>
+        <button class="icon-btn" id="themeBtn" title="Alternar tema">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="banner" class="banner" style="display:none;"></div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="filters">
+      <div class="search">
+        <input type="text" id="buscaInput" placeholder="Buscar cliente…">
+      </div>
+      <select class="filter-select" id="filtroTipo">
+        <option value="todos">Todos os tipos</option>
+        <option value="inicial">Petição inicial</option>
+        <option value="extrajudicial">Procedimento extrajudicial</option>
+      </select>
+      <select class="filter-select" id="filtroOrigem">
+        <option value="todos">Toda origem</option>
+        <option value="murilo">Cliente Murilo</option>
+        <option value="proprio">Cliente próprio</option>
+      </select>
+      <select class="filter-select" id="filtroPrioridade">
+        <option value="todos">Toda prioridade</option>
+        <option value="urgente">Urgente</option>
+        <option value="tutela">Tutela de urgência</option>
+        <option value="normal">Normal</option>
+      </select>
+      <select class="filter-select" id="filtroStatus">
+        <option value="todos">Todo status</option>
+        <option value="pendente">Pendente</option>
+        <option value="aguardando_documentacao">Aguardando documentação</option>
+        <option value="aguardando_cliente">Aguardando cliente</option>
+        <option value="protocolado">Protocolado</option>
+      </select>
+      <select class="filter-select" id="ordenarPor">
+        <option value="prioridade">Ordenar: prioridade</option>
+        <option value="data">Ordenar: data de cadastro</option>
+        <option value="valor">Ordenar: valor dos honorários</option>
+        <option value="cliente">Ordenar: cliente (A-Z)</option>
+      </select>
+      <label class="chip-toggle">
+        <input type="checkbox" id="mostrarConcluidos"> Mostrar concluídas
+      </label>
+    </div>
+  </header>
+
+  <section class="stall-section" id="stallSection" style="display:none;">
+    <h2>Casos parados<span class="count-badge" id="stallBadge"></span></h2>
+    <div class="stall-scroll" id="stallScroll"></div>
+  </section>
+
+  <section class="stall-section" id="muriloSection" style="display:none;">
+    <h2>Honorários a confirmar com Murilo<span class="count-badge amber" id="muriloBadge"></span></h2>
+    <div class="stall-scroll" id="muriloScroll"></div>
+  </section>
+
+  <section class="upcoming" id="upcomingSection" style="display:none;">
+    <h2>Próximos vencimentos e prazos<span class="count-badge" id="upcomingBadge"></span></h2>
+    <div class="upcoming-scroll" id="upcomingScroll"></div>
+  </section>
+
+  <div class="list" id="list"></div>
+</div>
+
+<button class="fab" id="fabNew" title="Nova petição">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nova petição</h2>
+      <button class="icon-btn" id="closeModal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Tipo</label>
+        <div class="segmented" id="segTipo">
+          <button type="button" class="seg-btn" data-value="inicial">Petição inicial</button>
+          <button type="button" class="seg-btn" data-value="extrajudicial">Procedimento extrajudicial</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="clienteInput">Descrição do cliente</label>
+        <input type="text" id="clienteInput" placeholder="Ex.: Maria Aparecida da Silva — rescisão contratual">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="processoInput">Número do processo ou protocolo (opcional)</label>
+        <input type="text" id="processoInput" placeholder="Ex.: 5000000-00.2026.8.09.0107">
+      </div>
+
+      <div class="field">
+        <label class="field-label">Origem</label>
+        <div class="segmented" id="segOrigem">
+          <button type="button" class="seg-btn" data-value="murilo">Cliente Murilo</button>
+          <button type="button" class="seg-btn" data-value="proprio">Cliente próprio</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Prioridade</label>
+        <div class="segmented" id="segPrioridade">
+          <button type="button" class="seg-btn" data-value="urgente"><span class="prio-dot p-urgente"></span>Urgente</button>
+          <button type="button" class="seg-btn" data-value="tutela"><span class="prio-dot p-tutela"></span>Tutela de urgência</button>
+          <button type="button" class="seg-btn" data-value="normal"><span class="prio-dot p-normal"></span>Normal</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Status</label>
+        <div class="segmented" id="segStatus">
+          <button type="button" class="seg-btn" data-value="pendente">Pendente</button>
+          <button type="button" class="seg-btn" data-value="aguardando_documentacao">Aguardando documentação</button>
+          <button type="button" class="seg-btn" data-value="aguardando_cliente">Aguardando cliente</button>
+          <button type="button" class="seg-btn" data-value="protocolado">Protocolado</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Modalidade de honorário</label>
+        <div class="segmented" id="segModalidade">
+          <button type="button" class="seg-btn" data-value="fixo">Valor fixo</button>
+          <button type="button" class="seg-btn" data-value="exito">Percentual de êxito</button>
+          <button type="button" class="seg-btn" data-value="fixo_exito">Fixo + êxito</button>
+          <button type="button" class="seg-btn" data-value="aguardando_murilo">Confirmar com Murilo</button>
+        </div>
+      </div>
+
+      <div class="banner" id="avisoMurilo" style="display:none;">
+        O caso será cadastrado sem valor de honorários definido, marcado como aguardando confirmação com Murilo. Você poderá voltar e preencher o valor depois.
+      </div>
+
+      <div class="subgroup" id="wrapFixo">
+        <div class="field">
+          <label class="field-label" for="valorInput" id="labelValorFixo">Valor dos honorários (R$)</label>
+          <input type="number" id="valorInput" min="0" step="0.01" placeholder="0,00">
+        </div>
+
+        <div class="field">
+          <label class="field-label">Forma de pagamento</label>
+          <div class="segmented" id="segPagamento">
+            <button type="button" class="seg-btn" data-value="avista">À vista</button>
+            <button type="button" class="seg-btn" data-value="parcelado">Parcelado</button>
+          </div>
+        </div>
+
+        <div class="field" id="campoAvista">
+          <label class="field-label" for="dataAvistaInput">Data do pagamento</label>
+          <input type="date" id="dataAvistaInput">
+        </div>
+
+        <div class="field" id="campoParcelado" style="display:none;">
+          <label class="field-label">Parcelas</label>
+          <div class="parcelas-editor" id="parcelasEditor"></div>
+          <button type="button" class="btn btn-ghost add-parcela" id="addParcelaBtn" style="margin-top:8px;">+ Adicionar parcela</button>
+          <div class="parcela-sum" id="parcelaSum" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div class="subgroup" id="wrapExito" style="display:none;">
+        <div class="field">
+          <label class="field-label" for="percentualInput">Percentual de êxito (%)</label>
+          <input type="number" id="percentualInput" min="0" max="100" step="0.1" placeholder="Ex.: 20">
+        </div>
+        <div class="field">
+          <label class="field-label" for="baseExitoInput">Base de cálculo (opcional)</label>
+          <input type="text" id="baseExitoInput" placeholder="Ex.: sobre o proveito econômico da ação">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Prazo processual (opcional)</label>
+        <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:8px;">
+          <input type="date" id="prazoDataInput">
+          <input type="text" id="prazoDescInput" placeholder="Ex.: contestação, audiência">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="obsInput">Observações (opcional)</label>
+        <textarea id="obsInput" placeholder="Anotações sobre o caso…"></textarea>
+      </div>
+
+      <div class="form-error" id="formError"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveBtn">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- estado ---------- */
+  var casos = [];              // {id, ...dados}
+  var storageMode = null;      // 'db' | 'local'
+  var casosRef = null;
+  var downloadsCap = null;
+  var expandedIds = new Set();
+  var editingId = null;
+  var parcelasState = [];      // durante edição no modal
+  var filters = { tipo:'todos', origem:'todos', prioridade:'todos', status:'todos', busca:'', mostrarConcluidos:false };
+  var sortBy = 'prioridade';
+
+  var PRIO_LABEL = { urgente:'Urgente', tutela:'Tutela de urgência', normal:'Normal' };
+  var PRIO_WEIGHT = { urgente:0, tutela:1, normal:2 };
+  var TIPO_LABEL = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial' };
+  var ORIGEM_LABEL = { murilo:'Cliente Murilo', proprio:'Cliente próprio' };
+  var STATUS_LABEL = { pendente:'Pendente', aguardando_documentacao:'Aguardando documentação', aguardando_cliente:'Aguardando cliente', protocolado:'Protocolado' };
+  var STALL_STATUSES = { aguardando_documentacao:true, aguardando_cliente:true };
+  var STALL_THRESHOLD_DAYS = 7;
+
+  var LOCAL_KEY = 'controlePeticoes.casos.v1';
+
+  /* ---------- utilidades ---------- */
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function fmtMoeda(v){
+    v = Number(v) || 0;
+    return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  }
+  function fmtData(iso){
+    if(!iso) return '—';
+    var parts = iso.split('-');
+    if(parts.length !== 3) return iso;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  function todayISO(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function uid(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+  function qs(id){ return document.getElementById(id); }
+  function diasDesde(isoDateTime){
+    if (!isoDateTime) return 0;
+    var d = new Date(isoDateTime);
+    if (isNaN(d.getTime())) return 0;
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  }
+
+  /* ---------- persistência ---------- */
+  function initStorage(){
+    if (!(window.claude && window.claude.use)){
+      fallbackToLocal();
+      return;
+    }
+    Promise.all([
+      window.claude.use('db'),
+      window.claude.use('downloads')
+    ]).then(function(res){
+      var db = res[0];
+      downloadsCap = res[1];
+      if (!db){ fallbackToLocal(); return; }
+      storageMode = 'db';
+      casosRef = db.collection('casos');
+      casosRef.limit(500).onSnapshot(function(snap){
+        casos = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        render();
+      }, function(err){
+        console.error('db onSnapshot error', err);
+        if (err && (err.code === 'not_granted' || err.code === 'capability_disabled')){
+          fallbackToLocal();
+        } else {
+          showBanner('Não foi possível sincronizar os dados agora. Tentando novamente…');
+        }
+      });
+    }).catch(function(err){
+      console.error('erro ao iniciar armazenamento', err);
+      fallbackToLocal();
+    });
+  }
+
+  function fallbackToLocal(){
+    storageMode = 'local';
+    showBanner('Sincronização entre dispositivos indisponível nesta visualização — os dados ficam salvos apenas neste navegador.');
+    loadLocal();
+    render();
+  }
+
+  function showBanner(msg){
+    var b = qs('banner');
+    b.textContent = msg;
+    b.style.display = '';
+  }
+
+  function loadLocal(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY);
+      casos = raw ? JSON.parse(raw) : [];
+    }catch(e){ casos = []; }
+  }
+  function saveLocal(){
+    try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(casos)); }catch(e){}
+  }
+
+  function persistNovo(data){
+    data.criadoEm = new Date().toISOString();
+    data.atualizadoEm = data.criadoEm;
+    if (storageMode === 'db'){
+      return casosRef.add(data);
+    }
+    data.id = uid();
+    casos.push(data);
+    saveLocal();
+    render();
+    return Promise.resolve();
+  }
+
+  function persistAtualiza(id, data){
+    data.atualizadoEm = new Date().toISOString();
+    if (storageMode === 'db'){
+      return casosRef.doc(id).set(data);
+    }
+    var idx = casos.findIndex(function(c){ return c.id === id; });
+    if (idx >= 0){
+      data.id = id;
+      casos[idx] = data;
+      saveLocal();
+      render();
+    }
+    return Promise.resolve();
+  }
+
+  function persistExclui(id){
+    if (storageMode === 'db'){
+      return casosRef.doc(id).delete();
+    }
+    casos = casos.filter(function(c){ return c.id !== id; });
+    saveLocal();
+    render();
+    return Promise.resolve();
+  }
+
+  function persistPatch(caso, patch){
+    // usado para alternar "pago" e "concluído" sem abrir o modal
+    var novo = Object.assign({}, caso, patch);
+    delete novo.id;
+    return persistAtualiza(caso.id, novo);
+  }
+
+  /* ---------- cálculos ---------- */
+  function casoAtivos(){ return casos.filter(function(c){ return !c.concluido; }); }
+
+  function computeStats(){
+    var ativos = casoAtivos();
+    var total = 0, recebido = 0, pendente = 0;
+    ativos.forEach(function(c){
+      total += Number(c.valorHonorarios) || 0;
+      if (c.formaPagamento === 'avista' && c.avista){
+        if (c.avista.pago) recebido += Number(c.valorHonorarios)||0;
+        else pendente += Number(c.valorHonorarios)||0;
+      } else if (c.formaPagamento === 'parcelado' && Array.isArray(c.parcelas)){
+        c.parcelas.forEach(function(p){
+          if (p.pago) recebido += Number(p.valor)||0;
+          else pendente += Number(p.valor)||0;
+        });
+      }
+    });
+    return { count: ativos.length, total: total, recebido: recebido, pendente: pendente };
+  }
+
+  function getUpcoming(){
+    var items = [];
+    casoAtivos().forEach(function(c){
+      if (c.formaPagamento === 'avista' && c.avista && !c.avista.pago){
+        items.push({ casoId:c.id, cliente:c.cliente, valor:c.valorHonorarios, data:c.avista.data, label:'À vista', tipoItem:'pagamento' });
+      } else if (c.formaPagamento === 'parcelado' && Array.isArray(c.parcelas)){
+        c.parcelas.forEach(function(p){
+          if (!p.pago) items.push({ casoId:c.id, cliente:c.cliente, valor:p.valor, data:p.data, label:'Parcela '+p.numero, tipoItem:'pagamento' });
+        });
+      }
+      if (c.prazo && c.prazo.data){
+        items.push({ casoId:c.id, cliente:c.cliente, valor:null, data:c.prazo.data, label:c.prazo.descricao || 'Prazo processual', tipoItem:'prazo' });
+      }
+    });
+    items.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); });
+    return items;
+  }
+
+  function getStalledCases(){
+    var items = [];
+    casoAtivos().forEach(function(c){
+      if (STALL_STATUSES[c.status]){
+        var dias = diasDesde(c.statusDesde || c.criadoEm);
+        if (dias >= STALL_THRESHOLD_DAYS){
+          items.push({ casoId:c.id, cliente:c.cliente, status:c.status, dias:dias });
+        }
+      }
+    });
+    items.sort(function(a,b){ return b.dias - a.dias; });
+    return items;
+  }
+
+  function getHonorarioPendente(){
+    var items = [];
+    casoAtivos().forEach(function(c){
+      if ((c.modalidadeHonorario||'fixo') === 'aguardando_murilo'){
+        items.push({ casoId:c.id, cliente:c.cliente, dias: diasDesde(c.criadoEm) });
+      }
+    });
+    items.sort(function(a,b){ return b.dias - a.dias; });
+    return items;
+  }
+
+  function honorarioPrincipal(c){
+    var modal = c.modalidadeHonorario || 'fixo';
+    if (modal === 'aguardando_murilo') return 'A confirmar com Murilo';
+    if (modal === 'exito') return (c.percentualExito||0) + '% de êxito';
+    if (modal === 'fixo_exito') return fmtMoeda(c.valorHonorarios) + ' + ' + (c.percentualExito||0) + '%';
+    return fmtMoeda(c.valorHonorarios);
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    renderStats();
+    renderStalled();
+    renderHonorarioPendente();
+    renderUpcoming();
+    renderList();
+    var stats = computeStats();
+    qs('subtitle').textContent = stats.count + (stats.count === 1 ? ' caso ativo' : ' casos ativos') + ' · ' + fmtMoeda(stats.total) + ' em honorários';
+  }
+
+  function renderStats(){
+    var s = computeStats();
+    var icoHonor = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>';
+    var icoPendente = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
+    var icoRecebido = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+    qs('stats').innerHTML =
+      '<div class="stat"><div class="stat-icon">'+icoHonor+'</div><div><div class="lbl">Honorários ativos</div><div class="val">'+fmtMoeda(s.total)+'</div></div></div>' +
+      '<div class="stat pendente"><div class="stat-icon">'+icoPendente+'</div><div><div class="lbl">Pendente</div><div class="val">'+fmtMoeda(s.pendente)+'</div></div></div>' +
+      '<div class="stat recebido"><div class="stat-icon">'+icoRecebido+'</div><div><div class="lbl">Recebido</div><div class="val">'+fmtMoeda(s.recebido)+'</div></div></div>';
+  }
+
+  function irParaCaso(id){
+    expandedIds.add(id);
+    render();
+    setTimeout(function(){
+      var card = document.querySelector('[data-card="'+id+'"]');
+      if (card){
+        card.scrollIntoView({behavior:'smooth', block:'center'});
+        card.classList.add('flash');
+        setTimeout(function(){ card.classList.remove('flash'); }, 900);
+      }
+    }, 30);
+  }
+
+  function renderUpcoming(){
+    var items = getUpcoming();
+    var section = qs('upcomingSection');
+    if (!items.length){ section.style.display = 'none'; qs('upcomingBadge').textContent=''; return; }
+    section.style.display = '';
+    qs('upcomingBadge').textContent = items.length;
+    var today = todayISO();
+    qs('upcomingScroll').innerHTML = items.slice(0, 12).map(function(it){
+      var atrasado = it.data && it.data < today;
+      var ehPrazo = it.tipoItem === 'prazo';
+      var direita = ehPrazo ? '' : '<span>'+fmtMoeda(it.valor)+'</span>';
+      return '<div class="up-chip'+(ehPrazo?' tipo-prazo':'')+(atrasado?' atrasado':'')+'" data-caso="'+escapeHtml(it.casoId)+'">' +
+        '<div class="up-top"><span>'+escapeHtml(it.cliente||'Sem nome')+'</span>'+direita+'</div>' +
+        '<div class="up-when">'+(ehPrazo?'Prazo: ':'')+escapeHtml(it.label)+', '+(atrasado ? 'atrasado desde ' : 'vence em ')+fmtData(it.data)+'</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(qs('upcomingScroll').children, function(el){
+      el.addEventListener('click', function(){ irParaCaso(el.getAttribute('data-caso')); });
+    });
+  }
+
+  function renderStalled(){
+    var items = getStalledCases();
+    var section = qs('stallSection');
+    if (!items.length){ section.style.display = 'none'; qs('stallBadge').textContent=''; return; }
+    section.style.display = '';
+    qs('stallBadge').textContent = items.length;
+    qs('stallScroll').innerHTML = items.slice(0, 12).map(function(it){
+      return '<div class="stall-chip" data-caso="'+escapeHtml(it.casoId)+'">' +
+        '<div class="up-top"><span>'+escapeHtml(it.cliente||'Sem nome')+'</span></div>' +
+        '<div class="up-when">'+escapeHtml(STATUS_LABEL[it.status])+' há '+it.dias+' dias</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(qs('stallScroll').children, function(el){
+      el.addEventListener('click', function(){ irParaCaso(el.getAttribute('data-caso')); });
+    });
+  }
+
+  function renderHonorarioPendente(){
+    var items = getHonorarioPendente();
+    var section = qs('muriloSection');
+    if (!items.length){ section.style.display = 'none'; qs('muriloBadge').textContent=''; return; }
+    section.style.display = '';
+    qs('muriloBadge').textContent = items.length;
+    qs('muriloScroll').innerHTML = items.slice(0, 12).map(function(it){
+      return '<div class="stall-chip tipo-murilo" data-caso="'+escapeHtml(it.casoId)+'">' +
+        '<div class="up-top"><span>'+escapeHtml(it.cliente||'Sem nome')+'</span></div>' +
+        '<div class="up-when">Aguardando confirmação há '+it.dias+' dias</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(qs('muriloScroll').children, function(el){
+      el.addEventListener('click', function(){ irParaCaso(el.getAttribute('data-caso')); });
+    });
+  }
+
+  function passaFiltro(c){
+    if (!filters.mostrarConcluidos && c.concluido) return false;
+    if (filters.tipo !== 'todos' && c.tipo !== filters.tipo) return false;
+    if (filters.origem !== 'todos' && c.origem !== filters.origem) return false;
+    if (filters.prioridade !== 'todos' && c.prioridade !== filters.prioridade) return false;
+    if (filters.status !== 'todos' && (c.status||'pendente') !== filters.status) return false;
+    if (filters.busca){
+      var alvo = ((c.cliente||'') + ' ' + (c.numeroProcesso||'')).toLowerCase();
+      if (alvo.indexOf(filters.busca.toLowerCase()) === -1) return false;
+    }
+    return true;
+  }
+
+  function ordenaLista(lista){
+    lista = lista.slice();
+    lista.sort(function(a,b){
+      if (sortBy === 'prioridade'){
+        var d = PRIO_WEIGHT[a.prioridade] - PRIO_WEIGHT[b.prioridade];
+        if (d !== 0) return d;
+        return (b.criadoEm||'').localeCompare(a.criadoEm||'');
+      }
+      if (sortBy === 'valor'){
+        return (Number(b.valorHonorarios)||0) - (Number(a.valorHonorarios)||0);
+      }
+      if (sortBy === 'cliente'){
+        return (a.cliente||'').localeCompare(b.cliente||'');
+      }
+      // data
+      return (b.criadoEm||'').localeCompare(a.criadoEm||'');
+    });
+    return lista;
+  }
+
+  function pagamentoResumo(c){
+    var modal = c.modalidadeHonorario||'fixo';
+    if (modal === 'aguardando_murilo'){
+      return { texto: 'Aguardando confirmação com Murilo', status: 'pendente' };
+    }
+    if (modal === 'exito'){
+      return { texto: c.baseCalculoExito ? 'Base: ' + c.baseCalculoExito : 'A definir conforme o resultado', status: '' };
+    }
+    if (c.formaPagamento === 'avista' && c.avista){
+      return { texto: 'À vista · ' + fmtData(c.avista.data), status: c.avista.pago ? 'pago' : 'pendente' };
+    }
+    if (c.formaPagamento === 'parcelado' && Array.isArray(c.parcelas) && c.parcelas.length){
+      var pagos = c.parcelas.filter(function(p){ return p.pago; }).length;
+      var todasPagas = pagos === c.parcelas.length;
+      var proxima = c.parcelas.find(function(p){ return !p.pago; });
+      var texto = c.parcelas.length + 'x · ' + pagos + '/' + c.parcelas.length + ' pagas';
+      if (!todasPagas && proxima) texto += ' · próx. ' + fmtData(proxima.data);
+      return { texto: texto, status: todasPagas ? 'pago' : 'pendente' };
+    }
+    return { texto: '—', status: '' };
+  }
+
+  function renderList(){
+    var visiveis = ordenaLista(casos.filter(passaFiltro));
+    var listEl = qs('list');
+    if (!visiveis.length){
+      listEl.innerHTML = '<div class="empty"><strong>Nenhuma petição encontrada</strong>Cadastre uma nova petição inicial ou procedimento extrajudicial para começar o controle.</div>';
+      return;
+    }
+    var today = todayISO();
+    listEl.innerHTML = visiveis.map(function(c){
+      var pr = pagamentoResumo(c);
+      var open = expandedIds.has(c.id);
+      var status = c.status || 'pendente';
+      var stalled = STALL_STATUSES[status] && diasDesde(c.statusDesde || c.criadoEm) >= STALL_THRESHOLD_DAYS;
+      var statusChipTexto = STATUS_LABEL[status] + (stalled ? ' — há ' + diasDesde(c.statusDesde || c.criadoEm) + ' dias' : '');
+      var detail = '';
+      if (open){
+        var linhasParcelas = '';
+        if (c.formaPagamento === 'avista' && c.avista){
+          linhasParcelas = '<div class="parcela-row"><label><input type="checkbox" data-avista="'+escapeHtml(c.id)+'" '+(c.avista.pago?'checked':'')+'> Pagamento à vista — '+fmtData(c.avista.data)+'</label><span class="p-info">'+fmtMoeda(c.valorHonorarios)+'</span></div>';
+        } else if (c.formaPagamento === 'parcelado' && Array.isArray(c.parcelas)){
+          linhasParcelas = c.parcelas.map(function(p){
+            return '<div class="parcela-row"><label><input type="checkbox" data-parcela="'+escapeHtml(c.id)+'" data-num="'+p.numero+'" '+(p.pago?'checked':'')+'> Parcela '+p.numero+' — '+fmtData(p.data)+'</label><span class="p-info">'+fmtMoeda(p.valor)+'</span></div>';
+          }).join('');
+        }
+        var prazoHtml = '';
+        if (c.prazo && c.prazo.data){
+          var prazoAtrasado = c.prazo.data < today;
+          prazoHtml = '<div class="prazo-line'+(prazoAtrasado?' atrasado':'')+'">Prazo processual: '+escapeHtml(c.prazo.descricao||'sem descrição')+' — '+fmtData(c.prazo.data)+(prazoAtrasado?' (vencido)':'')+'</div>';
+        }
+        var miniStatusBtns = Object.keys(STATUS_LABEL).map(function(sv){
+          return '<button type="button" data-status-quick="'+escapeHtml(c.id)+'" data-sv="'+sv+'" class="'+(sv===status?'active':'')+'">'+STATUS_LABEL[sv]+'</button>';
+        }).join('');
+        detail =
+          '<div class="card-detail">' +
+            (c.numeroProcesso ? '<div class="prazo-line">Processo/protocolo: '+escapeHtml(c.numeroProcesso)+'</div>' : '') +
+            prazoHtml +
+            '<div class="mini-status-label">Alterar status rapidamente</div>' +
+            '<div class="mini-status">'+miniStatusBtns+'</div>' +
+            linhasParcelas +
+            (c.observacoes ? '<div class="obs">'+escapeHtml(c.observacoes)+'</div>' : '') +
+            '<div class="detail-actions">' +
+              '<button class="btn-text" data-editar="'+escapeHtml(c.id)+'">Editar</button>' +
+              '<button class="btn-text" data-concluir="'+escapeHtml(c.id)+'">'+(c.concluido?'Reabrir caso':'Concluir caso')+'</button>' +
+              '<button class="btn-danger-text" data-excluir="'+escapeHtml(c.id)+'">Excluir</button>' +
+            '</div>' +
+          '</div>';
+      }
+      return '<div class="card p-'+c.prioridade+(c.concluido?' concluido':'')+(open?' open':'')+'" data-card="'+escapeHtml(c.id)+'">' +
+        '<div class="card-main" data-toggle="'+escapeHtml(c.id)+'">' +
+          '<div class="cliente-cell"><div class="nome">'+escapeHtml(c.cliente||'Sem nome')+'</div><div class="sub">'+TIPO_LABEL[c.tipo]+'</div>'+(c.numeroProcesso?'<div class="processo-num">'+escapeHtml(c.numeroProcesso)+'</div>':'')+'<div class="status-chip'+(stalled?' stalled':'')+'"><span class="status-dot st-'+status+'"></span>'+escapeHtml(statusChipTexto)+'</div></div>' +
+          '<div class="origem-cell"><span class="badge origem-'+c.origem+'">'+ORIGEM_LABEL[c.origem]+'</span></div>' +
+          '<div class="prio-tag"><span class="prio-dot p-'+c.prioridade+'"></span>'+PRIO_LABEL[c.prioridade]+'</div>' +
+          '<div class="valor-cell"><div class="v">'+honorarioPrincipal(c)+'</div><div class="status '+pr.status+'">'+pr.texto+'</div></div>' +
+          '<div class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>' +
+        '</div>' +
+        detail +
+      '</div>';
+    }).join('');
+
+    // listeners
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-toggle]'), function(el){
+      el.addEventListener('click', function(){
+        var id = el.getAttribute('data-toggle');
+        if (expandedIds.has(id)) expandedIds.delete(id); else expandedIds.add(id);
+        render();
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-avista]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id = el.getAttribute('data-avista');
+        var c = casos.find(function(x){ return x.id === id; });
+        if (!c) return;
+        var novoAvista = Object.assign({}, c.avista, { pago: el.checked });
+        persistPatch(c, { avista: novoAvista });
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-parcela]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id = el.getAttribute('data-parcela');
+        var num = Number(el.getAttribute('data-num'));
+        var c = casos.find(function(x){ return x.id === id; });
+        if (!c) return;
+        var novasParcelas = c.parcelas.map(function(p){
+          return p.numero === num ? Object.assign({}, p, { pago: el.checked }) : p;
+        });
+        persistPatch(c, { parcelas: novasParcelas });
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-status-quick]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id = el.getAttribute('data-status-quick');
+        var novoStatus = el.getAttribute('data-sv');
+        var c = casos.find(function(x){ return x.id === id; });
+        if (!c || (c.status||'pendente') === novoStatus) return;
+        persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-editar]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        abrirEdicao(el.getAttribute('data-editar'));
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-concluir]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id = el.getAttribute('data-concluir');
+        var c = casos.find(function(x){ return x.id === id; });
+        if (!c) return;
+        persistPatch(c, { concluido: !c.concluido });
+      });
+    });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-excluir]'), function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var id = el.getAttribute('data-excluir');
+        var c = casos.find(function(x){ return x.id === id; });
+        if (!c) return;
+        if (confirm('Excluir definitivamente "'+(c.cliente||'este caso')+'"? Essa ação não pode ser desfeita.')){
+          expandedIds.delete(id);
+          persistExclui(id);
+        }
+      });
+    });
+  }
+
+  /* ---------- modal ---------- */
+  var formState = { tipo:'inicial', origem:'murilo', prioridade:'normal', status:'pendente', modalidade:'fixo', pagamento:'avista' };
+
+  function setSegValue(groupId, value){
+    var group = qs(groupId);
+    Array.prototype.forEach.call(group.children, function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-value') === value);
+    });
+  }
+  function wireSegmented(groupId, stateKey, onChange){
+    var group = qs(groupId);
+    Array.prototype.forEach.call(group.children, function(btn){
+      btn.addEventListener('click', function(){
+        formState[stateKey] = btn.getAttribute('data-value');
+        setSegValue(groupId, formState[stateKey]);
+        if (onChange) onChange(formState[stateKey]);
+      });
+    });
+  }
+
+  function renderParcelasEditor(){
+    var wrap = qs('parcelasEditor');
+    wrap.innerHTML = parcelasState.map(function(p, i){
+      return '<div class="parcela-edit-row" data-idx="'+i+'">' +
+        '<span class="pnum">'+(i+1)+'ª</span>' +
+        '<input type="number" min="0" step="0.01" placeholder="Valor (R$)" class="pv" value="'+(p.valor||'')+'">' +
+        '<input type="date" class="pd" value="'+(p.data||'')+'">' +
+        '<button type="button" class="rm-parcela" data-rm="'+i+'" title="Remover parcela">&times;</button>' +
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(wrap.querySelectorAll('.pv'), function(el, i){
+      el.addEventListener('input', function(){ parcelasState[i].valor = parseFloat(el.value)||0; updateParcelaSum(); });
+    });
+    Array.prototype.forEach.call(wrap.querySelectorAll('.pd'), function(el, i){
+      el.addEventListener('input', function(){ parcelasState[i].data = el.value; });
+    });
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-rm]'), function(el){
+      el.addEventListener('click', function(){
+        parcelasState.splice(Number(el.getAttribute('data-rm')), 1);
+        renderParcelasEditor();
+        updateParcelaSum();
+      });
+    });
+    updateParcelaSum();
+  }
+  function updateParcelaSum(){
+    var soma = parcelasState.reduce(function(s,p){ return s + (Number(p.valor)||0); }, 0);
+    var honor = parseFloat(qs('valorInput').value) || 0;
+    var el = qs('parcelaSum');
+    el.textContent = parcelasState.length + ' parcela(s) somando ' + fmtMoeda(soma) + (honor ? ' de ' + fmtMoeda(honor) + ' em honorários' : '');
+    el.classList.toggle('mismatch', honor > 0 && Math.abs(soma - honor) > 0.009);
+  }
+
+  function togglePagamentoCampos(valor){
+    qs('campoAvista').style.display = valor === 'avista' ? '' : 'none';
+    qs('campoParcelado').style.display = valor === 'parcelado' ? '' : 'none';
+    if (valor === 'parcelado' && parcelasState.length === 0){
+      parcelasState.push({ numero:1, valor:0, data:'', pago:false });
+      renderParcelasEditor();
+    }
+  }
+
+  function toggleModalidadeCampos(valor){
+    qs('wrapFixo').style.display = (valor === 'fixo' || valor === 'fixo_exito') ? '' : 'none';
+    qs('wrapExito').style.display = (valor === 'exito' || valor === 'fixo_exito') ? '' : 'none';
+    qs('avisoMurilo').style.display = (valor === 'aguardando_murilo') ? '' : 'none';
+    qs('labelValorFixo').textContent = valor === 'fixo_exito' ? 'Valor fixo dos honorários (R$)' : 'Valor dos honorários (R$)';
+  }
+
+  wireSegmented('segTipo', 'tipo');
+  wireSegmented('segOrigem', 'origem');
+  wireSegmented('segPrioridade', 'prioridade');
+  wireSegmented('segStatus', 'status');
+  wireSegmented('segModalidade', 'modalidade', toggleModalidadeCampos);
+  wireSegmented('segPagamento', 'pagamento', togglePagamentoCampos);
+
+  qs('addParcelaBtn').addEventListener('click', function(){
+    parcelasState.push({ numero: parcelasState.length+1, valor:0, data:'', pago:false });
+    renderParcelasEditor();
+  });
+  qs('valorInput').addEventListener('input', updateParcelaSum);
+
+  function abrirNovo(){
+    editingId = null;
+    qs('modalTitle').textContent = 'Nova petição';
+    formState = { tipo:'inicial', origem:'murilo', prioridade:'normal', status:'pendente', modalidade:'fixo', pagamento:'avista' };
+    setSegValue('segTipo', formState.tipo);
+    setSegValue('segOrigem', formState.origem);
+    setSegValue('segPrioridade', formState.prioridade);
+    setSegValue('segStatus', formState.status);
+    setSegValue('segModalidade', formState.modalidade);
+    setSegValue('segPagamento', formState.pagamento);
+    qs('clienteInput').value = '';
+    qs('processoInput').value = '';
+    qs('valorInput').value = '';
+    qs('percentualInput').value = '';
+    qs('baseExitoInput').value = '';
+    qs('dataAvistaInput').value = todayISO();
+    qs('prazoDataInput').value = '';
+    qs('prazoDescInput').value = '';
+    qs('obsInput').value = '';
+    parcelasState = [];
+    togglePagamentoCampos('avista');
+    toggleModalidadeCampos('fixo');
+    qs('formError').textContent = '';
+    qs('overlay').classList.add('show');
+    setTimeout(function(){ qs('clienteInput').focus(); }, 30);
+  }
+
+  function abrirEdicao(id){
+    var c = casos.find(function(x){ return x.id === id; });
+    if (!c) return;
+    editingId = id;
+    qs('modalTitle').textContent = 'Editar petição';
+    formState = { tipo:c.tipo, origem:c.origem, prioridade:c.prioridade, status:c.status||'pendente', modalidade:c.modalidadeHonorario||'fixo', pagamento:c.formaPagamento||'avista' };
+    setSegValue('segTipo', formState.tipo);
+    setSegValue('segOrigem', formState.origem);
+    setSegValue('segPrioridade', formState.prioridade);
+    setSegValue('segStatus', formState.status);
+    setSegValue('segModalidade', formState.modalidade);
+    setSegValue('segPagamento', formState.pagamento);
+    qs('clienteInput').value = c.cliente || '';
+    qs('processoInput').value = c.numeroProcesso || '';
+    qs('valorInput').value = c.valorHonorarios || '';
+    qs('percentualInput').value = c.percentualExito || '';
+    qs('baseExitoInput').value = c.baseCalculoExito || '';
+    qs('dataAvistaInput').value = (c.avista && c.avista.data) || todayISO();
+    qs('prazoDataInput').value = (c.prazo && c.prazo.data) || '';
+    qs('prazoDescInput').value = (c.prazo && c.prazo.descricao) || '';
+    qs('obsInput').value = c.observacoes || '';
+    parcelasState = Array.isArray(c.parcelas) ? c.parcelas.map(function(p){ return Object.assign({}, p); }) : [];
+    togglePagamentoCampos(formState.pagamento);
+    toggleModalidadeCampos(formState.modalidade);
+    if (formState.pagamento === 'parcelado') renderParcelasEditor();
+    qs('formError').textContent = '';
+    qs('overlay').classList.add('show');
+  }
+
+  function fecharModal(){ qs('overlay').classList.remove('show'); }
+
+  qs('fabNew').addEventListener('click', abrirNovo);
+  qs('closeModal').addEventListener('click', fecharModal);
+  qs('cancelBtn').addEventListener('click', fecharModal);
+  qs('overlay').addEventListener('click', function(e){ if (e.target === qs('overlay')) fecharModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') fecharModal(); });
+
+  qs('saveBtn').addEventListener('click', function(){
+    var cliente = qs('clienteInput').value.trim();
+    var numeroProcesso = qs('processoInput').value.trim();
+    var valor = parseFloat(qs('valorInput').value) || 0;
+    var percentual = parseFloat(qs('percentualInput').value) || 0;
+    var modal = formState.modalidade;
+    var temFixo = modal === 'fixo' || modal === 'fixo_exito';
+    var temExito = modal === 'exito' || modal === 'fixo_exito';
+    var erro = '';
+    if (!cliente) erro = 'Informe a descrição do cliente.';
+    else if (temFixo && valor <= 0) erro = 'Informe o valor dos honorários.';
+    else if (temExito && (percentual <= 0 || percentual > 100)) erro = 'Informe um percentual de êxito válido.';
+    else if (temFixo && formState.pagamento === 'avista' && !qs('dataAvistaInput').value) erro = 'Informe a data do pagamento à vista.';
+    else if (temFixo && formState.pagamento === 'parcelado'){
+      if (!parcelasState.length) erro = 'Adicione ao menos uma parcela.';
+      else if (parcelasState.some(function(p){ return !p.valor || p.valor <= 0 || !p.data; })) erro = 'Preencha valor e data de todas as parcelas.';
+    }
+    if (erro){ qs('formError').textContent = erro; return; }
+
+    var casoAnterior = editingId ? casos.find(function(c){ return c.id === editingId; }) : null;
+    var statusDesde = (casoAnterior && (casoAnterior.status||'pendente') === formState.status)
+      ? (casoAnterior.statusDesde || casoAnterior.criadoEm || new Date().toISOString())
+      : new Date().toISOString();
+
+    var dados = {
+      tipo: formState.tipo,
+      cliente: cliente,
+      numeroProcesso: numeroProcesso,
+      origem: formState.origem,
+      prioridade: formState.prioridade,
+      status: formState.status,
+      statusDesde: statusDesde,
+      modalidadeHonorario: modal,
+      valorHonorarios: temFixo ? valor : 0,
+      percentualExito: temExito ? percentual : null,
+      baseCalculoExito: temExito ? qs('baseExitoInput').value.trim() : '',
+      observacoes: qs('obsInput').value.trim(),
+      concluido: casoAnterior ? (casoAnterior.concluido || false) : false
+    };
+
+    var prazoData = qs('prazoDataInput').value;
+    dados.prazo = prazoData ? { data: prazoData, descricao: qs('prazoDescInput').value.trim() } : null;
+
+    if (temFixo){
+      dados.formaPagamento = formState.pagamento;
+      if (formState.pagamento === 'avista'){
+        var pagoAnterior = false;
+        if (casoAnterior && casoAnterior.avista) pagoAnterior = casoAnterior.avista.pago;
+        dados.avista = { data: qs('dataAvistaInput').value, pago: pagoAnterior };
+        dados.parcelas = null;
+      } else {
+        dados.parcelas = parcelasState.map(function(p, i){
+          return { numero: i+1, valor: Number(p.valor)||0, data: p.data, pago: !!p.pago };
+        });
+        dados.avista = null;
+      }
+    } else {
+      dados.formaPagamento = null;
+      dados.avista = null;
+      dados.parcelas = null;
+    }
+
+    qs('saveBtn').disabled = true;
+    var promessa = editingId ? persistAtualiza(editingId, dados) : persistNovo(dados);
+    promessa.then(function(){
+      qs('saveBtn').disabled = false;
+      fecharModal();
+    }).catch(function(err){
+      console.error('erro ao salvar', err);
+      qs('saveBtn').disabled = false;
+      qs('formError').textContent = 'Não foi possível salvar agora. Tente novamente.';
+    });
+  });
+
+  /* ---------- filtros ---------- */
+  qs('buscaInput').addEventListener('input', function(){ filters.busca = this.value; render(); });
+  qs('filtroTipo').addEventListener('change', function(){ filters.tipo = this.value; render(); });
+  qs('filtroOrigem').addEventListener('change', function(){ filters.origem = this.value; render(); });
+  qs('filtroPrioridade').addEventListener('change', function(){ filters.prioridade = this.value; render(); });
+  qs('filtroStatus').addEventListener('change', function(){ filters.status = this.value; render(); });
+  qs('ordenarPor').addEventListener('change', function(){ sortBy = this.value; render(); });
+  qs('mostrarConcluidos').addEventListener('change', function(){ filters.mostrarConcluidos = this.checked; render(); });
+
+  /* ---------- tema ---------- */
+  function aplicarTemaSalvo(){
+    var t = null;
+    try{ t = localStorage.getItem('controlePeticoes.tema'); }catch(e){}
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    else document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  qs('themeBtn').addEventListener('click', function(){
+    var atual = document.documentElement.getAttribute('data-theme');
+    var next = atual === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try{ localStorage.setItem('controlePeticoes.tema', next); }catch(e){}
+  });
+  aplicarTemaSalvo();
+
+  /* ---------- exportação CSV ---------- */
+  qs('exportBtn').addEventListener('click', function(){
+    var linhas = [['Tipo','Cliente','Número do processo','Origem','Prioridade','Status do andamento','Modalidade de honorário','Valor fixo','Percentual de êxito','Base de cálculo do êxito','Forma de pagamento','Detalhamento pagamento','Prazo processual','Descrição do prazo','Situação do caso','Observações','Data de cadastro']];
+    casos.forEach(function(c){
+      var det = '';
+      if (c.formaPagamento === 'avista' && c.avista){
+        det = 'À vista em ' + fmtData(c.avista.data) + (c.avista.pago ? ' (pago)' : ' (pendente)');
+      } else if (Array.isArray(c.parcelas)){
+        det = c.parcelas.map(function(p){ return p.numero+'ª '+fmtMoeda(p.valor)+' '+fmtData(p.data)+(p.pago?' pago':' pendente'); }).join(' | ');
+      }
+      var modal = c.modalidadeHonorario || 'fixo';
+      var modalLabel = modal === 'exito' ? 'Percentual de êxito' : (modal === 'fixo_exito' ? 'Fixo + êxito' : (modal === 'aguardando_murilo' ? 'A confirmar com Murilo' : 'Valor fixo'));
+      linhas.push([
+        TIPO_LABEL[c.tipo]||c.tipo, c.cliente||'', c.numeroProcesso||'', ORIGEM_LABEL[c.origem]||c.origem, PRIO_LABEL[c.prioridade]||c.prioridade,
+        STATUS_LABEL[c.status||'pendente'], modalLabel, (modal==='exito') ? '' : fmtMoeda(c.valorHonorarios),
+        c.percentualExito ? (c.percentualExito+'%') : '', c.baseCalculoExito||'',
+        c.formaPagamento==='avista'?'À vista':(c.formaPagamento==='parcelado'?'Parcelado':''), det,
+        (c.prazo && c.prazo.data) ? fmtData(c.prazo.data) : '', (c.prazo && c.prazo.descricao) || '',
+        c.concluido ? 'Concluído' : 'Ativo', c.observacoes||'', c.criadoEm ? c.criadoEm.slice(0,10) : ''
+      ]);
+    });
+    var csv = linhas.map(function(l){
+      return l.map(function(v){
+        v = String(v);
+        return /[",;\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+      }).join(';');
+    }).join('\n');
+    if (downloadsCap){
+      downloadsCap.save({ filename:'controle-peticoes.csv', data: '\uFEFF'+csv }).catch(function(err){
+        if (err && err.code !== 'declined') console.error('erro ao exportar', err);
+      });
+    } else {
+      try{
+        var blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'controle-peticoes.csv';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+      }catch(err){ console.error('erro ao exportar', err); }
+    }
+  });
+
+  /* ---------- start ---------- */
+  initStorage();
+})();
+</script>
+</body>
+</html>
