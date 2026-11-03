@@ -4,7 +4,7 @@
   "compatibility_date": "2025-01-01",
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "d1_databases": [
-    { "binding": "DB", "database_name": "controle-juridico", "database_id": "COLOQUE_AQUI_O_ID_DO_BANCO" }
+    { "binding": "DB", "database_name": "controle-juridico", "database_id": "6e63cb30-f3a4-4611-9b53-275284e1fbec" }
   ],
   "observability": { "enabled": true }
 }
