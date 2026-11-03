@@ -64,3 +64,10 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - Adiar muda só o vencimento da parcela (`dataOriginal` e `adiadaEm` ficam gravados; histórico em `renegociacoes` com `tipo: "adiamento"`). As demais parcelas não mudam.
 - Em **Cobranças e relatório do Murilo** há **Adiar atrasadas…**: lista só as atrasadas do Murilo, marcadas por padrão, para uma data só.
 - Teste: `node test/adiar.test.mjs` (veja o cabeçalho).
+
+## Notificações no iPhone (Web Push)
+- Todo dia às **10:00 (Brasília)** o servidor (cron `0 13 * * *`, 13:00 UTC) envia uma notificação com **o que vence hoje** e, em notificações separadas, os **alertas novos do app** (cada alerta avisa uma vez por mês; atrasos de clientes não entram).
+- O app (`cliente/notificacoes.js`) envia ao servidor, em segundo plano, uma lista com os vencimentos dos próximos 45 dias e os alertas atuais (`PUT /api/notif/resumo`); o servidor escolhe o que é de hoje. Preferências: incluir alertas, esconder nomes e valores.
+- `src/push.js`: cifragem aes128gcm (RFC 8291) e assinatura VAPID (RFC 8292) só com WebCrypto. As chaves VAPID são geradas na primeira vez e ficam na área reservada do banco (`_notif`), fora dos backups.
+- `public/sw.js`: service worker que mostra a notificação e abre o app ao tocar.
+- Testes: `node test/push.test.mjs` (cifragem) e `node test/notif.test.mjs` (ponta a ponta; veja o cabeçalho).

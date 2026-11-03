@@ -2,6 +2,8 @@
    - Todo acesso (página e API) exige login do Cloudflare Access (só o seu e-mail).
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
+import { gerarChavesVapid, enviarPush } from './push.js';
+
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
 const MAX_LISTA = 1000;
@@ -217,6 +219,104 @@ async function recebidos(request, env, partes) {
   return erro(405, 'method', 'Método não permitido.');
 }
 
+
+/* ---------- notificações push: resumo do que vence hoje (10h, horário de Brasília) e alertas novos ---------- */
+const FUSO_MS = -3 * 3600e3, MAX_NOTIF_ITENS = 4;
+const hojeBR = () => new Date(Date.now() + FUSO_MS).toISOString().slice(0, 10);
+const mesBR = () => hojeBR().slice(0, 7);
+async function lerReservado(env, id, padrao) { const r = await env.DB.prepare("SELECT dados FROM docs WHERE colecao = '_notif' AND id = ?").bind(id).first(); return r ? JSON.parse(r.dados) : padrao; }
+const gravarReservado = (env, id, dados) => gravar(env, '_notif', id, dados);
+async function vapid(env) {
+  let v = await lerReservado(env, 'vapid', null);
+  if (!v) { v = await gerarChavesVapid(); await gravarReservado(env, 'vapid', v); }
+  return v;
+}
+async function inscricoes(env) {
+  const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = '_notif' AND id LIKE 'sub-%'").all();
+  return results.map((r) => ({ id: r.id, ...JSON.parse(r.dados) }));
+}
+const hashCurto = async (s) => b64u(await sha256('sub:' + s)).slice(0, 24);
+const moeda = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+export function montarNotificacoes(resumo, config, enviados, hoje, mes) {
+  const lista = [];
+  const esconder = !!config.esconder;
+  const itens = (resumo.itens || []).filter((i) => i.d === hoje);
+  if (itens.length) {
+    const linhas = itens.slice(0, MAX_NOTIF_ITENS).map((i) => `${i.n}${i.l ? ' · ' + i.l : ''}${i.v != null ? ' · ' + moeda(i.v) : ''}`);
+    if (itens.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${itens.length - MAX_NOTIF_ITENS}`);
+    lista.push({ tag: 'hoje-' + hoje, titulo: itens.length === 1 ? '1 item vence hoje' : `${itens.length} itens vencem hoje`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
+  }
+  if (config.alertas !== false) {
+    const vistos = enviados.alertas || {};
+    (resumo.alertas || []).filter((a) => a.chave && vistos[a.chave] !== mes).slice(0, 3).forEach((a) => {
+      lista.push({ tag: 'alerta-' + a.chave, chaveAlerta: a.chave, titulo: a.titulo, corpo: esconder ? 'Abra o app para ver.' : (a.detalhe || ''), url: '/' });
+    });
+  }
+  return lista;
+}
+export async function enviarResumoDiario(env, opcoes = {}) {
+  const resumo = await lerReservado(env, 'resumo', { itens: [], alertas: [] }), config = await lerReservado(env, 'config', {});
+  const enviados = await lerReservado(env, 'enviados', { alertas: {} }), hoje = hojeBR(), mes = mesBR();
+  enviados.alertas = enviados.alertas || {};
+  if (!opcoes.forcar && enviados.dia === hoje) return { enviadas: 0, motivo: 'já enviado hoje' };
+  const subs = await inscricoes(env);
+  if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
+  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Controle estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
+  const v = await vapid(env), assunto = env.PUSH_ASSUNTO || 'mailto:contato@controle.local';
+  let enviadas = 0;
+  for (const n of lista) {
+    for (const s of subs) {
+      const r = await enviarPush(v, assunto, s, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
+      if (r.ok) enviadas++;
+      else if (r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
+    }
+    if (n.chaveAlerta && !opcoes.teste) enviados.alertas[n.chaveAlerta] = mes;
+  }
+  if (!opcoes.teste) {
+    Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
+    enviados.dia = hoje; await gravarReservado(env, 'enviados', enviados);
+  }
+  return { enviadas, notificacoes: lista.length };
+}
+async function notif(request, env, partes) {
+  const acao = partes[1], m = request.method;
+  if (acao === 'chave' && m === 'GET') return json({ publica: (await vapid(env)).publica });
+  if (acao === 'estado' && m === 'GET') {
+    const config = await lerReservado(env, 'config', { alertas: true, esconder: false }), subs = await inscricoes(env), resumo = await lerReservado(env, 'resumo', null);
+    return json({ aparelhos: subs.length, config: { alertas: config.alertas !== false, esconder: !!config.esconder }, resumoEm: resumo ? resumo.geradoEm : null, hora: '10:00' });
+  }
+  if (acao === 'inscrever' && m === 'POST') {
+    const s = await request.json().catch(() => null);
+    if (!s || !s.endpoint || !s.keys || !s.keys.p256dh || !s.keys.auth || !/^https:\/\//.test(s.endpoint) && !/^http:\/\/127\.0\.0\.1/.test(s.endpoint)) return erro(400, 'invalid', 'Inscrição inválida.');
+    await gravarReservado(env, 'sub-' + (await hashCurto(s.endpoint)), { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth }, em: new Date().toISOString() });
+    return json({ ok: true });
+  }
+  if (acao === 'inscrever' && m === 'DELETE') {
+    const s = await request.json().catch(() => null);
+    if (s && s.endpoint) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind('sub-' + (await hashCurto(s.endpoint))).run();
+    return json({ ok: true });
+  }
+  if (acao === 'config' && m === 'PUT') {
+    const c = await request.json().catch(() => null);
+    if (!c || typeof c !== 'object') return erro(400, 'invalid', 'Configuração inválida.');
+    await gravarReservado(env, 'config', { alertas: c.alertas !== false, esconder: !!c.esconder });
+    return json({ ok: true });
+  }
+  if (acao === 'resumo' && m === 'PUT') {
+    const txt = await request.text();
+    if (txt.length > 200 * 1024) return erro(413, 'quota_exceeded', 'Resumo grande demais.');
+    let r; try { r = JSON.parse(txt); } catch (e) { return erro(400, 'invalid', 'JSON inválido.'); }
+    const limpa = (s) => String(s == null ? '' : s).slice(0, 140);
+    const itens = (Array.isArray(r.itens) ? r.itens : []).slice(0, 300).filter((i) => i && /^\d{4}-\d{2}-\d{2}$/.test(i.d || '')).map((i) => ({ d: i.d, t: limpa(i.t), n: limpa(i.n), l: limpa(i.l), v: i.v == null ? null : Number(i.v) || 0 }));
+    const alertas = (Array.isArray(r.alertas) ? r.alertas : []).slice(0, 10).filter((a) => a && a.chave).map((a) => ({ chave: limpa(a.chave), titulo: limpa(a.titulo), detalhe: limpa(a.detalhe) }));
+    await gravarReservado(env, 'resumo', { geradoEm: new Date().toISOString(), itens, alertas });
+    return json({ ok: true, itens: itens.length, alertas: alertas.length });
+  }
+  if (acao === 'teste' && m === 'POST') return json(await enviarResumoDiario(env, { teste: true, forcar: true }));
+  if (acao === 'agora' && m === 'POST') return json(await enviarResumoDiario(env, { forcar: !!new URL(request.url).searchParams.get('forcar') }));
+  return erro(404, 'not_found', 'Não encontrado.');
+}
+
 /* ---------- API do banco ---------- */
 async function api(request, env, partes) {
   // partes: ['db', colecao, id?]  |  ['backup']
@@ -274,12 +374,12 @@ const gravar = (env, colecao, id, dados) =>
   env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
 
 export default {
-  async scheduled(event, env, ctx) { ctx.waitUntil(fazerBackup(env)); },
+  async scheduled(event, env, ctx) { ctx.waitUntil(event.cron === '0 13 * * *' ? enviarResumoDiario(env) : fazerBackup(env)); },
   async fetch(request, env) {
     return comSeguranca(await tratar(request, env));
   },
 };
-const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest']);
+const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest', '/sw.js']);
 async function tratar(request, env) {
   const url = new URL(request.url);
   const dev = env.ALLOW_NO_AUTH === '1';
@@ -301,7 +401,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

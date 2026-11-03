@@ -9,6 +9,13 @@ if '/*PA-INICIO*/' in s:
 else:
     assert s.count('function obraAbrirGasto(id, pagarId){') == 1
     s = s.replace('function obraAbrirGasto(id, pagarId){', bloco + 'function obraAbrirGasto(id, pagarId){')
+nt = open(R + 'cliente/notificacoes.js', encoding='utf-8').read()
+bloco_nt = '/*NT-INICIO*/\n' + nt + '\n/*NT-FIM*/\n'
+if '/*NT-INICIO*/' in s:
+    s = re.sub(r'/\*NT-INICIO\*/.*?/\*NT-FIM\*/\n', lambda m: bloco_nt, s, flags=re.S)
+else:
+    assert s.count('/*PA-FIM*/\n') == 1
+    s = s.replace('/*PA-FIM*/\n', '/*PA-FIM*/\n' + bloco_nt)
 def rep(old, new):
     global s
     if new in s: return
