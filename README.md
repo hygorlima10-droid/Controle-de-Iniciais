@@ -32,3 +32,5 @@ npm run teste          # testes do login
 ## O que ainda não funciona aqui
 - **Extratos pelo Google Drive** (dependiam da conexão do Claude): voltam numa próxima etapa, escolhendo o arquivo direto no aparelho.
 - **Ler foto/recibo**: próxima etapa (usa a chave do Claude guardada no servidor).
+
+<!-- publicação disparada em 2026-11-03T03:19:47Z -->
