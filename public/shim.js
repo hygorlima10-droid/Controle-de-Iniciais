@@ -42,10 +42,44 @@
     };
     return c;
   }
+
+  /* Diário do "Desfazer": guarda como cada documento estava antes de cada gravação/exclusão (últimas 20 ações). */
+  var ROTULO_COL = { casos: 'petição', termosAcordo: 'acordo', alvaras: 'alvará', clientes: 'cliente', despesas: 'despesa', receitasManuais: 'receita', metas: 'meta', saldos: 'saldo', obraMov: 'lançamento da obra', extratos: 'extrato' };
+  var DIARIO_KEY = 'controle.desfazer.v1', desfazendo = false, diario = [];
+  try { diario = JSON.parse(localStorage.getItem(DIARIO_KEY) || '[]') || []; } catch (e) { diario = []; }
+  function salvarDiario() { try { localStorage.setItem(DIARIO_KEY, JSON.stringify(diario.slice(-20))); } catch (e) { diario = diario.slice(-5); } window.dispatchEvent(new Event('desfazer-mudou')); }
+  function nomeDoc(d) { return d ? String(d.cliente || d.nome || d.partes || d.descricao || '').slice(0, 40) : ''; }
+  function registrar(c, id, antes, existia, depois, apagar) {
+    if (desfazendo || !ROTULO_COL[c.nome]) return;
+    if (c.nome === 'extratos' && /^(h_)/.test(id)) return;   // marcas internas de lançamentos já importados
+    var agora = Date.now(), g = diario[diario.length - 1];
+    if (!g || agora - g.t > 2500 || g.grande) { g = { t: agora, ops: [], rotulo: '' }; diario.push(g); }
+    g.t = agora;
+    if (g.ops.length >= 25) { g.grande = true; g.ops = []; g.rotulo = 'ação grande (não pode ser desfeita)'; salvarDiario(); return; }
+    if (g.ops.length === 0) g.rotulo = (apagar ? 'apagou ' : (existia ? 'alterou ' : 'criou ')) + ROTULO_COL[c.nome] + (nomeDoc(apagar ? antes : depois) ? ' "' + nomeDoc(apagar ? antes : depois) + '"' : '');
+    else if (g.ops.length === 1) g.rotulo += ' (e mais alterações)';
+    g.ops.push({ c: c.nome, id: id, antes: existia ? antes : null, existia: !!existia });
+    salvarDiario();
+  }
+  function ultimoDiario() { for (var i = diario.length - 1; i >= 0; i--) if (!diario[i].grande && diario[i].ops.length) return diario[i]; return null; }
+  window.__desfazer = {
+    ultimo: function () { var g = ultimoDiario(); return g ? { rotulo: g.rotulo, quando: g.t } : null; },
+    desfazer: function () {
+      var g = ultimoDiario(); if (!g) return Promise.resolve(false);
+      desfazendo = true;
+      var cadeia = Promise.resolve();
+      g.ops.slice().reverse().forEach(function (op) {
+        cadeia = cadeia.then(function () { var c = colecao(op.c); return op.existia ? escrever(c, op.id, op.antes, false) : escrever(c, op.id, null, true); });
+      });
+      return cadeia.then(function () { diario.splice(diario.indexOf(g), 1); desfazendo = false; salvarDiario(); return true; }, function () { desfazendo = false; return false; });
+    }
+  };
+
   function escrever(c, id, dados, apagar) {
     var antes = c.mapa[id], existia = Object.prototype.hasOwnProperty.call(c.mapa, id);
     if (apagar) delete c.mapa[id]; else c.mapa[id] = JSON.parse(JSON.stringify(dados));
     c.pendentes++; c.avisar();
+    registrar(c, id, antes, existia, dados, apagar);
     var p = apagar ? req('DELETE', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id))
                    : req('PUT', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id), dados);
     return p.then(function () { c.pendentes--; c.assinatura = ''; }, function (e) {
@@ -120,7 +154,7 @@
         opts = opts || {};
         var imgs = opts.images ? (opts.images instanceof Blob ? [opts.images] : Array.prototype.slice.call(opts.images)) : [];
         return Promise.all(imgs.map(function (b) { return paraBase64(b).then(function (d) { return { tipo: b.type || 'image/jpeg', dados: d }; }); })).then(function (lista) {
-          return fetch('/api/ler', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt: String(prompt), imagens: lista }), credentials: 'same-origin', signal: opts.signal })
+          return fetch('/api/ler', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt: String(prompt), imagens: lista, modelo: opts.modelTier || 'default' }), credentials: 'same-origin', signal: opts.signal })
             .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j2) {
               if (r.status === 401) { location.href = '/login'; }
               if (!r.ok) throw (j2.error || { code: 'unavailable', message: 'Erro ' + r.status });

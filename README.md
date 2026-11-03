@@ -43,3 +43,10 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - Tela **Extratos → Escolher extratos**: PDF do Itaú (PF/PJ) ou do Sicoob, ou arquivo OFX. O app lê, mostra a fila de conferência e só lança o que você confirmar.
 - **Compartilhar do iPhone:** o iPhone não deixa um app da tela de início aparecer na folha de compartilhamento, então usa-se um **Atalho** que envia o arquivo para `POST /api/enviar` com o cabeçalho `Authorization: Bearer <ENVIO_TOKEN>` (e, opcionalmente, `X-Nome` com o nome do arquivo). Segredo do Worker: `ENVIO_TOKEN` (mín. 24 caracteres). O token só permite enviar arquivos (limite ~600 KB), nunca ler dados. Os arquivos ficam na lista "Recebidos pelo Compartilhar" até você tocar em **Ler os recebidos**.
 - Testes: `node test/extratos-arquivo.test.mjs` (veja o cabeçalho; PDFs reais ficam fora do repositório).
+
+## Pergunte ao app e ajustes de uso (branch `claude/pergunte-ao-app`)
+- **Pergunte ao app** (`cliente/pergunte.js`, injetado no `public/index.html` por `python3 cliente/montar.py`): duas chamadas ao Claude. A 1ª (modelo rápido) entende a pergunta (consulta ou "e se"); o app calcula os fatos e, nos cenários, uma simulação determinística em cima da projeção de Análises; a 2ª chamada só explica com esses números.
+- **Alertas** ("De olho" no Início), **metas com plano**, **fechamento comentado**, **busca ampliada**, **atalhos dinâmicos** e **Desfazer** (diário no `shim.js`, últimas 20 ações).
+- **Backup semanal:** cron de segunda 07:00 UTC (`wrangler.jsonc` → `triggers.crons`) grava cópias comprimidas em `_backups` (últimas 8); `GET /api/backups`, `/api/backups/AAAA-MM-DD` (formato do app), `POST /api/backups/agora`.
+- Testes: `node test/pergunte.test.mjs` (veja o cabeçalho).
+- **Ao levar para a branch oficial:** não leve o `wrangler.jsonc` de teste; só acrescente o bloco `triggers.crons` ao do oficial.

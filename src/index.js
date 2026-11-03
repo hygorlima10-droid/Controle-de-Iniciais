@@ -99,7 +99,7 @@ async function ler(request, env, partes) {
     r = await fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.MODELO_LEITURA || 'claude-sonnet-5-5', max_tokens: 2000, messages: [{ role: 'user', content }] }),
+      body: JSON.stringify({ model: b.modelo === 'quick' ? (env.MODELO_RAPIDO || 'claude-haiku-5-5') : (env.MODELO_LEITURA || 'claude-sonnet-5-5'), max_tokens: 2000, messages: [{ role: 'user', content }] }),
     });
   } catch (e) { return erro(502, 'unavailable', 'Não consegui falar com o Claude agora. Tente de novo.'); }
   const corpo = await r.json().catch(() => ({}));
@@ -117,6 +117,54 @@ async function ler(request, env, partes) {
 
 
 /* ---------- arquivos enviados pelo "Compartilhar" do iPhone (Atalho com token) ---------- */
+/* ---------- backup semanal automático (guardado no próprio banco, em partes comprimidas) ---------- */
+const GUARDAR_BACKUPS = 8, PARTE_B64 = 700 * 1024;
+async function gzipB64(texto) {
+  const cs = new Response(new Blob([texto]).stream().pipeThrough(new CompressionStream('gzip')));
+  return paraB64(await cs.arrayBuffer());
+}
+async function gunzipTexto(b64) {
+  const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+export async function fazerBackup(env) {
+  const { results } = await env.DB.prepare("SELECT colecao, id, dados FROM docs WHERE colecao NOT LIKE '\\_%' ESCAPE '\\' ORDER BY colecao, id").all();
+  const docs = results.map((r) => ({ colecao: r.colecao, id: r.id, dados: JSON.parse(r.dados) }));
+  const b64 = await gzipB64(JSON.stringify({ versao: 1, exportadoEm: new Date().toISOString(), docs }));
+  const dia = new Date().toISOString().slice(0, 10);
+  const antigos = await env.DB.prepare("SELECT id FROM docs WHERE colecao = '_backups' AND id LIKE ?").bind(dia + '-%').all();
+  for (const a of antigos.results) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_backups' AND id = ?").bind(a.id).run();
+  const total = Math.ceil(b64.length / PARTE_B64) || 1;
+  for (let i = 0; i < total; i++) await gravar(env, '_backups', `${dia}-${String(i).padStart(2, '0')}`, { dia, parte: i, total, docs: docs.length, b64: b64.slice(i * PARTE_B64, (i + 1) * PARTE_B64) });
+  const todos = await env.DB.prepare("SELECT DISTINCT substr(id,1,10) AS d FROM docs WHERE colecao = '_backups' ORDER BY d DESC").all();
+  for (const x of todos.results.slice(GUARDAR_BACKUPS)) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_backups' AND id LIKE ?").bind(x.d + '-%').run();
+  return { dia, partes: total, docs: docs.length };
+}
+const VERSAO_BACKUP_APP = 1;
+function backupNoFormatoDoApp(docs, exportadoEm) {
+  const por = (c) => docs.filter((d) => d.colecao === c).map((d) => Object.assign({}, d.dados, { id: d.id }));
+  const mapa = (c) => { const o = {}; docs.filter((d) => d.colecao === c).forEach((d) => { o[d.id] = d.dados; }); return o; };
+  return { versao: VERSAO_BACKUP_APP, exportadoEm, casos: por('casos'), acordos: por('termosAcordo'), alvaras: por('alvaras'), clientes: por('clientes'), despesas: por('despesas'), receitasManuais: por('receitasManuais'), saldos: mapa('saldos'), metas: por('metas'), extratos: por('extratos'), obraMov: por('obraMov'), config: mapa('config') };
+}
+async function backups(request, env, partes) {
+  const dia = partes[1];
+  if (!dia && request.method === 'GET') {
+    const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = '_backups' ORDER BY id DESC").all();
+    const por = {};
+    results.forEach((r) => { const d = JSON.parse(r.dados); (por[d.dia] = por[d.dia] || { dia: d.dia, docs: d.docs, partes: d.total }); });
+    return json({ itens: Object.values(por) });
+  }
+  if (dia === 'agora' && request.method === 'POST') return json(await fazerBackup(env));
+  if (dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) && request.method === 'GET') {
+    const { results } = await env.DB.prepare("SELECT dados FROM docs WHERE colecao = '_backups' AND id LIKE ? ORDER BY id").bind(dia + '-%').all();
+    if (!results.length) return erro(404, 'not_found', 'Backup não encontrado.');
+    const txt = await gunzipTexto(results.map((r) => JSON.parse(r.dados).b64).join(''));
+    const j = JSON.parse(txt);
+    return json(backupNoFormatoDoApp(j.docs, j.exportadoEm));
+  }
+  return erro(405, 'method', 'Método não permitido.');
+}
+
 const MAX_B64 = 850 * 1024, MAX_RECEBIDOS = 40;
 async function tokenConfere(env, request) {
   const m = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') || '');
@@ -226,6 +274,7 @@ const gravar = (env, colecao, id, dados) =>
   env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
 
 export default {
+  async scheduled(event, env, ctx) { ctx.waitUntil(fazerBackup(env)); },
   async fetch(request, env) {
     return comSeguranca(await tratar(request, env));
   },
@@ -252,7 +301,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

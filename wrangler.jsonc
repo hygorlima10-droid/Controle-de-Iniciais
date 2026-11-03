@@ -6,5 +6,6 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "controle-juridico-teste", "database_id": "933ab4d2-b04f-4c19-a830-ac18564c8b71" }
   ],
+  "triggers": { "crons": ["0 7 * * 1"] },
   "observability": { "enabled": true }
 }
