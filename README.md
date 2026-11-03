@@ -55,3 +55,6 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - `cliente/layout.py` (rodado uma vez) moveu as ações para uma faixa no topo do Início (Recebi R$, Foto/PDF, Pergunte, Novo), removeu os botões flutuantes de câmera e Recebi R$ e a fileira de atalhos do fim, e criou os ícones novos (desfazer, câmera, pergunte, mais, sair, recibo, aviso).
 - O botão **+** (fabNew) agora abre a folha **Novo** em todas as telas (no Financeiro continua o menu de lançamentos) e, no Início, só aparece depois que a faixa sai da tela.
 - Os alertas ("De olho") viram linhas no topo da Central de atenção (`paInserirAlertas`, em `cliente/pergunte.js`).
+
+- **Alertas dispensáveis:** cada alerta tem **Dispensar** (vale só no mês atual; gravado em `config/alertasDispensados` com a chave do mês) e a Central mostra "N alertas dispensados neste mês · mostrar de novo".
+- **Início no desktop:** o grid usa a classe `sem-extr` quando não há extratos para conferir, e a última linha absorve a altura da Central de atenção, para os cartões ficarem juntos.

@@ -38,6 +38,22 @@ await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]') 
 const alertas = await texto('#atencaoLista');
 check(await page.evaluate(() => document.querySelectorAll('#atencaoLista [data-pa-alerta]').length) >= 1 && /parcelas vencidas|negativo|Reserva/i.test(alertas) && !(await page.evaluate(() => document.getElementById('paAlertas'))), 'alertas aparecem como linhas da Central de atenção (sem cartão separado): ' + alertas.replace(/\n/g, ' | ').slice(0, 120));
 check(await page.evaluate(() => { const l = document.getElementById('atencaoLista'); return l.firstElementChild && l.firstElementChild.hasAttribute('data-pa-alerta'); }), 'os alertas ficam no topo da Central');
+// --- dispensar alertas
+const temAlerta = ch => page.evaluate(c => !!document.querySelector('#atencaoLista [data-pa-disp="' + c + '"]'), ch);
+check(await temAlerta('cliente|Joana Murilo'), 'alerta de cliente tem o botão Dispensar');
+await page.click('[data-pa-disp="cliente|Joana Murilo"]'); await page.waitForTimeout(900);
+check(!(await temAlerta('cliente|Joana Murilo')) && /dispensado neste mês/.test(await texto('#atencaoLista')), 'dispensar tira o alerta da lista e mostra o aviso "1 alerta dispensado neste mês"');
+let cfgAl = await (await api('GET', 'config/alertasDispensados')).json().catch(() => null);
+cfgAl = (await (await api('GET', 'config')).json()).docs.find(d => d.id === 'alertasDispensados');
+check(cfgAl && JSON.stringify(cfgAl.data[mes(0)]) === JSON.stringify(['cliente|Joana Murilo']) && Object.keys(cfgAl.data).length === 1, 'a dispensa fica gravada no servidor só para o mês atual');
+await page.reload(); await page.waitForTimeout(2500);
+check(!(await temAlerta('cliente|Joana Murilo')), 'depois de recarregar o alerta continua dispensado');
+check(await page.evaluate(() => document.querySelectorAll('#atencaoLista [data-pa-alerta]').length) >= 1, 'os outros alertas continuam aparecendo');
+await page.click('[data-pa-restaurar]'); await page.waitForTimeout(900);
+check(await temAlerta('cliente|Joana Murilo'), '"mostrar de novo" traz o alerta de volta');
+await api('PUT', 'config/alertasDispensados', { [mes(-1)]: ['cliente|Joana Murilo'] });
+await page.reload(); await page.waitForTimeout(2500);
+check(await temAlerta('cliente|Joana Murilo'), 'dispensa de um mês anterior não vale para o mês atual (o alerta volta)');
 // --- pergunte
 check(await page.evaluate(() => { const ids = Array.from(document.getElementById('inicioAcoes').children).filter(b => getComputedStyle(b).display !== 'none').map(b => b.id); return ids.join() === 'acRecebi,inicioLerDoc,inicioPergunte,inicioNovo'; }), 'faixa de ações no topo: Recebi R$, Foto/PDF, Pergunte, Novo (nessa ordem)');
 await page.click('#inicioPergunte'); await page.waitForTimeout(300);
