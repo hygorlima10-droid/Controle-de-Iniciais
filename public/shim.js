@@ -7,6 +7,7 @@
       .then(function (r) {
         return r.text().then(function (t) {
           var j = null; try { j = JSON.parse(t); } catch (e) {}
+          if (r.status === 401 && j) { location.href = '/login'; }
           if (!r.ok || !j) {
             var e2 = (j && j.error) || { code: r.status === 401 || r.status === 403 ? 'not_granted' : 'unavailable', message: 'Erro ' + r.status };
             throw e2;

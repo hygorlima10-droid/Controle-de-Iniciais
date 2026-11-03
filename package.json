@@ -7,7 +7,7 @@
     "banco:local": "wrangler d1 execute controle-juridico --local --persist-to .dev-data --file=schema.sql",
     "banco:remoto": "wrangler d1 execute controle-juridico --remote --file=schema.sql",
     "deploy": "wrangler deploy",
-    "teste": "node test/servidor.test.mjs"
+    "teste": "node test/login.test.mjs"
   },
   "devDependencies": { "wrangler": "^4.0.0" }
 }

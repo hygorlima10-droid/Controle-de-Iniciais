@@ -2,52 +2,87 @@
    - Todo acesso (página e API) exige login do Cloudflare Access (só o seu e-mail).
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
-const NOME = /^[A-Za-z0-9_-]{1,64}$/;
+const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
 const MAX_LISTA = 1000;
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
 
-/* ---------- login (Cloudflare Access) ---------- */
-let jwksCache = { em: 0, chaves: null };
-const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
-async function chavesAccess(env) {
-  if (jwksCache.chaves && Date.now() - jwksCache.em < 3600e3) return jwksCache.chaves;
-  const r = await fetch(`https://${env.ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`);
-  if (!r.ok) throw new Error('certs');
-  jwksCache = { em: Date.now(), chaves: (await r.json()).keys || [] };
-  return jwksCache.chaves;
+/* ---------- login com senha ---------- */
+const DIAS_SESSAO = 30, MAX_FALHAS = 5, BLOQUEIO_MS = 15 * 60e3;
+const enc = new TextEncoder();
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const deB64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+const sha256 = (txt) => crypto.subtle.digest('SHA-256', enc.encode(txt));
+async function chaveSessao(env) { return crypto.subtle.importKey('raw', await sha256('sessao-v1:' + env.SENHA), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']); }
+export async function criarSessao(env) {
+  const corpo = b64u(enc.encode(JSON.stringify({ exp: Date.now() + DIAS_SESSAO * 864e5 })));
+  const ass = b64u(await crypto.subtle.sign('HMAC', await chaveSessao(env), enc.encode(corpo)));
+  return corpo + '.' + ass;
 }
-export async function verificarLogin(request, env) {
-  if (env.ALLOW_NO_AUTH === '1') return { ok: true, email: 'dev@local' };      // só para testar no computador
-  if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return { ok: false, status: 503, msg: 'Login ainda não configurado (ACCESS_TEAM_DOMAIN e ACCESS_AUD).' };
-  const token = request.headers.get('cf-access-jwt-assertion');
-  if (!token) return { ok: false, status: 401, msg: 'Entre pelo login.' };
+async function sessaoValida(request, env) {
+  const m = /(?:^|;\s*)sessao=([^;]+)/.exec(request.headers.get('cookie') || '');
+  if (!m) return false;
+  const [corpo, ass] = m[1].split('.');
+  if (!corpo || !ass) return false;
   try {
-    const [h, p, s] = token.split('.');
-    const cab = JSON.parse(new TextDecoder().decode(b64u(h)));
-    const pay = JSON.parse(new TextDecoder().decode(b64u(p)));
-    if (cab.alg !== 'RS256') throw new Error('alg');
-    const jwk = (await chavesAccess(env)).find((k) => k.kid === cab.kid);
-    if (!jwk) throw new Error('kid');
-    const chave = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
-    const certo = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', chave, b64u(s), new TextEncoder().encode(h + '.' + p));
-    const aud = Array.isArray(pay.aud) ? pay.aud : [pay.aud];
-    if (!certo || !aud.includes(env.ACCESS_AUD) || pay.iss !== 'https://' + env.ACCESS_TEAM_DOMAIN || pay.exp * 1000 < Date.now()) throw new Error('invalido');
-    if (env.EMAIL_PERMITIDO && String(pay.email || '').toLowerCase() !== env.EMAIL_PERMITIDO.toLowerCase()) return { ok: false, status: 403, msg: 'Este e-mail não tem acesso.' };
-    return { ok: true, email: pay.email };
-  } catch (e) {
-    return { ok: false, status: 401, msg: 'Login inválido.' };
-  }
+    if (!(await crypto.subtle.verify('HMAC', await chaveSessao(env), deB64u(ass), enc.encode(corpo)))) return false;
+    return JSON.parse(new TextDecoder().decode(deB64u(corpo))).exp > Date.now();
+  } catch (e) { return false; }
 }
+async function senhaConfere(env, digitada) {   // comparação de tamanho fixo (não vaza a senha pelo tempo)
+  const a = new Uint8Array(await sha256('senha:' + env.SENHA)), b = new Uint8Array(await sha256('senha:' + digitada));
+  let d = 0; for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
+  return d === 0;
+}
+async function lerTent(env, chave) {
+  const r = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind('_sistema', chave).first();
+  return r ? JSON.parse(r.dados) : { n: 0, ate: 0 };
+}
+const gravarTent = (env, chave, v) => gravar(env, '_sistema', chave, v);
+const limparTent = (env, chave) => env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind('_sistema', chave).run();
+
+const PAGINA = (msg) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entrar</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f4f5;font:16px -apple-system,BlinkMacSystemFont,sans-serif;color:#18181b}
+form{background:#fff;border-radius:20px;padding:28px 24px;width:min(360px,90vw);box-shadow:0 10px 30px rgba(0,0,0,.08)}h1{font-size:1.25rem;margin:0 0 4px}p{margin:0 0 18px;color:#71717a;font-size:.9rem}
+input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d4d4d8;border-radius:12px;font-size:1rem}button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:#27272a;color:#fff;font-size:1rem;font-weight:600}
+.erro{color:#b91c1c;font-size:.88rem;margin-top:10px;min-height:1.2em}</style></head><body>
+<form method="post" action="/login"><h1>Controle Jurídico e Financeiro</h1><p>Digite a senha para entrar.</p>
+<input type="password" name="senha" autocomplete="current-password" autofocus required><button type="submit">Entrar</button><div class="erro">${msg || ''}</div></form></body></html>`;
+const htmlResp = (corpo, status = 200, extra = {}) => new Response(corpo, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...extra } });
+
+async function fazerLogin(request, env) {
+  const ip = request.headers.get('cf-connecting-ip') || 'sem-ip';
+  const chaveIp = 'tent-' + ip.replace(/[^A-Za-z0-9:._-]/g, '_').slice(0, 60), chaveGeral = 'tent-geral';
+  const agora = Date.now();
+  const [tIp, tGeral] = await Promise.all([lerTent(env, chaveIp), lerTent(env, chaveGeral)]);
+  if ((tIp.n >= MAX_FALHAS && tIp.ate > agora) || (tGeral.n >= MAX_FALHAS * 6 && tGeral.ate > agora)) return htmlResp(PAGINA('Muitas tentativas. Aguarde 15 minutos e tente de novo.'), 429);
+  let senha = '';
+  try { senha = String((await request.formData()).get('senha') || ''); } catch (e) {}
+  if (senha && (await senhaConfere(env, senha))) {
+    await Promise.all([limparTent(env, chaveIp)]);
+    const cookie = `sessao=${await criarSessao(env)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${DIAS_SESSAO * 86400}`;
+    return new Response(null, { status: 303, headers: { location: '/', 'set-cookie': cookie, 'cache-control': 'no-store' } });
+  }
+  const novo = (t) => ({ n: (t.ate > agora ? t.n : 0) + 1, ate: agora + BLOQUEIO_MS });
+  await Promise.all([gravarTent(env, chaveIp, novo(tIp)), gravarTent(env, chaveGeral, novo(tGeral))]);
+  return htmlResp(PAGINA('Senha incorreta.'), 401);
+}
+
+const comSeguranca = (resp) => {
+  const r = new Response(resp.body, resp);
+  r.headers.set('x-content-type-options', 'nosniff'); r.headers.set('referrer-policy', 'no-referrer'); r.headers.set('x-frame-options', 'DENY');
+  r.headers.set('strict-transport-security', 'max-age=31536000');
+  return r;
+};
 
 /* ---------- API do banco ---------- */
 async function api(request, env, partes) {
   // partes: ['db', colecao, id?]  |  ['backup']
   const metodo = request.method;
   if (partes[0] === 'backup' && metodo === 'GET') {
-    const { results } = await env.DB.prepare('SELECT colecao, id, dados FROM docs ORDER BY colecao, id').all();
+    const { results } = await env.DB.prepare("SELECT colecao, id, dados FROM docs WHERE colecao NOT LIKE '\\_%' ESCAPE '\\' ORDER BY colecao, id").all();
     return json({ versao: 1, exportadoEm: new Date().toISOString(), docs: results.map((r) => ({ colecao: r.colecao, id: r.id, dados: JSON.parse(r.dados) })) });
   }
   if (partes[0] === 'restaurar' && metodo === 'POST') {
@@ -100,13 +135,29 @@ const gravar = (env, colecao, id, dados) =>
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    const login = await verificarLogin(request, env);
-    if (!login.ok) return new Response(login.msg, { status: login.status, headers: { 'content-type': 'text/plain; charset=utf-8' } });
-    if (url.pathname.startsWith('/api/')) {
-      try { return await api(request, env, url.pathname.slice(5).split('/').filter(Boolean)); }
-      catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
-    }
-    return env.ASSETS.fetch(request);
+    return comSeguranca(await tratar(request, env));
   },
 };
+async function tratar(request, env) {
+  const url = new URL(request.url);
+  const dev = env.ALLOW_NO_AUTH === '1';
+  if (!dev && (!env.SENHA || String(env.SENHA).length < 12)) return new Response('Defina o segredo SENHA (mínimo 12 caracteres) no Cloudflare.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  if (url.pathname === '/login') {
+    if (request.method === 'POST') return dev ? new Response(null, { status: 303, headers: { location: '/' } }) : fazerLogin(request, env);
+    return htmlResp(PAGINA(''));
+  }
+  if (url.pathname === '/sair') return new Response(null, { status: 303, headers: { location: '/login', 'set-cookie': 'sessao=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0' } });
+  if (!dev && !(await sessaoValida(request, env))) {
+    if (url.pathname.startsWith('/api/')) return erro(401, 'not_granted', 'Entre com a senha.');
+    return new Response(null, { status: 303, headers: { location: '/login' } });
+  }
+  if (url.pathname.startsWith('/api/')) {
+    if (request.method !== 'GET') {   // proteção extra contra pedidos vindos de outros sites
+      const o = request.headers.get('origin');
+      if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
+    }
+    try { return await api(request, env, url.pathname.slice(5).split('/').filter(Boolean)); }
+    catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
+  }
+  return env.ASSETS.fetch(request);
+}

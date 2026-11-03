@@ -1,11 +1,12 @@
 // Teste de ponta a ponta: sobe o app no servidor local, cadastra uma despesa e uma petição, recarrega e confere que ficaram guardadas.
-// Uso: (com "npm run dev" rodando)  node test/e2e-local.mjs
+// Uso: suba o servidor local com SENHA (veja README) e rode: node test/e2e-local.mjs
 import { createRequire } from 'module'; const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
-const URL = process.env.URL || 'http://127.0.0.1:8787/';
+const URL = process.env.URL || 'http://127.0.0.1:8788/', SENHA = process.env.SENHA || 'senha-de-teste-123';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 400, height: 860 } })).newPage(); const erros = [];
 page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
-await page.goto(URL); await page.waitForTimeout(1500);
+await page.goto(URL); await page.waitForTimeout(500);
+if (page.url().includes('/login')) { await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(1500); }
 check(await page.evaluate(() => !!window.claude), 'o shim criou window.claude');
 check(await page.evaluate(() => document.getElementById('banner') ? getComputedStyle(document.getElementById('banner')).display === 'none' : true), 'app conectado ao banco (sem aviso de modo local)');
 await page.evaluate(() => document.querySelector('[data-novo="despesa"]').click()); await page.waitForTimeout(200);
