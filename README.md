@@ -38,3 +38,5 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 
 
 <!-- publicação disparada em 2026-11-03T03:19:47Z -->
+
+<!-- build do teste disparado em 2026-11-03T04:53:34Z -->
