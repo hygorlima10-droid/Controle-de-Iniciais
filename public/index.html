@@ -12217,7 +12217,7 @@ function extCfg(){
     contas: (c.contas && typeof c.contas === 'object' && !Array.isArray(c.contas)) ? c.contas : {},
     regras: (c.regras && typeof c.regras === 'object' && !Array.isArray(c.regras)) ? c.regras : {},
     ultimaLeitura: c.ultimaLeitura || null, ultimaImportacao: c.ultimaImportacao || null,
-    configuradoEm: c.configuradoEm || null, iniciado: !!c.iniciado, dataCorte: c.dataCorte || ''
+    configuradoEm: c.configuradoEm || null, iniciado: !!c.iniciado, dataCorte: c.dataCorte || '', ofDesde: c.ofDesde || ''
   };
 }
 /* regra de transição: linhas anteriores a esta data nunca são importadas (padrão: 1º dia do mês em que a pasta foi configurada) */
@@ -13153,6 +13153,90 @@ function extReclassificar(cc){
   return rev;
 }
 
+
+/* ---------- Open Finance (via Pluggy): traz o extrato das contas direto, sem PDF ---------- */
+var ofEstado = { configurado: null, rodando: false, info: '', erro: '' };
+function ofVerStatus(){
+  return fetch('/api/of/status', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ ofEstado.configurado = !!(j && j.configurado); renderExtratos(); }).catch(function(){ ofEstado.configurado = false; });
+}
+function ofTopoHtml(cfg){
+  var desde = cfg.ofDesde || '';
+  if (ofEstado.configurado === null) return '<div class="ext-topo-tit">Extratos do banco</div><div class="saldo-data">Verificando o Open Finance…</div>';
+  if (!ofEstado.configurado) return '<div class="ext-topo-tit">Extratos do banco</div><div class="parcela-sum">O Open Finance ainda não foi ligado neste servidor (faltam as chaves da Pluggy).</div><div class="ext-acoes"><button type="button" class="btn btn-ghost" id="ofDiag">Diagnóstico</button></div>';
+  return '<div class="ext-topo-tit">Open Finance <span class="saldo-data">(via Pluggy)</span></div>' +
+    '<div class="field"><label class="field-label">Trazer movimentações a partir de</label><input type="date" id="ofDesde" value="' + escapeHtml(desde || '') + '">' +
+    '<div class="parcela-sum">Escolha o primeiro dia que ainda não está nos extratos já importados, para não repetir lançamentos.</div></div>' +
+    (cfg.ultimaLeitura ? '<div class="saldo-data">Última atualização: ' + escapeHtml(extFmtQuando(cfg.ultimaLeitura)) + (cfg.ultimaImportacao ? ' · última importação confirmada: ' + escapeHtml(extFmtQuando(cfg.ultimaImportacao)) : '') + '</div>' : '') +
+    (ofEstado.info ? '<div class="saldo-data" role="status">' + escapeHtml(ofEstado.info) + '</div>' : '') +
+    (ofEstado.erro ? '<div class="aviso-sis critico"><span class="as-txt">' + escapeHtml(ofEstado.erro) + '</span></div>' : '') +
+    '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="ofAtualizar"' + (ofEstado.rodando ? ' disabled' : '') + '>' + (ofEstado.rodando ? 'Atualizando…' : 'Atualizar agora') + '</button><button type="button" class="btn btn-ghost" id="ofDiag">Diagnóstico</button><button type="button" class="btn btn-ghost" id="extContas">Contas</button></div>';
+}
+function ofHash(chave, l){ return 'p' + EX.fnv(chave + '|' + l.id); }
+function ofPendentesHashes(chave){
+  var s = {};
+  extPendentes().forEach(function(d){ if (d.chave === chave) (d.lanc || []).forEach(function(l){ s[l.h] = 1; }); });
+  return s;
+}
+function ofAtualizar(){
+  if (ofEstado.rodando) return Promise.resolve();
+  var cfg = extCfg(), desde = (qs('ofDesde') && qs('ofDesde').value) || cfg.ofDesde || '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)){ ofEstado.erro = 'Escolha a data inicial antes de atualizar.'; ofEstado.info = ''; renderExtratos(); return Promise.resolve(); }
+  ofEstado.rodando = true; ofEstado.erro = ''; ofEstado.info = 'Buscando no banco…'; renderExtratos();
+  var trouxe = 0, contasN = 0, avisos = [];
+  return persistExtCfg({ ofDesde: desde }).then(function(){
+    return fetch('/api/of/sincronizar?desde=' + encodeURIComponent(desde), { credentials: 'same-origin', cache: 'no-store' });
+  }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); }).then(function(res){
+    avisos = res.erros || [];
+    var cadeia = Promise.resolve();
+    (res.contas || []).forEach(function(c){
+      cadeia = cadeia.then(function(){
+        var hs = extHashes(c.chave), pend = ofPendentesHashes(c.chave);
+        var lanc = c.lanc.map(function(l){ return { data: l.data, desc: l.desc, nome: l.nome, doc: l.doc, valor: l.valor, h: ofHash(c.chave, l) }; })
+          .filter(function(l){ return !hs[l.h] && !pend[l.h]; });
+        contasN++;
+        if (!lanc.length) return null;
+        trouxe += lanc.length;
+        var r = { banco: c.banco, tipoConta: c.tipoConta, ag: c.ag, cc: c.cc, titular: c.titular, de: lanc[0].data, ate: lanc[lanc.length - 1].data, emitido: c.emitido, saldoAtual: c.saldoAtual, lanc: lanc, conf: { conferidos: 0, divergencias: [] }, chave: c.chave, formato: 'openfinance' };
+        var agora = new Date();
+        return extRegistrarArquivo({ id: 'of_' + c.chave + '_' + agora.getTime(), title: 'Open Finance · ' + c.banco + ' ' + c.tipoConta.toUpperCase() + ' · ' + agora.toISOString().slice(0, 10), createdTime: agora.toISOString() }, r);
+      });
+    });
+    return cadeia;
+  }).then(function(){
+    return persistExtCfg({ ultimaLeitura: new Date().toISOString(), iniciado: true });
+  }).then(function(){
+    ofEstado.info = trouxe ? ('Trouxe ' + trouxe + ' lançamento(s) novo(s) de ' + contasN + ' conta(s). Toque em Conferir para revisar.') : ('Nenhum lançamento novo em ' + contasN + ' conta(s).');
+    if (avisos.length) ofEstado.erro = avisos.join(' · ');
+  }).catch(function(e){
+    ofEstado.erro = (e && e.message) ? e.message : 'Não consegui atualizar agora.'; ofEstado.info = '';
+  }).then(function(){ ofEstado.rodando = false; renderExtratos(); renderInicioExtratos(); renderPainelAtencao(); });
+}
+function ofDiagnostico(){
+  extAbrirGen('Diagnóstico do Open Finance', '<div class="saldo-data">Consultando a Pluggy…</div>', '', false);
+  fetch('/api/of/diagnostico', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); }).then(function(d){
+    var h = '<div class="parcela-sum">Chaves da Pluggy: <b>' + (d.configurado ? 'configuradas' : 'faltando') + '</b>' + (d.configurado ? ' · login na Pluggy: <b>' + (d.autenticou ? 'ok' : 'recusado') + '</b>' : '') + '</div>';
+    if (d.erro) h += '<div class="aviso-sis critico"><span class="as-txt">' + escapeHtml(d.erro) + '</span></div>';
+    (d.avisos || []).forEach(function(a){ h += '<div class="aviso-sis"><span class="as-txt">' + escapeHtml(a) + '</span></div>'; });
+    (d.itens || []).forEach(function(it){
+      h += '<div class="ini-card ext-card"><div class="ext-card-top"><b>' + escapeHtml(it.conector || it.id) + '</b><span class="saldo-data">' + escapeHtml(String(it.status || '')) + (it.tipoConector ? ' · ' + escapeHtml(it.tipoConector) : '') + '</span></div>' +
+        (it.erro ? '<div class="saldo-data" style="color:var(--danger)">' + escapeHtml(it.erro) + '</div>' : '') +
+        (it.atualizadoEm ? '<div class="saldo-data">Atualizado na Pluggy: ' + escapeHtml(String(it.atualizadoEm).slice(0, 16).replace('T', ' ')) + '</div>' : '') +
+        (it.contas || []).map(function(c){ return '<div class="plan-linha"><span>' + escapeHtml((c.tipo || '') + ' · ' + (c.subtipo || '') + ' · ' + (c.nome || '') + ' ' + (c.numero || '')) + '<em>' + (c.erro ? escapeHtml(c.erro) : (c.movimentos90d + ' mov. em 90 dias' + (c.primeira ? ' (' + escapeHtml(c.primeira) + ' a ' + escapeHtml(c.ultima) + ')' : ''))) + '</em></span><strong>' + (c.saldo == null ? '' : fmtMoeda(c.saldo)) + '</strong></div>'; }).join('') + '</div>';
+    });
+    extAbrirGen('Diagnóstico do Open Finance', h, '<button type="button" class="btn btn-ghost" id="ofFecharDiag">Fechar</button>', false);
+  }).catch(function(e){
+    extAbrirGen('Diagnóstico do Open Finance', '<div class="aviso-sis critico"><span class="as-txt">' + escapeHtml((e && e.message) || 'Não consegui consultar.') + '</span></div>', '<button type="button" class="btn btn-ghost" id="ofFecharDiag">Fechar</button>', false);
+  });
+}
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest ? ev.target.closest('#ofAtualizar, #ofDiag, #ofFecharDiag') : null;
+  if (!t) return;
+  if (t.id === 'ofAtualizar') ofAtualizar();
+  else if (t.id === 'ofDiag') ofDiagnostico();
+  else extFecharGen();
+});
+if (window.__SERVIDOR) ofVerStatus();
+
 /* ---------- telas: Extratos, Início, aviso ---------- */
 function extLinhasPendentes(){ var n = 0; extPendentes().forEach(function(d){ n += (d.lanc || []).length; }); return n; }
 function extNomeMes(m){ return mesLabel(m); }
@@ -13165,7 +13249,8 @@ function renderExtratos(){
     return;
   }
   var h = '';
-  if (!cfg.pastaId){
+  if (window.__SERVIDOR){ h = ofTopoHtml(cfg); }
+  else if (!cfg.pastaId){
     h = '<div class="ext-topo-tit">Extratos do banco</div><div class="parcela-sum">Salve os PDFs dos extratos (Itaú e Sicoob) numa pasta do seu Google Drive. O app lê os arquivos novos, mostra o que entendeu e só lança o que você confirmar.</div>' +
         '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="extEscolher">Escolher a pasta do Drive</button></div>';
   } else {
@@ -13184,7 +13269,7 @@ function renderExtratos(){
         '<div class="ext-chips"><span class="ext-chip">' + (d.lanc || []).length + ' linha(s) nova(s)</span>' + (d.nRep ? '<span class="ext-chip">' + d.nRep + ' já importada(s)</span>' : '') + (d.nDescartadas ? '<span class="ext-chip">' + d.nDescartadas + ' anterior(es) ao corte, descartada(s)</span>' : '') + '<span class="ext-chip ' + (d.saldoFecha ? 'ok' : 'bad') + '">' + (d.saldoFecha ? 'saldo fecha' : 'saldo não fecha') + '</span>' + (d.saldoNovo ? '<span class="ext-chip">saldo mais novo que o do app</span>' : '') + '</div>' +
         '<div class="saldo-data">' + escapeHtml(d.titulo || '') + '</div></div>';
     }).join('') + '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="extConferir"' + (extSync.rodando ? ' disabled' : '') + '>' + (extSync.rodando ? 'Lendo os extratos…' : 'Conferir ' + pend.length + ' extrato(s)') + '</button></div>';
-  } else if (cfg.pastaId){
+  } else if (cfg.pastaId || window.__SERVIDOR){
     p = '<div class="financeiro-vazio">Nada para conferir agora. Quando você salvar extratos novos na pasta, eles aparecem aqui.</div>';
   }
   qs('extPend').innerHTML = p;
@@ -13218,7 +13303,7 @@ function renderInicioExtratos(){
 }
 function extAvisoQuinzenal(){
   var cfg = extCfg();
-  if (!cfg.pastaId || storageMode !== 'db') return null;
+  if (window.__SERVIDOR || !cfg.pastaId || storageMode !== 'db') return null;
   var base = cfg.ultimaImportacao || cfg.configuradoEm;
   if (!base) return null;
   var dias = diasDesde(base);

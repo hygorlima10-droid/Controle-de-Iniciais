@@ -1,6 +1,8 @@
 /* Servidor do Controle Jurídico e Financeiro (Cloudflare Worker + banco D1).
-   - Todo acesso (página e API) exige login do Cloudflare Access (só o seu e-mail).
+   - Todo acesso (página e API) exige login com senha (segredo SENHA).
    - A API imita o "banco" que o app já usava dentro do Claude. */
+
+import { configurado as pluggyOk, diagnostico as pluggyDiag, sincronizar as pluggySinc } from './pluggy.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -115,6 +117,20 @@ async function ler(request, env, partes) {
   return json({ text: texto });
 }
 
+
+async function openFinance(request, env, partes) {
+  if (partes[1] === 'status') return json({ configurado: pluggyOk(env) });
+  if (!pluggyOk(env)) return erro(503, 'not_configured', 'O Open Finance ainda não foi configurado no servidor.');
+  if (partes[1] === 'diagnostico') return json(await pluggyDiag(env));
+  if (partes[1] === 'sincronizar') {
+    const desde = new URL(request.url).searchParams.get('desde') || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)) return erro(400, 'invalid', 'Informe a data inicial (AAAA-MM-DD).');
+    try { return json(await pluggySinc(env, desde)); }
+    catch (e) { return erro(502, 'unavailable', `A Pluggy não respondeu como esperado (${e.etapa || ''} ${e.status || ''} ${e.msg || ''}).`.replace(/\s+/g, ' ')); }
+  }
+  return erro(404, 'not_found', 'Não encontrado.');
+}
+
 /* ---------- API do banco ---------- */
 async function api(request, env, partes) {
   // partes: ['db', colecao, id?]  |  ['backup']
@@ -197,7 +213,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'of' ? await openFinance(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

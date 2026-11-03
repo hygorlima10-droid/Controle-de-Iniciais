@@ -40,3 +40,9 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 <!-- publicação disparada em 2026-11-03T03:19:47Z -->
 
 <!-- build do teste disparado em 2026-11-03T04:53:34Z -->
+
+## Open Finance (Pluggy) — somente no app de teste por enquanto
+Segredos no Worker: `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET` e, se a Pluggy não listar as conexões sozinha, `PLUGGY_ITEM_IDS` (ids separados por vírgula). Sem os dois primeiros, a tela Extratos mostra só o aviso e o Diagnóstico.
+A tela **Extratos** traz o botão **Atualizar agora**: busca as contas correntes e coloca as linhas na mesma fila de conferência dos PDFs. Cartões aparecem só no Diagnóstico por enquanto.
+Teste local: `node test/of.test.mjs` (usa uma Pluggy simulada; veja o cabeçalho do arquivo).
+**Ao levar esta branch para a oficial, não leve o `wrangler.jsonc`** (aponta para o banco de teste).

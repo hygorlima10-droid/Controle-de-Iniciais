@@ -1,6 +1,7 @@
 /* Faz o app (que foi feito para rodar dentro do Claude) funcionar neste servidor:
    "claude.use('db')" passa a falar com /api/db (banco D1) e "claude.use('downloads')" baixa o arquivo. */
 (function () {
+  window.__SERVIDOR = true;
   var colecoes = {};
   function req(metodo, caminho, corpo) {
     return fetch(caminho, { method: metodo, headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined, credentials: 'same-origin', cache: 'no-store' })
