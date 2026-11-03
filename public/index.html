@@ -13153,6 +13153,125 @@ function extReclassificar(cc){
   return rev;
 }
 
+
+/* ---------- Extratos por arquivo do celular (PDF do Itaú/Sicoob ou OFX) e arquivos recebidos pelo Compartilhar ---------- */
+var impEstado = { rodando: false, info: '', erro: '', recebidos: [], carregou: false };
+function impBytesParaTexto(buf){
+  var u = new Uint8Array(buf);
+  try{ var t = new TextDecoder('utf-8', { fatal: true }).decode(u); return t; }catch(e){ return new TextDecoder('windows-1252').decode(u); }
+}
+function ofxTag(bloco, nome){
+  var m = new RegExp('<' + nome + '>\\s*([^<\\r\\n]*)', 'i').exec(bloco);
+  return m ? m[1].trim() : '';
+}
+function ofxData(v){ var m = /^(\d{4})(\d{2})(\d{2})/.exec(String(v || '')); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
+function ofxCentavos(v){ var x = String(v).replace(/\s/g, ''); if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); var n = parseFloat(x); return isFinite(n) ? Math.round(n * 100) : null; }
+function ofxLer(txt){
+  if (!/<OFX>/i.test(txt) && !/<STMTTRN>/i.test(txt)) return null;
+  var bankId = ofxTag(txt, 'BANKID').replace(/^0+/, ''), ag = ofxTag(txt, 'BRANCHID').replace(/[^0-9A-Za-z-]/g, ''), cc = ofxTag(txt, 'ACCTID').replace(/[^0-9A-Za-z-]/g, '');
+  var banco = bankId === '341' ? 'Itaú' : (bankId === '756' ? 'Sicoob' : (ofxTag(txt, 'ORG') || ('Banco ' + (bankId || '?'))));
+  var chaveBanco = bankId === '341' ? 'itau' : (bankId === '756' ? 'sicoob' : ('b' + (bankId || 'x')));
+  var chave = chaveBanco + '-' + (ag || '?') + '-' + (cc || '?');
+  var r = { banco: banco, tipoConta: 'pf', ag: ag, cc: cc, titular: {}, lanc: [], saldos: {}, saldoAtual: null, formato: 'ofx', chave: chave, conf: { conferidos: 0, divergencias: [] } };
+  var vistos = {};
+  txt.split(/<STMTTRN>/i).slice(1).forEach(function(blk){
+    blk = blk.split(/<\/STMTTRN>/i)[0];
+    var data = ofxData(ofxTag(blk, 'DTPOSTED')), valor = ofxCentavos(ofxTag(blk, 'TRNAMT')), memo = ofxTag(blk, 'MEMO'), nome = ofxTag(blk, 'NAME'), fit = ofxTag(blk, 'FITID');
+    if (!data || valor === null) return;
+    var desc = memo || nome, contra = (memo && nome && nome !== memo) ? nome : '';
+    var base = fit ? ('o|' + chave + '|' + fit) : [chave, data, valor, EX.norm(desc), EX.norm(contra)].join('|');
+    vistos[base] = (vistos[base] || 0) + 1;
+    r.lanc.push({ data: data, desc: desc, nome: contra, doc: '', valor: valor, h: 'o' + EX.fnv(base) + vistos[base].toString(36) });
+  });
+  var bal = /<LEDGERBAL>([\s\S]*?)<\/LEDGERBAL>|<LEDGERBAL>([\s\S]*)/i.exec(txt);
+  if (bal){ var bl = bal[1] || bal[2] || ''; r.saldoAtual = ofxCentavos(ofxTag(bl, 'BALAMT')); r.emitido = ofxData(ofxTag(bl, 'DTASOF')) ? ofxData(ofxTag(bl, 'DTASOF')) + 'T00:00:00' : null; }
+  var ds = r.lanc.map(function(l){ return l.data; }).sort();
+  r.de = ofxData(ofxTag(txt, 'DTSTART')) || ds[0] || null; r.ate = ofxData(ofxTag(txt, 'DTEND')) || ds[ds.length - 1] || null;
+  if (!r.emitido) r.emitido = new Date().toISOString().slice(0, 19);
+  return r;
+}
+function impLerBytes(nome, buf){
+  var u = new Uint8Array(buf), ehPdf = u.length > 4 && u[0] === 0x25 && u[1] === 0x50 && u[2] === 0x44 && u[3] === 0x46;
+  if (ehPdf){
+    return extCarregarPdfJs().then(function(pdfjs){ return EX.pdfLinhas(pdfjs, new Uint8Array(buf.slice(0))); }).then(function(L){
+      var r = EX.ler(L);
+      if (!r) throw new Error('Não reconheci o formato deste PDF (por enquanto: extratos do Itaú PF/PJ e do Sicoob).');
+      return { r: r, sig: EX.fnv(L.join('\n')) };
+    });
+  }
+  var txt = impBytesParaTexto(buf), r = ofxLer(txt);
+  if (!r) throw new Error('Formato não suportado. Envie o PDF do extrato (Itaú ou Sicoob) ou um arquivo OFX.');
+  return Promise.resolve({ r: r, sig: EX.fnv(txt) });
+}
+function impProcessar(nome, buf){
+  return impLerBytes(nome, buf).then(function(x){
+    var id = 'imp_' + x.sig;
+    if (extDocPorId('arq_' + id)) return { jaLido: true, nome: nome };
+    return extRegistrarArquivo({ id: id, title: nome, createdTime: new Date().toISOString() }, x.r).then(function(){ return { ok: true, nome: nome, linhas: x.r.lanc.length }; });
+  });
+}
+function impResumir(res, falhas){
+  var ok = res.filter(function(x){ return x.ok; }).length, ja = res.filter(function(x){ return x.jaLido; }).length;
+  impEstado.info = (ok ? 'Li ' + ok + ' arquivo(s). Toque em Conferir para revisar.' : 'Nenhum arquivo novo para conferir.') + (ja ? ' ' + ja + ' já tinha(m) sido lido(s).' : '');
+  impEstado.erro = falhas.join(' · ');
+}
+function impLerArquivos(files){
+  if (impEstado.rodando || !files.length) return Promise.resolve();
+  impEstado.rodando = true; impEstado.erro = ''; impEstado.info = 'Lendo ' + files.length + ' arquivo(s)…'; renderExtratos();
+  var res = [], falhas = [], cadeia = Promise.resolve();
+  files.forEach(function(f){
+    cadeia = cadeia.then(function(){ return f.arrayBuffer(); }).then(function(buf){ return impProcessar(f.name, buf); }).then(function(x){ res.push(x); }, function(e){ falhas.push(f.name + ': ' + ((e && e.message) || 'não consegui ler')); });
+  });
+  return cadeia.then(function(){ return persistExtCfg({ ultimaLeitura: new Date().toISOString(), iniciado: true }); }).then(function(){ impResumir(res, falhas); }).then(function(){ impEstado.rodando = false; renderExtratos(); renderInicioExtratos(); renderPainelAtencao(); });
+}
+function impVerRecebidos(){
+  return fetch('/api/recebidos', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ impEstado.recebidos = (j && j.itens) || []; impEstado.carregou = true; renderExtratos(); }).catch(function(){ impEstado.carregou = true; });
+}
+function impB64ParaBuf(b64){ var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+function impLerRecebidos(){
+  if (impEstado.rodando || !impEstado.recebidos.length) return Promise.resolve();
+  impEstado.rodando = true; impEstado.erro = ''; impEstado.info = 'Lendo os arquivos recebidos…'; renderExtratos();
+  var res = [], falhas = [], cadeia = Promise.resolve();
+  impEstado.recebidos.slice().forEach(function(it){
+    cadeia = cadeia.then(function(){ return fetch('/api/recebidos/' + encodeURIComponent(it.id), { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }); })
+      .then(function(d){ return impProcessar(d.nome || it.nome, impB64ParaBuf(d.b64)); })
+      .then(function(x){ res.push(x); return fetch('/api/recebidos/' + encodeURIComponent(it.id), { method: 'DELETE', credentials: 'same-origin' }); },
+            function(e){ falhas.push((it.nome || 'arquivo') + ': ' + ((e && e.message) || 'não consegui ler') + ' (continua na lista; apague-o abaixo se não servir)'); });
+  });
+  return cadeia.then(function(){ return persistExtCfg({ ultimaLeitura: new Date().toISOString(), iniciado: true }); }).then(function(){ impResumir(res, falhas); return impVerRecebidos(); }).then(function(){ impEstado.rodando = false; renderExtratos(); renderInicioExtratos(); renderPainelAtencao(); });
+}
+function impApagarRecebido(id){
+  return fetch('/api/recebidos/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'same-origin' }).then(function(){ return impVerRecebidos(); });
+}
+function impTopoHtml(cfg){
+  var corte = extDataCorte() || '';
+  var rec = impEstado.recebidos || [];
+  return '<div class="ext-topo-tit">Extratos do banco</div>' +
+    '<div class="parcela-sum">Escolha os extratos que estão no celular (PDF do Itaú ou do Sicoob, ou arquivo OFX). O app lê, mostra o que entendeu e só lança o que você confirmar.</div>' +
+    '<input type="file" id="impArq" accept=".pdf,.ofx,application/pdf,application/x-ofx,text/plain,application/octet-stream" multiple style="display:none">' +
+    '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="impEscolher"' + (impEstado.rodando ? ' disabled' : '') + '>' + (impEstado.rodando ? 'Lendo…' : 'Escolher extratos') + '</button><button type="button" class="btn btn-ghost" id="extContas">Contas</button></div>' +
+    (impEstado.info ? '<div class="saldo-data" role="status">' + escapeHtml(impEstado.info) + '</div>' : '') +
+    (impEstado.erro ? '<div class="aviso-sis critico"><span class="as-txt">' + escapeHtml(impEstado.erro) + '</span></div>' : '') +
+    (rec.length ? '<div class="financeiro-secao-head" style="margin-top:12px"><h4>Recebidos pelo Compartilhar (' + rec.length + ')</h4></div>' +
+      rec.map(function(it){ return '<div class="plan-linha"><span>' + escapeHtml(it.nome || 'arquivo') + '<em>' + escapeHtml(extFmtQuando(it.em)) + '</em></span><button type="button" class="btn-text" data-imp-apagar="' + escapeHtml(it.id) + '">Apagar</button></div>'; }).join('') +
+      '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="impLerRec"' + (impEstado.rodando ? ' disabled' : '') + '>Ler os recebidos</button></div>' : '') +
+    '<div class="field" style="margin-top:12px"><label class="field-label">Importar lançamentos a partir de</label><input type="date" id="impCorte" value="' + escapeHtml(corte) + '"><div class="parcela-sum">Lançamentos de datas anteriores são ignorados. Diminua a data se precisar de meses antigos.</div></div>' +
+    (cfg.ultimaLeitura ? '<div class="saldo-data">Última leitura: ' + escapeHtml(extFmtQuando(cfg.ultimaLeitura)) + (cfg.ultimaImportacao ? ' · última importação confirmada: ' + escapeHtml(extFmtQuando(cfg.ultimaImportacao)) : '') + '</div>' : '');
+}
+document.addEventListener('click', function(ev){
+  var t = ev.target.closest ? ev.target.closest('#impEscolher, #impLerRec, [data-imp-apagar]') : null;
+  if (!t) return;
+  if (t.id === 'impEscolher'){ var i = qs('impArq'); if (i) i.click(); }
+  else if (t.id === 'impLerRec') impLerRecebidos();
+  else impApagarRecebido(t.getAttribute('data-imp-apagar'));
+});
+document.addEventListener('change', function(ev){
+  var t = ev.target;
+  if (t && t.id === 'impArq'){ var fs = Array.prototype.slice.call(t.files || []); t.value = ''; impLerArquivos(fs); }
+  else if (t && t.id === 'impCorte' && /^\d{4}-\d{2}-\d{2}$/.test(t.value)){ persistExtCfg({ dataCorte: t.value }).then(function(){ impEstado.info = 'Data de corte atualizada.'; renderExtratos(); }); }
+});
+if (window.__SERVIDOR) impVerRecebidos();
+
 /* ---------- telas: Extratos, Início, aviso ---------- */
 function extLinhasPendentes(){ var n = 0; extPendentes().forEach(function(d){ n += (d.lanc || []).length; }); return n; }
 function extNomeMes(m){ return mesLabel(m); }
@@ -13165,7 +13284,8 @@ function renderExtratos(){
     return;
   }
   var h = '';
-  if (!cfg.pastaId){
+  if (window.__SERVIDOR){ h = impTopoHtml(cfg); }
+  else if (!cfg.pastaId){
     h = '<div class="ext-topo-tit">Extratos do banco</div><div class="parcela-sum">Salve os PDFs dos extratos (Itaú e Sicoob) numa pasta do seu Google Drive. O app lê os arquivos novos, mostra o que entendeu e só lança o que você confirmar.</div>' +
         '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="extEscolher">Escolher a pasta do Drive</button></div>';
   } else {
@@ -13184,8 +13304,8 @@ function renderExtratos(){
         '<div class="ext-chips"><span class="ext-chip">' + (d.lanc || []).length + ' linha(s) nova(s)</span>' + (d.nRep ? '<span class="ext-chip">' + d.nRep + ' já importada(s)</span>' : '') + (d.nDescartadas ? '<span class="ext-chip">' + d.nDescartadas + ' anterior(es) ao corte, descartada(s)</span>' : '') + '<span class="ext-chip ' + (d.saldoFecha ? 'ok' : 'bad') + '">' + (d.saldoFecha ? 'saldo fecha' : 'saldo não fecha') + '</span>' + (d.saldoNovo ? '<span class="ext-chip">saldo mais novo que o do app</span>' : '') + '</div>' +
         '<div class="saldo-data">' + escapeHtml(d.titulo || '') + '</div></div>';
     }).join('') + '<div class="ext-acoes"><button type="button" class="btn btn-primary" id="extConferir"' + (extSync.rodando ? ' disabled' : '') + '>' + (extSync.rodando ? 'Lendo os extratos…' : 'Conferir ' + pend.length + ' extrato(s)') + '</button></div>';
-  } else if (cfg.pastaId){
-    p = '<div class="financeiro-vazio">Nada para conferir agora. Quando você salvar extratos novos na pasta, eles aparecem aqui.</div>';
+  } else if (cfg.pastaId || window.__SERVIDOR){
+    p = '<div class="financeiro-vazio">Nada para conferir agora. ' + (window.__SERVIDOR ? 'Escolha extratos acima ou envie pelo Compartilhar do iPhone.' : 'Quando você salvar extratos novos na pasta, eles aparecem aqui.') + '</div>';
   }
   qs('extPend').innerHTML = p;
   /* dia a dia por mês */
@@ -13218,7 +13338,7 @@ function renderInicioExtratos(){
 }
 function extAvisoQuinzenal(){
   var cfg = extCfg();
-  if (!cfg.pastaId || storageMode !== 'db') return null;
+  if (window.__SERVIDOR || !cfg.pastaId || storageMode !== 'db') return null;
   var base = cfg.ultimaImportacao || cfg.configuradoEm;
   if (!base) return null;
   var dias = diasDesde(base);

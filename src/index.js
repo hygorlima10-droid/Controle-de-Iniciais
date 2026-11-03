@@ -115,6 +115,60 @@ async function ler(request, env, partes) {
   return json({ text: texto });
 }
 
+
+/* ---------- arquivos enviados pelo "Compartilhar" do iPhone (Atalho com token) ---------- */
+const MAX_B64 = 850 * 1024, MAX_RECEBIDOS = 40;
+async function tokenConfere(env, request) {
+  const m = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') || '');
+  if (!m || !env.ENVIO_TOKEN || String(env.ENVIO_TOKEN).length < 24) return false;
+  const a = new Uint8Array(await sha256('token:' + env.ENVIO_TOKEN)), b = new Uint8Array(await sha256('token:' + m[1].trim()));
+  let d = 0; for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i];
+  return d === 0;
+}
+const paraB64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+async function enviar(request, env) {
+  if (request.method !== 'POST') return erro(405, 'method', 'Use POST.');
+  const ip = request.headers.get('cf-connecting-ip') || 'sem-ip', chave = 'tent-env-' + ip.replace(/[^A-Za-z0-9:._-]/g, '_').slice(0, 60), agora = Date.now();
+  const t = await lerTent(env, chave);
+  if (t.n >= MAX_FALHAS && t.ate > agora) return erro(429, 'rate_limited', 'Muitas tentativas. Aguarde 15 minutos.');
+  if (!(await tokenConfere(env, request))) {
+    await gravarTent(env, chave, { n: (t.ate > agora ? t.n : 0) + 1, ate: agora + BLOQUEIO_MS });
+    return erro(401, 'not_granted', 'Token inválido.');
+  }
+  const ct = request.headers.get('content-type') || '';
+  let nome = '', tipo = ct.split(';')[0].trim() || 'application/octet-stream', bytes;
+  try { nome = decodeURIComponent(request.headers.get('x-nome') || ''); } catch (e) { nome = request.headers.get('x-nome') || ''; }
+  if (/multipart\/form-data/i.test(ct)) {
+    const f = await request.formData(); let arq = null;
+    for (const v of f.values()) if (v && typeof v === 'object' && 'arrayBuffer' in v) { arq = v; break; }
+    if (!arq) return erro(400, 'invalid', 'Nenhum arquivo no envio.');
+    bytes = await arq.arrayBuffer(); nome = nome || arq.name || 'arquivo'; tipo = arq.type || tipo;
+  } else bytes = await request.arrayBuffer();
+  if (!bytes.byteLength) return erro(400, 'invalid', 'Arquivo vazio.');
+  const b64 = paraB64(bytes);
+  if (b64.length > MAX_B64) return erro(413, 'quota_exceeded', 'Arquivo grande demais (limite de uns 600 KB). Use "Escolher extratos" dentro do app.');
+  const { results } = await env.DB.prepare("SELECT COUNT(*) AS n FROM docs WHERE colecao = '_recebidos'").all();
+  if (results[0].n >= MAX_RECEBIDOS) return erro(429, 'rate_limited', 'Há arquivos demais esperando no app. Abra Extratos e leia os recebidos.');
+  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+  await gravar(env, '_recebidos', id, { nome: String(nome || 'arquivo').slice(0, 120), tipo, tam: bytes.byteLength, em: new Date().toISOString(), b64 });
+  return json({ ok: true, id, nome: nome || 'arquivo', recebido: true });
+}
+async function recebidos(request, env, partes) {
+  const id = partes[1];
+  if (!id && request.method === 'GET') {
+    const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = '_recebidos' ORDER BY atualizado").all();
+    return json({ itens: results.map((r) => { const d = JSON.parse(r.dados); return { id: r.id, nome: d.nome, tam: d.tam, em: d.em }; }) });
+  }
+  if (id && !NOME.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
+  if (id && request.method === 'GET') {
+    const r = await env.DB.prepare("SELECT dados FROM docs WHERE colecao = '_recebidos' AND id = ?").bind(id).first();
+    if (!r) return erro(404, 'not_found', 'Arquivo não encontrado.');
+    const d = JSON.parse(r.dados); return json({ nome: d.nome, tipo: d.tipo, b64: d.b64 });
+  }
+  if (id && request.method === 'DELETE') { await env.DB.prepare("DELETE FROM docs WHERE colecao = '_recebidos' AND id = ?").bind(id).run(); return json({ ok: true }); }
+  return erro(405, 'method', 'Método não permitido.');
+}
+
 /* ---------- API do banco ---------- */
 async function api(request, env, partes) {
   // partes: ['db', colecao, id?]  |  ['backup']
@@ -187,6 +241,7 @@ async function tratar(request, env) {
     return htmlResp(PAGINA(''));
   }
   if (url.pathname === '/sair') return new Response(null, { status: 303, headers: { location: '/login', 'set-cookie': 'sessao=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0' } });
+  if (url.pathname === '/api/enviar') return enviar(request, env);   // autenticada por token próprio
   if (!dev && !(await sessaoValida(request, env))) {
     if (url.pathname.startsWith('/api/')) return erro(401, 'not_granted', 'Entre com a senha.');
     return new Response(null, { status: 303, headers: { location: '/login' } });
@@ -197,7 +252,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

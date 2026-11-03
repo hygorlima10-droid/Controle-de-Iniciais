@@ -34,7 +34,12 @@ Crie o segredo `ANTHROPIC_API_KEY` (chave do Console do Claude) no Worker. Enqua
 Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 
 ## O que ainda não funciona aqui
-- **Extratos pelo Google Drive** (dependiam da conexão do Claude): voltam numa próxima etapa, escolhendo o arquivo direto no aparelho.
+- **Extratos pelo Google Drive**: substituídos por arquivo do próprio aparelho (abaixo).
 
 
 <!-- publicação disparada em 2026-11-03T03:19:47Z -->
+
+## Extratos por arquivo e pelo Compartilhar do iPhone
+- Tela **Extratos → Escolher extratos**: PDF do Itaú (PF/PJ) ou do Sicoob, ou arquivo OFX. O app lê, mostra a fila de conferência e só lança o que você confirmar.
+- **Compartilhar do iPhone:** o iPhone não deixa um app da tela de início aparecer na folha de compartilhamento, então usa-se um **Atalho** que envia o arquivo para `POST /api/enviar` com o cabeçalho `Authorization: Bearer <ENVIO_TOKEN>` (e, opcionalmente, `X-Nome` com o nome do arquivo). Segredo do Worker: `ENVIO_TOKEN` (mín. 24 caracteres). O token só permite enviar arquivos (limite ~600 KB), nunca ler dados. Os arquivos ficam na lista "Recebidos pelo Compartilhar" até você tocar em **Ler os recebidos**.
+- Testes: `node test/extratos-arquivo.test.mjs` (veja o cabeçalho; PDFs reais ficam fora do repositório).
