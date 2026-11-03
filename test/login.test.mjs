@@ -3,7 +3,9 @@
 const B = process.env.BASE || 'http://127.0.0.1:8788', SENHA = process.env.SENHA || 'senha-de-teste-123';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const post = (senha, ip) => fetch(B + '/login', { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', 'cf-connecting-ip': ip || '1.1.1.1' }, body: 'senha=' + encodeURIComponent(senha) });
-let r = await fetch(B + '/', { redirect: 'manual' }); check(r.status === 303 && r.headers.get('location') === '/login', 'sem sessão: a página manda para /login');
+let r = await fetch(B + '/apple-touch-icon.png', { redirect: 'manual' }); check(r.status === 200 && r.headers.get('content-type').includes('image/png'), 'o ícone do app abre sem login (o iPhone precisa dele)');
+r = await fetch(B + '/manifest.webmanifest', { redirect: 'manual' }); check(r.status === 200, 'o manifesto abre sem login');
+r = await fetch(B + '/', { redirect: 'manual' }); check(r.status === 303 && r.headers.get('location') === '/login', 'sem sessão: a página manda para /login');
 r = await fetch(B + '/api/db/casos'); check(r.status === 401, 'sem sessão: a API responde 401');
 r = await fetch(B + '/shim.js', { redirect: 'manual' }); check(r.status === 303, 'sem sessão: nem os arquivos do app abrem');
 r = await fetch(B + '/login'); check(r.status === 200 && (await r.text()).includes('type="password"'), 'a tela de login abre');
