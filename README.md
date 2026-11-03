@@ -58,3 +58,9 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 
 - **Alertas dispensáveis:** cada alerta tem **Dispensar** (vale só no mês atual; gravado em `config/alertasDispensados` com a chave do mês) e a Central mostra "N alertas dispensados neste mês · mostrar de novo".
 - **Início no desktop:** o grid usa a classe `sem-extr` quando não há extratos para conferir, e a última linha absorve a altura da Central de atenção, para os cartões ficarem juntos.
+
+## Adiar parcela (dentro do Renegociar)
+- `cliente/adiar.py` (rodado uma vez): ao tocar numa parcela atrasada na Central de atenção aparece a escolha **Marcar como recebido / Renegociar** (alvarás, êxitos e prazos seguem o fluxo antigo). O Renegociar abre no modo **só uma parcela** (seletor, data pelo calendário, motivo) e tem o link **Renegociar o contrato todo**.
+- Adiar muda só o vencimento da parcela (`dataOriginal` e `adiadaEm` ficam gravados; histórico em `renegociacoes` com `tipo: "adiamento"`). As demais parcelas não mudam.
+- Em **Cobranças e relatório do Murilo** há **Adiar atrasadas…**: lista só as atrasadas do Murilo, marcadas por padrão, para uma data só.
+- Teste: `node test/adiar.test.mjs` (veja o cabeçalho).
