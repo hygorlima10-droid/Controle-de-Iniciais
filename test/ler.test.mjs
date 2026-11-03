@@ -31,10 +31,8 @@ modo = 'ok';
 // pela tela
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 400, height: 860 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(1800);
-check(await page.evaluate(() => getComputedStyle(document.getElementById('fabLerDoc')).display === 'flex'), 'o botão flutuante da câmera aparece');
-const m = await page.evaluate(() => { const a = document.getElementById('fabLerDoc').getBoundingClientRect(), b = document.getElementById('fabRecebi').getBoundingClientRect(); return [a.right - b.right, a.width - b.width, a.height - b.height, b.top - a.bottom]; });
-check(Math.abs(m[0]) < 1 && Math.abs(m[1]) < 1 && Math.abs(m[2]) < 1 && m[3] > 0, 'câmera simétrica ao Recebi R$ (' + m.map(x => Math.round(x)).join(',') + ')');
-await page.click('#fabLerDoc'); await page.waitForTimeout(300);
+check(await page.evaluate(() => getComputedStyle(document.getElementById('inicioLerDoc')).display !== 'none' && !document.getElementById('fabLerDoc')), 'botão Foto/PDF aparece na faixa de ações do Início (sem botão flutuante)');
+await page.click('#inicioLerDoc'); await page.waitForTimeout(300);
 check(!(await page.evaluate(() => /não recebe fotos/.test(document.getElementById('ldCorpo').innerText))), 'aceita foto (sem aviso de "não recebe fotos")');
 await page.setInputFiles('#ldArq', 'test/pixel.png'); await page.click('#ldPrim'); await page.waitForTimeout(1500);
 check(await page.evaluate(() => document.getElementById('ldTitulo').textContent) === 'Conferir o que foi lido', 'tela de conferência aparece');

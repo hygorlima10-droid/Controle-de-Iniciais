@@ -190,65 +190,61 @@ paMontarTela();
 
 /* ---------- onde abrir ---------- */
 (function(){
-  var at = qs('inicioAtalhos');
-  if (at){ var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost'; b.id = 'inicioPergunte'; b.setAttribute('data-uso', 'pergunte'); b.style.display = 'none'; b.textContent = 'Pergunte ao app'; at.appendChild(b); }
   var dr = qs('abrirRecebiBtn');
-  if (dr && dr.parentNode){ var it = document.createElement('button'); it.type = 'button'; it.className = 'dr-it'; it.id = 'abrirPergunteBtn'; it.style.display = 'none'; it.title = 'Pergunte ao app'; it.innerHTML = '<svg><use href="#ic-chart"/></svg><span class="lab">Pergunte ao app</span>'; dr.parentNode.insertBefore(it, dr); }
+  if (dr && dr.parentNode){ var it = document.createElement('button'); it.type = 'button'; it.className = 'dr-it'; it.id = 'abrirPergunteBtn'; it.style.display = 'none'; it.title = 'Pergunte ao app'; it.innerHTML = '<svg><use href="#ic-ask"/></svg><span class="lab">Pergunte ao app</span>'; dr.parentNode.insertBefore(it, dr); }
   paSample().then(function(s){ ['inicioPergunte', 'abrirPergunteBtn'].forEach(function(id){ var e = qs(id); if (e) e.style.display = s ? '' : 'none'; }); });
   document.addEventListener('click', function(ev){
     var t = ev.target.closest ? ev.target.closest('#inicioPergunte, #abrirPergunteBtn, [data-pa-abrir]') : null;
     if (!t) return;
     if (t.id === 'abrirPergunteBtn' && typeof fecharMenu === 'function') fecharMenu();
+    paUsar('pergunte');
     paAbrir(t.getAttribute('data-pa-abrir') || '');
   });
 })();
 
-/* ---------- alertas que pensam (calculados pelo app, sem IA) ---------- */
+/* ---------- alertas que pensam (calculados pelo app, sem IA) — aparecem como linhas da Central de atenção ---------- */
 function paAlertas(){
   var a = [], hoje = todayISO(), m0 = hoje.slice(0, 7);
   var proj; try{ proj = anProjecao(4); }catch(e){ return a; }
   var neg = proj.linhas.filter(function(l){ return l.saldoBase < 0; })[0];
-  if (neg) a.push({ nivel: 'alto', txt: 'O caixa previsto fica <b>negativo em ' + escapeHtml(mesLabel(neg.m)) + '</b> (' + fmtMoeda(neg.saldoBase) + '), considerando só parcelas e receitas fixas.', q: 'O que posso fazer para o caixa não ficar negativo em ' + mesLabel(neg.m) + '?' });
+  if (neg) a.push({ nivel: 'alto', titulo: 'Caixa previsto negativo em ' + mesLabel(neg.m), detalhe: 'Só com parcelas e receitas fixas, sem contar alvarás.', valor: neg.saldoBase, q: 'O que posso fazer para o caixa não ficar negativo em ' + mesLabel(neg.m) + '?' });
   var un = listarUnidades().filter(function(u){ var d = anDocDaUnidade(u); return !(d && d.atipica) && !u.arquivado && restanteMeu(u) > 0.004 && u.data && u.data < hoje; });
   var porCli = {};
   un.forEach(function(u){ var k = u.cliente; (porCli[k] = porCli[k] || { n: 0, v: 0, antiga: u.data }).n++; porCli[k].v += restanteMeu(u); if (u.data < porCli[k].antiga) porCli[k].antiga = u.data; });
   Object.keys(porCli).filter(function(k){ return porCli[k].n >= 2; }).sort(function(x, y){ return porCli[y].v - porCli[x].v; }).slice(0, 2).forEach(function(k){
-    a.push({ nivel: 'medio', txt: '<b>' + escapeHtml(k) + '</b> tem ' + porCli[k].n + ' parcelas vencidas (' + fmtMoeda(porCli[k].v) + '), a mais antiga desde ' + escapeHtml(fmtData(porCli[k].antiga)) + '.', q: 'Resuma o que ' + k + ' me deve' });
+    a.push({ nivel: 'medio', titulo: k + ': ' + porCli[k].n + ' parcelas vencidas', detalhe: 'A mais antiga venceu em ' + fmtData(porCli[k].antiga) + '.', valor: r2(porCli[k].v), q: 'Resuma o que ' + k + ' me deve' });
   });
   var res = computeReservaInfo();
-  if (res.existe && res.alvo > 0 && res.atual < res.alvo * 0.5) a.push({ nivel: 'medio', txt: 'A reserva de emergência está em <b>' + Math.round(res.atual / res.alvo * 100) + '%</b> do alvo (' + fmtMoeda(res.atual) + ' de ' + fmtMoeda(res.alvo) + ').', q: 'Como posso completar a reserva de emergência?' });
-  /* despesa fixa que subiu bastante */
+  if (res.existe && res.alvo > 0 && res.atual < res.alvo * 0.5) a.push({ nivel: 'medio', titulo: 'Reserva de emergência em ' + Math.round(res.atual / res.alvo * 100) + '% do alvo', detalhe: fmtMoeda(res.atual) + ' de ' + fmtMoeda(res.alvo) + '.', valor: r2(res.alvo - res.atual), q: 'Como posso completar a reserva de emergência?' });
   despesas.forEach(function(d){
     if (d.tipo !== 'fixa' || d.ativa === false || !d.pagamentos) return;
     var ms = Object.keys(d.pagamentos).filter(function(k){ return k < m0 && d.pagamentos[k] && d.pagamentos[k].valor > 0; }).sort().slice(-4);
     var atualReg = d.pagamentos[m0] && d.pagamentos[m0].valor;
-    if (ms.length >= 3 && atualReg > 0){ var med = ms.reduce(function(t, k){ return t + d.pagamentos[k].valor; }, 0) / ms.length; if (atualReg > med * 1.25 && atualReg - med > 30) a.push({ nivel: 'baixo', txt: '<b>' + escapeHtml(d.nome) + '</b> veio ' + fmtMoeda(atualReg) + ' este mês, ' + Math.round((atualReg / med - 1) * 100) + '% acima da média recente (' + fmtMoeda(med) + ').', q: '' }); }
+    if (ms.length >= 3 && atualReg > 0){ var med = ms.reduce(function(t, k){ return t + d.pagamentos[k].valor; }, 0) / ms.length; if (atualReg > med * 1.25 && atualReg - med > 30) a.push({ nivel: 'baixo', titulo: d.nome + ' veio mais cara', detalhe: Math.round((atualReg / med - 1) * 100) + '% acima da média recente (' + fmtMoeda(med) + ').', valor: r2(atualReg), q: '' }); }
   });
   var prox = listarUnidades().filter(function(u){ return u.docTipo === 'alvara' && !u.pago && u.data && u.data >= hoje && u.data <= somarDias(hoje, 10) && restanteMeu(u) > 0.004; });
-  if (prox.length) a.push({ nivel: 'baixo', txt: 'Alvará previsto para os próximos dias: <b>' + escapeHtml(prox[0].cliente) + '</b> (' + fmtMoeda(restanteMeu(prox[0])) + ', ' + escapeHtml(fmtData(prox[0].data)) + ').', q: '' });
+  if (prox.length) a.push({ nivel: 'baixo', titulo: 'Alvará previsto: ' + prox[0].cliente, detalhe: 'Previsão para ' + fmtData(prox[0].data) + '.', valor: r2(restanteMeu(prox[0])), q: '' });
   var ordem = { alto: 0, medio: 1, baixo: 2 };
-  return a.sort(function(x, y){ return ordem[x.nivel] - ordem[y.nivel]; }).slice(0, 4);
+  return a.sort(function(x, y){ return ordem[x.nivel] - ordem[y.nivel]; }).slice(0, 3);
 }
-function paRenderAlertas(){
-  var host = qs('paAlertas');
-  if (!host){
-    var ref = qs('atencaoSection'); if (!ref || !ref.parentNode) return;
-    host = document.createElement('div'); host.id = 'paAlertas'; ref.parentNode.insertBefore(host, ref);
-  }
-  var a = []; try{ a = paAlertas(); }catch(e){ console.error('alertas', e); }
-  var html = a.length ? '<div class="ini-card pa-alertas"><div class="financeiro-secao-head"><h4>De olho</h4></div>' + a.map(function(x){
-    return '<div class="pa-al pa-al-' + x.nivel + '"><span>' + x.txt + '</span>' + (x.q && paTemSample() ? '<button type="button" class="btn-text" data-pa-abrir="' + escapeHtml(x.q) + '">Perguntar</button>' : '') + '</div>';
-  }).join('') + '</div>' : '';
-  if (host.getAttribute('data-h') === html) return;
-  host.setAttribute('data-h', html); host.innerHTML = html;
-}
-var paSampleOk = false; paSample().then(function(s){ paSampleOk = !!s; paRenderAlertas(); });
+var paAlertasCache = { t: 0, v: [] };
+function paAlertasRapido(){ var agora = Date.now(); if (agora - paAlertasCache.t > 1500){ try{ paAlertasCache = { t: agora, v: paAlertas() }; }catch(e){ console.error('alertas', e); paAlertasCache = { t: agora, v: [] }; } } return paAlertasCache.v; }
+var paSampleOk = false; paSample().then(function(s){ paSampleOk = !!s; paAlertasCache.t = 0; try{ renderPainelAtencao(); }catch(e){} });
 function paTemSample(){ return paSampleOk; }
-(function(){
-  var st = document.createElement('style');
-  st.textContent = '.pa-alertas{margin:0 0 12px}.pa-al{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border);font-size:.86rem;line-height:1.4}.pa-al:first-of-type{border-top:0}.pa-al-alto{border-left:3px solid var(--danger);padding-left:9px}.pa-al-medio{border-left:3px solid var(--tutela);padding-left:9px}.pa-al-baixo{border-left:3px solid var(--info);padding-left:9px}.pa-al button{flex-shrink:0}';
-  document.head.appendChild(st);
-})();
+function paLinhaAlerta(a){
+  var tom = a.nivel === 'alto' ? 'up-d-atraso' : (a.nivel === 'medio' ? 'up-d-aviso' : 'up-d-info');
+  return '<div class="stall-chip pa-linha" data-pa-alerta="1"><div class="up-data ' + tom + '"><svg><use href="#ic-warn"/></svg></div>' +
+    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span>' + (a.valor !== null && a.valor !== undefined ? '<span>' + fmtMoeda(a.valor) + '</span>' : '') + '</div>' +
+    '<div class="up-when">' + escapeHtml(a.detalhe) + (a.q && paTemSample() ? ' <button type="button" class="pa-ask" data-pa-abrir="' + escapeHtml(a.q) + '" title="Perguntar ao app" aria-label="Perguntar ao app"><svg><use href="#ic-ask"/></svg></button>' : '') + '</div></div>';
+}
+function paInserirAlertas(){
+  var lista = qs('atencaoLista'), sec = qs('atencaoSection'); if (!lista || !sec) return;
+  Array.prototype.forEach.call(lista.querySelectorAll('[data-pa-alerta]'), function(e){ e.remove(); });
+  var a = paAlertasRapido(); if (!a.length) return;
+  sec.style.display = ''; var vz = qs('atencaoVazio'); if (vz) vz.style.display = 'none';
+  lista.insertAdjacentHTML('afterbegin', a.map(paLinhaAlerta).join(''));
+  var bd = qs('atencaoBadge'); if (bd) bd.textContent = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length;
+}
 
 /* ---------- metas com plano ---------- */
 function paMetaPlanoHtml(m, falta, meses){
@@ -309,42 +305,65 @@ function paIrExtra(tipo, id){
   var inp = qs('buscaGlobalInput'); if (inp) inp.placeholder = 'Buscar em tudo: clientes, processos, despesas, obra, valores…';
 })();
 
-/* ---------- atalhos dinâmicos ---------- */
+/* ---------- folha "Novo" (cadastros e ações), ordenada pelo que você mais usa ---------- */
 var PA_USO_KEY = 'controle.atalhos.uso.v1';
 function paUsoLer(){ try{ return JSON.parse(localStorage.getItem(PA_USO_KEY) || '{}') || {}; }catch(e){ return {}; } }
-function paUsoGravar(o){ try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(o)); }catch(e){} }
-function paOrdenarAtalhos(){
-  var host = qs('inicioAtalhos'); if (!host) return;
-  var uso = paUsoLer(), btns = Array.prototype.slice.call(host.children).filter(function(b){ return b.tagName === 'BUTTON'; });
-  function chave(b){ return b.getAttribute('data-novo') || b.getAttribute('data-uso') || b.id; }
-  var ordem = btns.map(function(b, i){ return { b: b, i: i, n: uso[chave(b)] || 0 }; });
-  ordem.sort(function(a, b){ return b.n - a.n || a.i - b.i; });
-  ordem.forEach(function(x){ host.appendChild(x.b); });
-  ordem.forEach(function(x, i){ x.b.classList.toggle('btn-primary', i === 0 && x.n > 0 || (x.b.classList.contains('ini-recebi') && !ordem.some(function(y){ return y.n > 0; }))); x.b.classList.toggle('btn-ghost', !x.b.classList.contains('btn-primary')); });
+function paUsar(k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(u)); }catch(e){} }
+var PA_NOVO = [
+  { k: 'recebi', t: 'Recebi R$', i: 'ic-coin', f: function(){ abrirRecebi(); } },
+  { k: 'peticao', t: 'Petição', i: 'ic-file', f: function(){ abrirNovo(); } },
+  { k: 'acordo', t: 'Acordo', i: 'ic-clip', f: function(){ abrirNovoAcordo(); } },
+  { k: 'alvara', t: 'Alvará', i: 'ic-stamp', f: function(){ abrirNovoAlvara(); } },
+  { k: 'despesa', t: 'Despesa', i: 'ic-receipt', f: function(){ abrirNovaDespesa('pj'); } },
+  { k: 'cliente', t: 'Cliente', i: 'ic-users', f: function(){ abrirClienteEdit({}); } },
+  { k: 'foto', t: 'Foto ou PDF', i: 'ic-cam', f: function(){ ldAbrir(); }, ia: true },
+  { k: 'extratos', t: 'Extratos', i: 'ic-bank', f: function(){ setActiveTab('extratos'); } },
+  { k: 'pergunte', t: 'Pergunte', i: 'ic-ask', f: function(){ paAbrir(''); }, ia: true }
+];
+function paNovoHtml(){
+  var uso = paUsoLer(), tab = (typeof activeTab !== 'undefined') ? activeTab : '';
+  var primeiro = { peticoes: 'peticao', acordos: 'acordo', alvaras: 'alvara', clientes: 'cliente' }[tab] || '';
+  var itens = PA_NOVO.filter(function(x){ return !x.ia || paTemSample(); }).map(function(x, i){ return { x: x, i: i, n: x.k === primeiro ? 1e9 : (uso[x.k] || 0) }; });
+  itens.sort(function(a, b){ return b.n - a.n || a.i - b.i; });
+  return itens.map(function(o, i){ return '<button type="button" class="novo-it' + (i === 0 ? ' novo-1' : '') + '" data-novo-k="' + o.x.k + '"><svg><use href="#' + o.x.i + '"/></svg><span>' + escapeHtml(o.x.t) + '</span></button>'; }).join('');
 }
-function paAtalhosContexto(){
-  var host = qs('inicioAtalhos'); if (!host) return;
-  var ctx = qs('inicioAtalhosCtx');
-  if (!ctx){ ctx = document.createElement('div'); ctx.id = 'inicioAtalhosCtx'; ctx.className = 'atalhos'; ctx.style.marginTop = '8px'; host.parentNode.insertBefore(ctx, host.nextSibling); }
-  var hoje = todayISO(), itens = [];
-  var vencemHoje = listarUnidades().filter(function(u){ var d = anDocDaUnidade(u); return !(d && d.atipica) && restanteMeu(u) > 0.004 && u.data && u.data <= hoje; }).length;
-  if (vencemHoje) itens.push('<button type="button" class="btn btn-ghost" data-pa-recebi="1">Receber ' + vencemHoje + ' vencida' + (vencemHoje > 1 ? 's' : '') + ' / de hoje</button>');
-  var pend = extPendentes().length;
-  if (pend) itens.push('<button type="button" class="btn btn-ghost" data-pa-ext="1">Conferir ' + pend + ' extrato' + (pend > 1 ? 's' : '') + '</button>');
-  var html = itens.join(''); if (ctx.getAttribute('data-h') !== html){ ctx.setAttribute('data-h', html); ctx.innerHTML = html; ctx.style.display = html ? '' : 'none'; }
+function paAbrirNovo(){
+  var ov = qs('overlayNovo');
+  if (!ov){
+    ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'overlayNovo';
+    ov.innerHTML = '<div class="modal"><div class="modal-head"><h2>Novo</h2><button class="icon-btn" id="novoFechar" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="novo-grid" id="novoGrid"></div></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+      if (e.target === ov || (e.target.closest && e.target.closest('#novoFechar'))){ ov.classList.remove('show'); return; }
+      var b = e.target.closest ? e.target.closest('[data-novo-k]') : null; if (!b) return;
+      var k = b.getAttribute('data-novo-k'), it = PA_NOVO.filter(function(x){ return x.k === k; })[0];
+      ov.classList.remove('show'); paUsar(k); if (it) setTimeout(function(){ it.f(); }, 60);
+    });
+  }
+  qs('novoGrid').innerHTML = paNovoHtml();
+  ov.classList.add('show');
 }
 document.addEventListener('click', function(ev){
-  var t = ev.target.closest ? ev.target.closest('#inicioAtalhos button, #fabLerDoc, #fabRecebi') : null;
-  if (t){ var k = t.getAttribute('data-novo') || t.getAttribute('data-uso') || t.id; if (k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; paUsoGravar(u); setTimeout(paOrdenarAtalhos, 50); } }
-  var c = ev.target.closest ? ev.target.closest('[data-pa-recebi], [data-pa-ext]') : null;
-  if (c){ if (c.hasAttribute('data-pa-recebi')) abrirRecebi(); else setActiveTab('extratos'); }
+  var t = ev.target.closest ? ev.target.closest('#inicioNovo, #acRecebi, #inicioLerDoc') : null;
+  if (!t) return;
+  if (t.id === 'inicioNovo') paAbrirNovo();
+  else if (t.id === 'acRecebi'){ paUsar('recebi'); abrirRecebi(); }
+  else if (t.id === 'inicioLerDoc') paUsar('foto');
 });
-function paAtualizarInicio(){ try{ paOrdenarAtalhos(); paAtalhosContexto(); paRenderAlertas(); }catch(e){ console.error('inicio', e); } }
+/* botão + pequeno: no Início só aparece depois que a faixa de ações sai da tela */
+(function(){
+  function ajustar(){
+    var fab = qs('fabNew'), ac = qs('inicioAcoes'); if (!fab || !ac || activeTab !== 'inicio') return;
+    fab.style.display = (ac.getBoundingClientRect().bottom < 4) ? '' : 'none';
+  }
+  window.addEventListener('scroll', ajustar, { passive: true });
+  setInterval(ajustar, 700);
+})();
 
 /* ---------- desfazer a última ação ---------- */
 function paDesfazerBotao(){
   var dr = qs('backupBtn'); if (!dr || qs('desfazerBtn')) return;
-  var b = document.createElement('button'); b.type = 'button'; b.className = 'dr-it'; b.id = 'desfazerBtn'; b.title = 'Desfazer a última ação'; b.innerHTML = '<svg><use href="#ic-dl"/></svg><span class="lab" id="desfazerRotulo">Desfazer última ação</span>';
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'dr-it'; b.id = 'desfazerBtn'; b.title = 'Desfazer a última ação'; b.innerHTML = '<svg><use href="#ic-undo"/></svg><span class="lab" id="desfazerRotulo">Desfazer última ação</span>';
   dr.parentNode.insertBefore(b, dr);
   b.addEventListener('click', function(){
     if (typeof fecharMenu === 'function') fecharMenu();
@@ -357,12 +376,18 @@ function paDesfazerBotao(){
 }
 if (window.__desfazer) paDesfazerBotao();
 
-/* ---------- gancho: refaz o que depende dos dados ---------- */
+/* ---------- gancho: depois de desenhar a Central de atenção, acrescenta os alertas ---------- */
+var paAtraso = null;
 (function(){
-  var agendado = null;
   var orig = renderPainelAtencao;
-  renderPainelAtencao = function(){ var r = orig.apply(this, arguments); clearTimeout(agendado); agendado = setTimeout(paAtualizarInicio, 120); return r; };
-  setTimeout(paAtualizarInicio, 600);
+  renderPainelAtencao = function(){
+    var bd = qs('atencaoBadge'); var r = orig.apply(this, arguments);
+    if (bd) bd.setAttribute('data-itens', bd.textContent || '0');
+    try{ paInserirAlertas(); }catch(e){ console.error('alertas', e); }
+    clearTimeout(paAtraso); paAtraso = setTimeout(function(){ paAlertasCache.t = 0; try{ paInserirAlertas(); }catch(e){} }, 900);   /* garante o resultado final depois que os dados terminam de chegar */
+    return r;
+  };
+  setTimeout(function(){ try{ renderPainelAtencao(); }catch(e){} }, 600);
 })();
 
 /* ---------- backups automáticos semanais (guardados no servidor) ---------- */

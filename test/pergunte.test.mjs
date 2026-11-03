@@ -35,10 +35,11 @@ await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await pag
 const texto = sel => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', sel);
 // --- alertas
 await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]') && document.querySelector('#drawer [data-tab="inicio"]').click()); await page.waitForTimeout(1200);
-const alertas = await texto('#paAlertas');
-check(/De olho/.test(alertas) && /Joana Murilo/.test(alertas) === false || /parcelas vencidas|negativo|reserva/i.test(alertas), 'alertas inteligentes aparecem no Início: ' + alertas.replace(/\n/g, ' | ').slice(0, 150));
+const alertas = await texto('#atencaoLista');
+check(await page.evaluate(() => document.querySelectorAll('#atencaoLista [data-pa-alerta]').length) >= 1 && /parcelas vencidas|negativo|Reserva/i.test(alertas) && !(await page.evaluate(() => document.getElementById('paAlertas'))), 'alertas aparecem como linhas da Central de atenção (sem cartão separado): ' + alertas.replace(/\n/g, ' | ').slice(0, 120));
+check(await page.evaluate(() => { const l = document.getElementById('atencaoLista'); return l.firstElementChild && l.firstElementChild.hasAttribute('data-pa-alerta'); }), 'os alertas ficam no topo da Central');
 // --- pergunte
-check(await page.evaluate(() => getComputedStyle(document.getElementById('inicioPergunte')).display !== 'none'), 'botão "Pergunte ao app" aparece no Início');
+check(await page.evaluate(() => { const ids = Array.from(document.getElementById('inicioAcoes').children).filter(b => getComputedStyle(b).display !== 'none').map(b => b.id); return ids.join() === 'acRecebi,inicioLerDoc,inicioPergunte,inicioNovo'; }), 'faixa de ações no topo: Recebi R$, Foto/PDF, Pergunte, Novo (nessa ordem)');
 await page.click('#inicioPergunte'); await page.waitForTimeout(300);
 await page.fill('#paInput', 'Quanto o Murilo me deve?'); await page.click('#paEnviar'); await page.waitForTimeout(1800);
 const p2 = prompts.filter(p => !/Classifique a pergunta/.test(p.texto)).pop(), fatos = JSON.parse(p2.texto.split('CONTEXTO (JSON):\n')[1].split('\nPERGUNTA')[0]);
@@ -75,13 +76,25 @@ check(/Pedro Silva/.test(await texto('#buscaGlobalResultados')), 'busca por valo
 await page.fill('#buscaGlobalInput', 'quanto vou receber do alvará do Ciclano'); await page.waitForTimeout(400);
 check(/Perguntar ao app/.test(await texto('#buscaGlobalResultados')), 'sem resultados, a busca oferece "Perguntar ao app"');
 await page.fill('#buscaGlobalInput', '');
-// --- atalhos dinâmicos
-for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('#inicioAtalhos [data-novo="despesa"]').click()); await page.waitForTimeout(120); await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'))); }
-await page.waitForTimeout(300);
-check(await page.evaluate(() => document.getElementById('inicioAtalhos').children[0].getAttribute('data-novo')) === 'despesa', 'atalho mais usado vem primeiro no Início');
-check(/Receber|Conferir/.test(await texto('#inicioAtalhosCtx')), 'atalho de contexto aparece (parcelas vencidas)');
+// --- folha Novo
+await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
+for (let i = 0; i < 3; i++) { await page.click('#inicioNovo'); await page.waitForTimeout(150); await page.click('[data-novo-k="despesa"]'); await page.waitForTimeout(250); await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'))); }
+await page.click('#inicioNovo'); await page.waitForTimeout(200);
+const tiles = await page.evaluate(() => Array.from(document.querySelectorAll('#novoGrid [data-novo-k]')).map(b => b.getAttribute('data-novo-k')));
+check(tiles.length === 9 && tiles[0] === 'despesa', 'folha "Novo": 9 ações, a mais usada (Despesa) vem primeiro: ' + tiles.join());
+await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
+check(!(await page.evaluate(() => !!document.getElementById('inicioAtalhos') || !!document.getElementById('fabRecebi') || !!document.getElementById('fabLerDoc'))), 'não há mais fileira de atalhos no fim nem botões flutuantes de Recebi/câmera');
+check(await page.evaluate(() => getComputedStyle(document.getElementById('fabNew')).display === 'none'), 'no topo do Início o botão + pequeno fica escondido');
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await page.waitForTimeout(1000);
+check(await page.evaluate(() => getComputedStyle(document.getElementById('fabNew')).display !== 'none' && document.getElementById('fabNew').getBoundingClientRect().width <= 48), 'depois de rolar, aparece o botão + pequeno (até 48 px)');
+await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="peticoes"]').click()); await page.waitForTimeout(500);
+await page.click('#fabNew'); await page.waitForTimeout(200);
+check(await page.evaluate(() => document.querySelector('#novoGrid [data-novo-k]').getAttribute('data-novo-k')) === 'peticao', 'em Petições, o + abre a folha "Novo" com Petição primeiro');
+await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
+await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await page.waitForTimeout(600);
 // --- desfazer
-await page.evaluate(() => document.querySelector('[data-novo="despesa"]').click()); await page.waitForTimeout(200);
+await page.click('#inicioNovo'); await page.waitForTimeout(200); await page.click('[data-novo-k="despesa"]'); await page.waitForTimeout(300);
 await page.fill('#despesaNomeInput', 'Despesa para desfazer'); await page.fill('#despesaValorInput', '10'); await page.evaluate(() => document.querySelector('#segDespesaTipo [data-value="unica"]').click()); await page.fill('#despesaDataInput', dia(3)); await page.click('#saveBtnDespesa'); await page.waitForTimeout(900);
 let ds = await (await api('GET', 'despesas')).json(); check(ds.docs.some(d => d.data.nome === 'Despesa para desfazer'), 'despesa criada');
 check(/Desfazer: criou despesa "Despesa para desfazer"/.test(await page.evaluate(() => document.getElementById('desfazerRotulo').textContent)), 'o menu mostra o que será desfeito');

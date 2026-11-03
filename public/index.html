@@ -630,6 +630,23 @@
     padding:24px 16px;overflow-y:auto;z-index:100;
   }
   .overlay.show{display:flex;}
+  /* ---- faixa de ações do Início, folha "Novo", alertas na Central ---- */
+  .ini-acoes{grid-area:acoes;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;}
+  .ini-acoes .acao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:64px;padding:9px 4px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-weight:600;font-size:0.76rem;cursor:pointer;font-family:inherit;}
+  .ini-acoes .acao svg{width:23px;height:23px;}
+  .ini-acoes .acao.acao-ouro{background:var(--gold-btn);color:var(--gold-ink);border-color:transparent;}
+  @media (min-width:1000px){ .ini-acoes{max-width:520px;} }
+  .novo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .novo-it{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:84px;border-radius:18px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font-weight:600;font-size:0.84rem;cursor:pointer;font-family:inherit;padding:10px 4px;}
+  .novo-it svg{width:26px;height:26px;}
+  .novo-it.novo-1{background:var(--gold-btn);color:var(--gold-ink);border-color:transparent;}
+  #atencaoSection .up-data svg{width:24px;height:24px;}
+  #atencaoSection .up-data.up-d-aviso{background:rgba(201,133,0,0.16);color:var(--tutela);}
+  #atencaoSection .up-data.up-d-info{background:rgba(29,127,191,0.14);color:var(--info);}
+  #atencaoSection .up-data.up-d-atraso svg{color:var(--urgente);}
+  .pa-ask{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;width:26px;height:26px;margin-left:6px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--accent);cursor:pointer;padding:0;}
+  .pa-ask svg{width:15px;height:15px;}
+
   .ld-lista{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
   .ld-lin{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border);}
   .ld-lin:last-child{border-bottom:0;}
@@ -894,7 +911,7 @@
     .scrim{display:none!important;}
   }
   /* Início */
-  .ini-grid{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);grid-template-areas:"busca" "hero" "kpi" "atencao" "extratos" "divisao" "atalhos";padding-top:12px;}
+  .ini-grid{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);grid-template-areas:"busca" "acoes" "hero" "kpi" "atencao" "extratos" "divisao";padding-top:12px;}
   .ini-busca{grid-area:busca;}
   .ini-busca .busca-global{margin-top:0;}
   .ini-hero{grid-area:hero;}
@@ -903,7 +920,7 @@
   .ini-divisao{grid-area:divisao;}
   .ini-atalhos{grid-area:atalhos;}
   @media (min-width:900px){
-    .ini-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"busca busca" "hero atencao" "kpi atencao" "extratos atencao" "divisao atencao" "atalhos atencao";align-items:start;}
+    .ini-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "extratos atencao" "divisao atencao";align-items:start;}
   }
   .ini-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:13px 15px;}
   .ini-card .lbl,.ini-div-grid .lbl{font-size:0.78rem;color:var(--ink-soft);margin-bottom:3px;}
@@ -1188,7 +1205,7 @@
     .stat{padding:12px 9px;min-width:0;}
     .stat .lbl{font-size:0.7rem;}
     .stat .val{font-size:0.86rem;white-space:nowrap;letter-spacing:-0.01em;font-family:var(--font-sans);}
-    .fab{bottom:calc(96px + env(safe-area-inset-bottom));right:18px;}
+    .fab{bottom:calc(88px + env(safe-area-inset-bottom));right:16px;width:46px;height:46px;}
     .fin-fab-menu{bottom:164px;}
     .toast{bottom:104px;}
     body{padding-bottom:130px;}
@@ -1243,13 +1260,7 @@
   .bolso{border-radius:18px;padding:16px 18px;background:var(--surface-2);}
   .fin-detalhes summary{font-weight:600;cursor:pointer;color:var(--accent);padding:8px 0;}
   /* "Recebi R$" no celular */
-  .fab-recebi{display:none;}
-  .fab-camera{display:none;}
   @media (max-width:999.98px){
-    body[data-tab="inicio"] .fab-recebi{display:flex;position:fixed;right:18px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:65;align-items:center;gap:8px;border:none;border-radius:99px;padding:14px 22px;font-weight:600;font-size:0.92rem;background:var(--gold-btn);color:var(--gold-ink);box-shadow:0 12px 28px rgba(201,133,0,0.38);cursor:pointer;}
-    body[data-tab="inicio"] .fab-camera.ok{display:flex;position:fixed;right:18px;bottom:calc(96px + 52px + 12px + env(safe-area-inset-bottom));z-index:65;align-items:center;justify-content:center;gap:8px;border:none;border-radius:99px;padding:14px 22px;width:164px;font-weight:600;font-size:0.92rem;background:var(--accent);color:var(--accent-ink);box-shadow:0 12px 28px rgba(0,0,0,0.28);cursor:pointer;}
-    body[data-tab="inicio"] .fab-recebi{width:164px;justify-content:center;}
-    body[data-tab="inicio"]{padding-bottom:236px;}
     /* formulários como folha que sobe de baixo */
     .overlay{padding:0;align-items:flex-end;}
     .overlay .modal{margin:0;max-width:none;border-radius:26px 26px 0 0;border-bottom:none;max-height:92vh;display:flex;flex-direction:column;animation:folhaSobe .24s ease;}
@@ -1360,6 +1371,14 @@
 <symbol id="ic-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></symbol>
 <symbol id="ic-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></symbol>
 <symbol id="ic-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></symbol>
+<symbol id="ic-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></symbol>
+<symbol id="ic-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13.5" r="3.6"/></symbol>
+<symbol id="ic-ask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 01-12.3 7.6L3.5 20.5l1.4-4.9A8.5 8.5 0 1121 11.5z"/><path d="M12 7.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ic-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></symbol>
+<symbol id="ic-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+<symbol id="ic-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.1"/></symbol>
+
 <symbol id="ic-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></symbol>
 <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></symbol>
 <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
@@ -1383,11 +1402,11 @@
       <button type="button" class="dr-it" data-tab="obra" title="Construção da casa"><svg><use href="#ic-house"/></svg><span class="lab">Construção</span></button>
       <div class="dr-grp">Ferramentas</div>
       <button type="button" class="dr-it" data-tab="extratos" title="Extratos do banco"><svg><use href="#ic-bank"/></svg><span class="lab">Extratos do banco</span><span class="dr-n red" id="menuNExtratos"></span></button>
-      <button type="button" class="dr-it" id="abrirLerDocBtn" style="display:none;" title="Cadastrar por foto ou PDF"><svg><use href="#ic-file"/></svg><span class="lab">Ler foto ou PDF</span></button>
+      <button type="button" class="dr-it" id="abrirLerDocBtn" style="display:none;" title="Cadastrar por foto ou PDF"><svg><use href="#ic-cam"/></svg><span class="lab">Ler foto ou PDF</span></button>
       <button type="button" class="dr-it" id="abrirRecebiBtn" title="Recebi R$ (registrar recebimento)"><svg><use href="#ic-coin"/></svg><span class="lab">Recebi R$</span></button>
       <button type="button" class="dr-it" id="abrirRelMuriloBtn" title="Cobranças e relatório do Murilo"><svg><use href="#ic-send"/></svg><span class="lab">Cobranças e relatório do Murilo</span></button>
       <button type="button" class="dr-it" id="abrirFechamentoBtn" title="Fechamento do mês"><svg><use href="#ic-cal"/></svg><span class="lab">Fechamento do mês</span></button>
-      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href='/sair'"><svg><use href="#ic-user"/></svg><span class="lab">Sair</span></button>
+      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href='/sair'"><svg><use href="#ic-out"/></svg><span class="lab">Sair</span></button>
       <button type="button" class="dr-it" id="backupBtn" title="Backup e restauração"><svg><use href="#ic-dl"/></svg><span class="lab">Backup e restauração</span></button>
       <button type="button" class="dr-it" id="exportBtn" title="Exportar lista (CSV)"><svg><use href="#ic-table"/></svg><span class="lab">Exportar lista (CSV)</span></button>
     </nav>
@@ -1591,6 +1610,12 @@
     </div>
 
       </div>
+      <div class="ini-acoes" id="inicioAcoes">
+        <button type="button" class="acao acao-ouro" id="acRecebi"><svg><use href="#ic-coin"/></svg><span>Recebi R$</span></button>
+        <button type="button" class="acao" id="inicioLerDoc" style="display:none;"><svg><use href="#ic-cam"/></svg><span>Foto/PDF</span></button>
+        <button type="button" class="acao" id="inicioPergunte" style="display:none;"><svg><use href="#ic-ask"/></svg><span>Pergunte</span></button>
+        <button type="button" class="acao" id="inicioNovo"><svg><use href="#ic-plus"/></svg><span>Novo</span></button>
+      </div>
       <div class="ini-card ini-hero">
         <div class="lbl" id="resumoRecebidoLbl">Recebido no mês</div>
         <div class="hero-val" id="resumoRecebido">R$ 0,00</div>
@@ -1637,16 +1662,6 @@
       <div class="ini-divisao">
         <div class="financeiro-secao-head"><h4>Divisão do mês</h4><button type="button" class="btn-text" id="inicioAbrirDivisao">Abrir</button></div>
         <div class="ini-card" id="inicioDivisao"></div>
-      </div>
-      <div class="ini-atalhos">
-        <div class="atalhos" id="inicioAtalhos">
-          <button type="button" class="btn btn-primary ini-recebi" data-novo="recebi">Recebi R$</button>
-          <button type="button" class="btn btn-ghost" data-novo="peticao">+ Petição</button>
-          <button type="button" class="btn btn-ghost" data-novo="acordo">+ Acordo</button>
-          <button type="button" class="btn btn-ghost" data-novo="alvara">+ Alvará</button>
-          <button type="button" class="btn btn-ghost" data-novo="despesa">+ Despesa</button>
-          <button type="button" class="btn btn-ghost" id="inicioLerDoc" style="display:none;">Ler foto ou PDF</button>
-        </div>
       </div>
     </div>
   </div>
@@ -1720,9 +1735,7 @@
 
 
 <div class="toast" id="toast" style="display:none;"></div>
-<button type="button" class="fab-camera" id="fabLerDoc" title="Cadastrar por foto ou PDF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>Foto ou PDF</button>
-<button type="button" class="fab-recebi" id="fabRecebi"><svg width="20" height="20"><use href="#ic-coin"/></svg>Recebi R$</button>
-<button class="fab" id="fabNew" title="Nova petição">
+<button class="fab" id="fabNew" title="Novo">
 
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </button>
@@ -6896,10 +6909,7 @@
 
   qs('fabNew').addEventListener('click', function(){
     if (activeTab === 'financeiro'){ var mf = qs('finFabMenu'); mf.style.display = mf.style.display === 'none' ? 'flex' : 'none'; return; }
-    if (activeTab === 'acordos') abrirNovoAcordo();
-    else if (activeTab === 'alvaras') abrirNovoAlvara();
-    else if (activeTab === 'clientes') abrirClienteEdit({});
-    else abrirNovo();
+    paAbrirNovo();
   });
   qs('closeModal').addEventListener('click', fecharModal);
   qs('cancelBtn').addEventListener('click', fecharModal);
@@ -9283,17 +9293,6 @@
   }
   qs('inicioAbrirDivisao').addEventListener('click', function(){ finTab = 'geral'; try{ localStorage.setItem('controlePeticoes.finTab.v1', finTab); }catch(e){} setActiveTab('financeiro'); });
   qs('atencaoMais').addEventListener('click', function(){ atencaoExpandida = !atencaoExpandida; renderPainelAtencao(); });
-  qs('fabRecebi').addEventListener('click', function(){ abrirRecebi(); });
-  qs('inicioAtalhos').addEventListener('click', function(ev){
-    var b = ev.target.closest ? ev.target.closest('[data-novo]') : null;
-    if (!b) return;
-    var k = b.getAttribute('data-novo');
-    if (k === 'peticao') abrirNovo();
-    else if (k === 'acordo') abrirNovoAcordo();
-    else if (k === 'alvara') abrirNovoAlvara();
-    else if (k === 'despesa') abrirNovaDespesa('pj');
-    else if (k === 'recebi') abrirRecebi();
-  });
   qs('abrirRecebiBtn').addEventListener('click', function(){ abrirRecebi(); });
 
   /* filtros recolhidos */
@@ -14613,7 +14612,6 @@ function ldIniciar(){
   }).catch(function(){ ldSample = null; }).then(function(){
     ldPronto = true;
     ['inicioLerDoc', 'abrirLerDocBtn'].forEach(function(id){ var b = qs(id); if (b) b.style.display = ldSample ? '' : 'none'; });
-    qs('fabLerDoc').classList.toggle('ok', !!ldSample);
   });
 }
 function ldAbrir(tipo){
@@ -14874,7 +14872,6 @@ function ldAplicar(){
 qs('ldSec').addEventListener('click', function(){ ldFechar(); });
 qs('ldFechar').addEventListener('click', ldFechar);
 qs('inicioLerDoc').addEventListener('click', function(){ ldAbrir(); });
-qs('fabLerDoc').addEventListener('click', function(){ ldAbrir(); });
 qs('abrirLerDocBtn').addEventListener('click', function(){ if (typeof fecharMenu === 'function') fecharMenu(); ldAbrir(); });
 ldIniciar();
 
@@ -15071,65 +15068,61 @@ paMontarTela();
 
 /* ---------- onde abrir ---------- */
 (function(){
-  var at = qs('inicioAtalhos');
-  if (at){ var b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost'; b.id = 'inicioPergunte'; b.setAttribute('data-uso', 'pergunte'); b.style.display = 'none'; b.textContent = 'Pergunte ao app'; at.appendChild(b); }
   var dr = qs('abrirRecebiBtn');
-  if (dr && dr.parentNode){ var it = document.createElement('button'); it.type = 'button'; it.className = 'dr-it'; it.id = 'abrirPergunteBtn'; it.style.display = 'none'; it.title = 'Pergunte ao app'; it.innerHTML = '<svg><use href="#ic-chart"/></svg><span class="lab">Pergunte ao app</span>'; dr.parentNode.insertBefore(it, dr); }
+  if (dr && dr.parentNode){ var it = document.createElement('button'); it.type = 'button'; it.className = 'dr-it'; it.id = 'abrirPergunteBtn'; it.style.display = 'none'; it.title = 'Pergunte ao app'; it.innerHTML = '<svg><use href="#ic-ask"/></svg><span class="lab">Pergunte ao app</span>'; dr.parentNode.insertBefore(it, dr); }
   paSample().then(function(s){ ['inicioPergunte', 'abrirPergunteBtn'].forEach(function(id){ var e = qs(id); if (e) e.style.display = s ? '' : 'none'; }); });
   document.addEventListener('click', function(ev){
     var t = ev.target.closest ? ev.target.closest('#inicioPergunte, #abrirPergunteBtn, [data-pa-abrir]') : null;
     if (!t) return;
     if (t.id === 'abrirPergunteBtn' && typeof fecharMenu === 'function') fecharMenu();
+    paUsar('pergunte');
     paAbrir(t.getAttribute('data-pa-abrir') || '');
   });
 })();
 
-/* ---------- alertas que pensam (calculados pelo app, sem IA) ---------- */
+/* ---------- alertas que pensam (calculados pelo app, sem IA) — aparecem como linhas da Central de atenção ---------- */
 function paAlertas(){
   var a = [], hoje = todayISO(), m0 = hoje.slice(0, 7);
   var proj; try{ proj = anProjecao(4); }catch(e){ return a; }
   var neg = proj.linhas.filter(function(l){ return l.saldoBase < 0; })[0];
-  if (neg) a.push({ nivel: 'alto', txt: 'O caixa previsto fica <b>negativo em ' + escapeHtml(mesLabel(neg.m)) + '</b> (' + fmtMoeda(neg.saldoBase) + '), considerando só parcelas e receitas fixas.', q: 'O que posso fazer para o caixa não ficar negativo em ' + mesLabel(neg.m) + '?' });
+  if (neg) a.push({ nivel: 'alto', titulo: 'Caixa previsto negativo em ' + mesLabel(neg.m), detalhe: 'Só com parcelas e receitas fixas, sem contar alvarás.', valor: neg.saldoBase, q: 'O que posso fazer para o caixa não ficar negativo em ' + mesLabel(neg.m) + '?' });
   var un = listarUnidades().filter(function(u){ var d = anDocDaUnidade(u); return !(d && d.atipica) && !u.arquivado && restanteMeu(u) > 0.004 && u.data && u.data < hoje; });
   var porCli = {};
   un.forEach(function(u){ var k = u.cliente; (porCli[k] = porCli[k] || { n: 0, v: 0, antiga: u.data }).n++; porCli[k].v += restanteMeu(u); if (u.data < porCli[k].antiga) porCli[k].antiga = u.data; });
   Object.keys(porCli).filter(function(k){ return porCli[k].n >= 2; }).sort(function(x, y){ return porCli[y].v - porCli[x].v; }).slice(0, 2).forEach(function(k){
-    a.push({ nivel: 'medio', txt: '<b>' + escapeHtml(k) + '</b> tem ' + porCli[k].n + ' parcelas vencidas (' + fmtMoeda(porCli[k].v) + '), a mais antiga desde ' + escapeHtml(fmtData(porCli[k].antiga)) + '.', q: 'Resuma o que ' + k + ' me deve' });
+    a.push({ nivel: 'medio', titulo: k + ': ' + porCli[k].n + ' parcelas vencidas', detalhe: 'A mais antiga venceu em ' + fmtData(porCli[k].antiga) + '.', valor: r2(porCli[k].v), q: 'Resuma o que ' + k + ' me deve' });
   });
   var res = computeReservaInfo();
-  if (res.existe && res.alvo > 0 && res.atual < res.alvo * 0.5) a.push({ nivel: 'medio', txt: 'A reserva de emergência está em <b>' + Math.round(res.atual / res.alvo * 100) + '%</b> do alvo (' + fmtMoeda(res.atual) + ' de ' + fmtMoeda(res.alvo) + ').', q: 'Como posso completar a reserva de emergência?' });
-  /* despesa fixa que subiu bastante */
+  if (res.existe && res.alvo > 0 && res.atual < res.alvo * 0.5) a.push({ nivel: 'medio', titulo: 'Reserva de emergência em ' + Math.round(res.atual / res.alvo * 100) + '% do alvo', detalhe: fmtMoeda(res.atual) + ' de ' + fmtMoeda(res.alvo) + '.', valor: r2(res.alvo - res.atual), q: 'Como posso completar a reserva de emergência?' });
   despesas.forEach(function(d){
     if (d.tipo !== 'fixa' || d.ativa === false || !d.pagamentos) return;
     var ms = Object.keys(d.pagamentos).filter(function(k){ return k < m0 && d.pagamentos[k] && d.pagamentos[k].valor > 0; }).sort().slice(-4);
     var atualReg = d.pagamentos[m0] && d.pagamentos[m0].valor;
-    if (ms.length >= 3 && atualReg > 0){ var med = ms.reduce(function(t, k){ return t + d.pagamentos[k].valor; }, 0) / ms.length; if (atualReg > med * 1.25 && atualReg - med > 30) a.push({ nivel: 'baixo', txt: '<b>' + escapeHtml(d.nome) + '</b> veio ' + fmtMoeda(atualReg) + ' este mês, ' + Math.round((atualReg / med - 1) * 100) + '% acima da média recente (' + fmtMoeda(med) + ').', q: '' }); }
+    if (ms.length >= 3 && atualReg > 0){ var med = ms.reduce(function(t, k){ return t + d.pagamentos[k].valor; }, 0) / ms.length; if (atualReg > med * 1.25 && atualReg - med > 30) a.push({ nivel: 'baixo', titulo: d.nome + ' veio mais cara', detalhe: Math.round((atualReg / med - 1) * 100) + '% acima da média recente (' + fmtMoeda(med) + ').', valor: r2(atualReg), q: '' }); }
   });
   var prox = listarUnidades().filter(function(u){ return u.docTipo === 'alvara' && !u.pago && u.data && u.data >= hoje && u.data <= somarDias(hoje, 10) && restanteMeu(u) > 0.004; });
-  if (prox.length) a.push({ nivel: 'baixo', txt: 'Alvará previsto para os próximos dias: <b>' + escapeHtml(prox[0].cliente) + '</b> (' + fmtMoeda(restanteMeu(prox[0])) + ', ' + escapeHtml(fmtData(prox[0].data)) + ').', q: '' });
+  if (prox.length) a.push({ nivel: 'baixo', titulo: 'Alvará previsto: ' + prox[0].cliente, detalhe: 'Previsão para ' + fmtData(prox[0].data) + '.', valor: r2(restanteMeu(prox[0])), q: '' });
   var ordem = { alto: 0, medio: 1, baixo: 2 };
-  return a.sort(function(x, y){ return ordem[x.nivel] - ordem[y.nivel]; }).slice(0, 4);
+  return a.sort(function(x, y){ return ordem[x.nivel] - ordem[y.nivel]; }).slice(0, 3);
 }
-function paRenderAlertas(){
-  var host = qs('paAlertas');
-  if (!host){
-    var ref = qs('atencaoSection'); if (!ref || !ref.parentNode) return;
-    host = document.createElement('div'); host.id = 'paAlertas'; ref.parentNode.insertBefore(host, ref);
-  }
-  var a = []; try{ a = paAlertas(); }catch(e){ console.error('alertas', e); }
-  var html = a.length ? '<div class="ini-card pa-alertas"><div class="financeiro-secao-head"><h4>De olho</h4></div>' + a.map(function(x){
-    return '<div class="pa-al pa-al-' + x.nivel + '"><span>' + x.txt + '</span>' + (x.q && paTemSample() ? '<button type="button" class="btn-text" data-pa-abrir="' + escapeHtml(x.q) + '">Perguntar</button>' : '') + '</div>';
-  }).join('') + '</div>' : '';
-  if (host.getAttribute('data-h') === html) return;
-  host.setAttribute('data-h', html); host.innerHTML = html;
-}
-var paSampleOk = false; paSample().then(function(s){ paSampleOk = !!s; paRenderAlertas(); });
+var paAlertasCache = { t: 0, v: [] };
+function paAlertasRapido(){ var agora = Date.now(); if (agora - paAlertasCache.t > 1500){ try{ paAlertasCache = { t: agora, v: paAlertas() }; }catch(e){ console.error('alertas', e); paAlertasCache = { t: agora, v: [] }; } } return paAlertasCache.v; }
+var paSampleOk = false; paSample().then(function(s){ paSampleOk = !!s; paAlertasCache.t = 0; try{ renderPainelAtencao(); }catch(e){} });
 function paTemSample(){ return paSampleOk; }
-(function(){
-  var st = document.createElement('style');
-  st.textContent = '.pa-alertas{margin:0 0 12px}.pa-al{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--border);font-size:.86rem;line-height:1.4}.pa-al:first-of-type{border-top:0}.pa-al-alto{border-left:3px solid var(--danger);padding-left:9px}.pa-al-medio{border-left:3px solid var(--tutela);padding-left:9px}.pa-al-baixo{border-left:3px solid var(--info);padding-left:9px}.pa-al button{flex-shrink:0}';
-  document.head.appendChild(st);
-})();
+function paLinhaAlerta(a){
+  var tom = a.nivel === 'alto' ? 'up-d-atraso' : (a.nivel === 'medio' ? 'up-d-aviso' : 'up-d-info');
+  return '<div class="stall-chip pa-linha" data-pa-alerta="1"><div class="up-data ' + tom + '"><svg><use href="#ic-warn"/></svg></div>' +
+    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span>' + (a.valor !== null && a.valor !== undefined ? '<span>' + fmtMoeda(a.valor) + '</span>' : '') + '</div>' +
+    '<div class="up-when">' + escapeHtml(a.detalhe) + (a.q && paTemSample() ? ' <button type="button" class="pa-ask" data-pa-abrir="' + escapeHtml(a.q) + '" title="Perguntar ao app" aria-label="Perguntar ao app"><svg><use href="#ic-ask"/></svg></button>' : '') + '</div></div>';
+}
+function paInserirAlertas(){
+  var lista = qs('atencaoLista'), sec = qs('atencaoSection'); if (!lista || !sec) return;
+  Array.prototype.forEach.call(lista.querySelectorAll('[data-pa-alerta]'), function(e){ e.remove(); });
+  var a = paAlertasRapido(); if (!a.length) return;
+  sec.style.display = ''; var vz = qs('atencaoVazio'); if (vz) vz.style.display = 'none';
+  lista.insertAdjacentHTML('afterbegin', a.map(paLinhaAlerta).join(''));
+  var bd = qs('atencaoBadge'); if (bd) bd.textContent = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length;
+}
 
 /* ---------- metas com plano ---------- */
 function paMetaPlanoHtml(m, falta, meses){
@@ -15190,42 +15183,65 @@ function paIrExtra(tipo, id){
   var inp = qs('buscaGlobalInput'); if (inp) inp.placeholder = 'Buscar em tudo: clientes, processos, despesas, obra, valores…';
 })();
 
-/* ---------- atalhos dinâmicos ---------- */
+/* ---------- folha "Novo" (cadastros e ações), ordenada pelo que você mais usa ---------- */
 var PA_USO_KEY = 'controle.atalhos.uso.v1';
 function paUsoLer(){ try{ return JSON.parse(localStorage.getItem(PA_USO_KEY) || '{}') || {}; }catch(e){ return {}; } }
-function paUsoGravar(o){ try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(o)); }catch(e){} }
-function paOrdenarAtalhos(){
-  var host = qs('inicioAtalhos'); if (!host) return;
-  var uso = paUsoLer(), btns = Array.prototype.slice.call(host.children).filter(function(b){ return b.tagName === 'BUTTON'; });
-  function chave(b){ return b.getAttribute('data-novo') || b.getAttribute('data-uso') || b.id; }
-  var ordem = btns.map(function(b, i){ return { b: b, i: i, n: uso[chave(b)] || 0 }; });
-  ordem.sort(function(a, b){ return b.n - a.n || a.i - b.i; });
-  ordem.forEach(function(x){ host.appendChild(x.b); });
-  ordem.forEach(function(x, i){ x.b.classList.toggle('btn-primary', i === 0 && x.n > 0 || (x.b.classList.contains('ini-recebi') && !ordem.some(function(y){ return y.n > 0; }))); x.b.classList.toggle('btn-ghost', !x.b.classList.contains('btn-primary')); });
+function paUsar(k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(u)); }catch(e){} }
+var PA_NOVO = [
+  { k: 'recebi', t: 'Recebi R$', i: 'ic-coin', f: function(){ abrirRecebi(); } },
+  { k: 'peticao', t: 'Petição', i: 'ic-file', f: function(){ abrirNovo(); } },
+  { k: 'acordo', t: 'Acordo', i: 'ic-clip', f: function(){ abrirNovoAcordo(); } },
+  { k: 'alvara', t: 'Alvará', i: 'ic-stamp', f: function(){ abrirNovoAlvara(); } },
+  { k: 'despesa', t: 'Despesa', i: 'ic-receipt', f: function(){ abrirNovaDespesa('pj'); } },
+  { k: 'cliente', t: 'Cliente', i: 'ic-users', f: function(){ abrirClienteEdit({}); } },
+  { k: 'foto', t: 'Foto ou PDF', i: 'ic-cam', f: function(){ ldAbrir(); }, ia: true },
+  { k: 'extratos', t: 'Extratos', i: 'ic-bank', f: function(){ setActiveTab('extratos'); } },
+  { k: 'pergunte', t: 'Pergunte', i: 'ic-ask', f: function(){ paAbrir(''); }, ia: true }
+];
+function paNovoHtml(){
+  var uso = paUsoLer(), tab = (typeof activeTab !== 'undefined') ? activeTab : '';
+  var primeiro = { peticoes: 'peticao', acordos: 'acordo', alvaras: 'alvara', clientes: 'cliente' }[tab] || '';
+  var itens = PA_NOVO.filter(function(x){ return !x.ia || paTemSample(); }).map(function(x, i){ return { x: x, i: i, n: x.k === primeiro ? 1e9 : (uso[x.k] || 0) }; });
+  itens.sort(function(a, b){ return b.n - a.n || a.i - b.i; });
+  return itens.map(function(o, i){ return '<button type="button" class="novo-it' + (i === 0 ? ' novo-1' : '') + '" data-novo-k="' + o.x.k + '"><svg><use href="#' + o.x.i + '"/></svg><span>' + escapeHtml(o.x.t) + '</span></button>'; }).join('');
 }
-function paAtalhosContexto(){
-  var host = qs('inicioAtalhos'); if (!host) return;
-  var ctx = qs('inicioAtalhosCtx');
-  if (!ctx){ ctx = document.createElement('div'); ctx.id = 'inicioAtalhosCtx'; ctx.className = 'atalhos'; ctx.style.marginTop = '8px'; host.parentNode.insertBefore(ctx, host.nextSibling); }
-  var hoje = todayISO(), itens = [];
-  var vencemHoje = listarUnidades().filter(function(u){ var d = anDocDaUnidade(u); return !(d && d.atipica) && restanteMeu(u) > 0.004 && u.data && u.data <= hoje; }).length;
-  if (vencemHoje) itens.push('<button type="button" class="btn btn-ghost" data-pa-recebi="1">Receber ' + vencemHoje + ' vencida' + (vencemHoje > 1 ? 's' : '') + ' / de hoje</button>');
-  var pend = extPendentes().length;
-  if (pend) itens.push('<button type="button" class="btn btn-ghost" data-pa-ext="1">Conferir ' + pend + ' extrato' + (pend > 1 ? 's' : '') + '</button>');
-  var html = itens.join(''); if (ctx.getAttribute('data-h') !== html){ ctx.setAttribute('data-h', html); ctx.innerHTML = html; ctx.style.display = html ? '' : 'none'; }
+function paAbrirNovo(){
+  var ov = qs('overlayNovo');
+  if (!ov){
+    ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'overlayNovo';
+    ov.innerHTML = '<div class="modal"><div class="modal-head"><h2>Novo</h2><button class="icon-btn" id="novoFechar" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="novo-grid" id="novoGrid"></div></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+      if (e.target === ov || (e.target.closest && e.target.closest('#novoFechar'))){ ov.classList.remove('show'); return; }
+      var b = e.target.closest ? e.target.closest('[data-novo-k]') : null; if (!b) return;
+      var k = b.getAttribute('data-novo-k'), it = PA_NOVO.filter(function(x){ return x.k === k; })[0];
+      ov.classList.remove('show'); paUsar(k); if (it) setTimeout(function(){ it.f(); }, 60);
+    });
+  }
+  qs('novoGrid').innerHTML = paNovoHtml();
+  ov.classList.add('show');
 }
 document.addEventListener('click', function(ev){
-  var t = ev.target.closest ? ev.target.closest('#inicioAtalhos button, #fabLerDoc, #fabRecebi') : null;
-  if (t){ var k = t.getAttribute('data-novo') || t.getAttribute('data-uso') || t.id; if (k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; paUsoGravar(u); setTimeout(paOrdenarAtalhos, 50); } }
-  var c = ev.target.closest ? ev.target.closest('[data-pa-recebi], [data-pa-ext]') : null;
-  if (c){ if (c.hasAttribute('data-pa-recebi')) abrirRecebi(); else setActiveTab('extratos'); }
+  var t = ev.target.closest ? ev.target.closest('#inicioNovo, #acRecebi, #inicioLerDoc') : null;
+  if (!t) return;
+  if (t.id === 'inicioNovo') paAbrirNovo();
+  else if (t.id === 'acRecebi'){ paUsar('recebi'); abrirRecebi(); }
+  else if (t.id === 'inicioLerDoc') paUsar('foto');
 });
-function paAtualizarInicio(){ try{ paOrdenarAtalhos(); paAtalhosContexto(); paRenderAlertas(); }catch(e){ console.error('inicio', e); } }
+/* botão + pequeno: no Início só aparece depois que a faixa de ações sai da tela */
+(function(){
+  function ajustar(){
+    var fab = qs('fabNew'), ac = qs('inicioAcoes'); if (!fab || !ac || activeTab !== 'inicio') return;
+    fab.style.display = (ac.getBoundingClientRect().bottom < 4) ? '' : 'none';
+  }
+  window.addEventListener('scroll', ajustar, { passive: true });
+  setInterval(ajustar, 700);
+})();
 
 /* ---------- desfazer a última ação ---------- */
 function paDesfazerBotao(){
   var dr = qs('backupBtn'); if (!dr || qs('desfazerBtn')) return;
-  var b = document.createElement('button'); b.type = 'button'; b.className = 'dr-it'; b.id = 'desfazerBtn'; b.title = 'Desfazer a última ação'; b.innerHTML = '<svg><use href="#ic-dl"/></svg><span class="lab" id="desfazerRotulo">Desfazer última ação</span>';
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'dr-it'; b.id = 'desfazerBtn'; b.title = 'Desfazer a última ação'; b.innerHTML = '<svg><use href="#ic-undo"/></svg><span class="lab" id="desfazerRotulo">Desfazer última ação</span>';
   dr.parentNode.insertBefore(b, dr);
   b.addEventListener('click', function(){
     if (typeof fecharMenu === 'function') fecharMenu();
@@ -15238,12 +15254,18 @@ function paDesfazerBotao(){
 }
 if (window.__desfazer) paDesfazerBotao();
 
-/* ---------- gancho: refaz o que depende dos dados ---------- */
+/* ---------- gancho: depois de desenhar a Central de atenção, acrescenta os alertas ---------- */
+var paAtraso = null;
 (function(){
-  var agendado = null;
   var orig = renderPainelAtencao;
-  renderPainelAtencao = function(){ var r = orig.apply(this, arguments); clearTimeout(agendado); agendado = setTimeout(paAtualizarInicio, 120); return r; };
-  setTimeout(paAtualizarInicio, 600);
+  renderPainelAtencao = function(){
+    var bd = qs('atencaoBadge'); var r = orig.apply(this, arguments);
+    if (bd) bd.setAttribute('data-itens', bd.textContent || '0');
+    try{ paInserirAlertas(); }catch(e){ console.error('alertas', e); }
+    clearTimeout(paAtraso); paAtraso = setTimeout(function(){ paAlertasCache.t = 0; try{ paInserirAlertas(); }catch(e){} }, 900);   /* garante o resultado final depois que os dados terminam de chegar */
+    return r;
+  };
+  setTimeout(function(){ try{ renderPainelAtencao(); }catch(e){} }, 600);
 })();
 
 /* ---------- backups automáticos semanais (guardados no servidor) ---------- */

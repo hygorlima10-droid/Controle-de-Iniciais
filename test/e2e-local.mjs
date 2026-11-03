@@ -9,11 +9,11 @@ await page.goto(URL); await page.waitForTimeout(500);
 if (page.url().includes('/login')) { await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(1500); }
 check(await page.evaluate(() => !!window.claude), 'o shim criou window.claude');
 check(await page.evaluate(() => document.getElementById('banner') ? getComputedStyle(document.getElementById('banner')).display === 'none' : true), 'app conectado ao banco (sem aviso de modo local)');
-await page.evaluate(() => document.querySelector('[data-novo="despesa"]').click()); await page.waitForTimeout(200);
+await page.click('#inicioNovo'); await page.waitForTimeout(200); await page.click('[data-novo-k="despesa"]'); await page.waitForTimeout(300);
 await page.fill('#despesaNomeInput', 'Aluguel do escritório'); await page.fill('#despesaValorInput', '1.250,50');
 await page.evaluate(() => document.querySelector('#segDespesaTipo [data-value="unica"]').click()); await page.fill('#despesaDataInput', '2026-11-20');
 await page.click('#saveBtnDespesa'); await page.waitForTimeout(800);
-await page.evaluate(() => document.querySelector('[data-novo="peticao"]').click()); await page.waitForTimeout(200);
+await page.click('#inicioNovo'); await page.waitForTimeout(200); await page.click('[data-novo-k="peticao"]'); await page.waitForTimeout(300);
 await page.fill('#clienteInput', 'Fulano de Tal'); await page.fill('#nomeAcaoInput', 'Revisional'); await page.fill('#valorInput', '3.000'); await page.click('#saveBtn'); await page.waitForTimeout(800);
 const api = await page.evaluate(async () => ({ d: await (await fetch('/api/db/despesas')).json(), c: await (await fetch('/api/db/casos')).json() }));
 check(api.d.docs.length === 1 && api.d.docs[0].data.nome === 'Aluguel do escritório' && api.d.docs[0].data.valorPadrao === 1250.5 || JSON.stringify(api.d).includes('1250.5'), 'despesa gravada no banco com valor 1250,50');

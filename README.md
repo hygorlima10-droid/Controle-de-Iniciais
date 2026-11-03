@@ -50,3 +50,8 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - **Backup semanal:** cron de segunda 07:00 UTC (`wrangler.jsonc` → `triggers.crons`) grava cópias comprimidas em `_backups` (últimas 8); `GET /api/backups`, `/api/backups/AAAA-MM-DD` (formato do app), `POST /api/backups/agora`.
 - Testes: `node test/pergunte.test.mjs` (veja o cabeçalho).
 - **Ao levar para a branch oficial:** não leve o `wrangler.jsonc` de teste; só acrescente o bloco `triggers.crons` ao do oficial.
+
+## Layout do Início (faixa de ações, folha "Novo", alertas na Central)
+- `cliente/layout.py` (rodado uma vez) moveu as ações para uma faixa no topo do Início (Recebi R$, Foto/PDF, Pergunte, Novo), removeu os botões flutuantes de câmera e Recebi R$ e a fileira de atalhos do fim, e criou os ícones novos (desfazer, câmera, pergunte, mais, sair, recibo, aviso).
+- O botão **+** (fabNew) agora abre a folha **Novo** em todas as telas (no Financeiro continua o menu de lançamentos) e, no Início, só aparece depois que a faixa sai da tela.
+- Os alertas ("De olho") viram linhas no topo da Central de atenção (`paInserirAlertas`, em `cliente/pergunte.js`).
