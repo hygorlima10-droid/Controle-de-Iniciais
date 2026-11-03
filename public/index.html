@@ -4360,7 +4360,7 @@
     config.backup = dados;
     atualizarAvisosSistema();
     if (storageMode === 'db' && configRef){
-      return configRef.doc('backup').set(dados).catch(function(err){ console.error('erro ao registrar o backup', err); });
+      return configRef.doc('backup').set(dados).catch(function(err){ console.error('erro ao registrar o backup', err); toast('O backup foi salvo, mas não consegui registrar isso no servidor. Tente de novo.'); });
     }
     saveLocalConfig();
     return Promise.resolve();

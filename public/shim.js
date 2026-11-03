@@ -79,14 +79,33 @@
       };
     }
   };
+  /* Salvar arquivo: no iPhone usa a folha de compartilhamento ("Salvar em Arquivos"), que não tira o app da tela.
+     Nos demais casos baixa pelo navegador, com um pequeno atraso para o app registrar antes o que precisa. */
   var downloads = { save: function (r) {
+    var blob = r.data instanceof Blob ? r.data : new Blob([typeof r.data === 'string' ? r.data : JSON.stringify(r.data)], { type: r.type || 'application/octet-stream' });
+    var nome = r.filename || 'arquivo';
     try {
-      var blob = r.data instanceof Blob ? r.data : new Blob([typeof r.data === 'string' ? r.data : JSON.stringify(r.data)], { type: r.type || 'application/octet-stream' });
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = r.filename || 'arquivo';
-      document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+      var arq = new File([blob], nome, { type: blob.type || 'application/octet-stream' });
+      if (navigator.canShare && navigator.share && navigator.canShare({ files: [arq] }) && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        return navigator.share({ files: [arq], title: nome }).then(function () { return { status: 'saved' }; }, function (e) {
+          if (e && e.name === 'AbortError') throw { code: 'declined', message: 'Cancelado.' };
+          return baixarPeloNavegador(blob, nome);
+        });
+      }
+    } catch (e) { /* cai no download comum */ }
+    return baixarPeloNavegador(blob, nome);
+  } };
+  function baixarPeloNavegador(blob, nome) {
+    try {
+      var url = URL.createObjectURL(blob);
+      setTimeout(function () {
+        var a = document.createElement('a'); a.href = url; a.download = nome;
+        document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 4000);
+      }, 1200);
       return Promise.resolve({ status: 'saved' });
     } catch (e) { return Promise.reject({ code: 'failed', message: String(e) }); }
-  } };
+  }
+
   /* leitura de foto/PDF: o servidor chama o Claude com a chave guardada lá */
   function paraBase64(blob) {
     return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1]); }; fr.onerror = function () { rej({ code: 'image_rejected', message: 'Não consegui ler a imagem.' }); }; fr.readAsDataURL(blob); });
