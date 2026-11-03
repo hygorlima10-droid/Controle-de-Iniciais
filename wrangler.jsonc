@@ -6,5 +6,6 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "controle-juridico", "database_id": "6e63cb30-f3a4-4611-9b53-275284e1fbec" }
   ],
+  "triggers": { "crons": ["0 7 * * 1"] },
   "observability": { "enabled": true }
 }
