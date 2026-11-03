@@ -13157,12 +13157,22 @@ function extReclassificar(cc){
 /* ---------- Open Finance (via Pluggy): traz o extrato das contas direto, sem PDF ---------- */
 var ofEstado = { configurado: null, rodando: false, info: '', erro: '' };
 function ofVerStatus(){
-  return fetch('/api/of/status', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ ofEstado.configurado = !!(j && j.configurado); renderExtratos(); }).catch(function(){ ofEstado.configurado = false; });
+  return fetch('/api/of/status', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ ofEstado.configurado = !!(j && j.configurado); ofEstado.status = j || {}; renderExtratos(); }).catch(function(){ ofEstado.configurado = false; });
+}
+function ofFaltaHtml(){
+  var st = ofEstado.status || {};
+  var falta = [];
+  if (!st.temId) falta.push('PLUGGY_CLIENT_ID');
+  if (!st.temSegredo) falta.push('PLUGGY_CLIENT_SECRET');
+  var h = '<div class="saldo-data">' + (falta.length ? 'Faltando no Cloudflare: <b>' + falta.map(escapeHtml).join(', ') + '</b>.' : 'As duas chaves foram encontradas.') + '</div>';
+  var outros = (st.nomesParecidos || []).filter(function(n){ return n !== 'PLUGGY_CLIENT_ID' && n !== 'PLUGGY_CLIENT_SECRET'; });
+  if (outros.length) h += '<div class="saldo-data">Variáveis parecidas com nome diferente do esperado: ' + outros.map(function(n){ return '<b>' + escapeHtml(n) + '</b>'; }).join(', ') + '.</div>';
+  return h;
 }
 function ofTopoHtml(cfg){
   var desde = cfg.ofDesde || '';
   if (ofEstado.configurado === null) return '<div class="ext-topo-tit">Extratos do banco</div><div class="saldo-data">Verificando o Open Finance…</div>';
-  if (!ofEstado.configurado) return '<div class="ext-topo-tit">Extratos do banco</div><div class="parcela-sum">O Open Finance ainda não foi ligado neste servidor (faltam as chaves da Pluggy).</div><div class="ext-acoes"><button type="button" class="btn btn-ghost" id="ofDiag">Diagnóstico</button></div>';
+  if (!ofEstado.configurado) return '<div class="ext-topo-tit">Extratos do banco</div><div class="parcela-sum">O Open Finance ainda não foi ligado neste servidor.</div>' + ofFaltaHtml() + '<div class="ext-acoes"><button type="button" class="btn btn-ghost" id="ofDiag">Diagnóstico</button></div>';
   return '<div class="ext-topo-tit">Open Finance <span class="saldo-data">(via Pluggy)</span></div>' +
     '<div class="field"><label class="field-label">Trazer movimentações a partir de</label><input type="date" id="ofDesde" value="' + escapeHtml(desde || '') + '">' +
     '<div class="parcela-sum">Escolha o primeiro dia que ainda não está nos extratos já importados, para não repetir lançamentos.</div></div>' +

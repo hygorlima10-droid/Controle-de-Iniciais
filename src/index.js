@@ -119,7 +119,7 @@ async function ler(request, env, partes) {
 
 
 async function openFinance(request, env, partes) {
-  if (partes[1] === 'status') return json({ configurado: pluggyOk(env) });
+  if (partes[1] === 'status') return json({ configurado: pluggyOk(env), temId: !!env.PLUGGY_CLIENT_ID, temSegredo: !!env.PLUGGY_CLIENT_SECRET, nomesParecidos: Object.keys(env).filter((k) => /pluggy/i.test(k) && k !== 'PLUGGY_BASE_URL').slice(0, 8) });
   if (!pluggyOk(env)) return erro(503, 'not_configured', 'O Open Finance ainda não foi configurado no servidor.');
   if (partes[1] === 'diagnostico') return json(await pluggyDiag(env));
   if (partes[1] === 'sincronizar') {
