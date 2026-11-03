@@ -77,6 +77,44 @@ const comSeguranca = (resp) => {
   return r;
 };
 
+
+/* ---------- leitura de documentos (foto/PDF) pelo Claude ---------- */
+const TIPOS_IMG = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const LIMITE_DIA = 200;
+async function ler(request, env, partes) {
+  if (partes[1] === 'status') return json({ ok: !!env.ANTHROPIC_API_KEY });
+  if (request.method !== 'POST') return erro(405, 'method', 'Método não permitido.');
+  if (!env.ANTHROPIC_API_KEY) return erro(503, 'not_configured', 'A leitura de documentos ainda não foi configurada no servidor.');
+  const b = await request.json().catch(() => null);
+  if (!b || typeof b.prompt !== 'string' || !b.prompt || b.prompt.length > 60000) return erro(400, 'invalid', 'Pedido inválido.');
+  const imgs = Array.isArray(b.imagens) ? b.imagens : [];
+  if (imgs.length > 4 || imgs.some((i) => !i || !TIPOS_IMG.has(i.tipo) || typeof i.dados !== 'string' || i.dados.length > 7e6)) return erro(400, 'image_rejected', 'Imagem inválida ou grande demais.');
+  const dia = 'uso-' + new Date().toISOString().slice(0, 10);
+  const uso = await lerTent(env, dia);
+  if (uso.n >= LIMITE_DIA) return erro(429, 'rate_limited', 'Limite diário de leituras atingido. Tente amanhã.');
+  await gravarTent(env, dia, { n: uso.n + 1, ate: 0 });
+  const content = imgs.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.tipo, data: i.dados } })).concat([{ type: 'text', text: b.prompt }]);
+  let r;
+  try {
+    r = await fetch(env.ANTHROPIC_URL || 'https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: env.MODELO_LEITURA || 'claude-sonnet-5-5', max_tokens: 2000, messages: [{ role: 'user', content }] }),
+    });
+  } catch (e) { return erro(502, 'unavailable', 'Não consegui falar com o Claude agora. Tente de novo.'); }
+  const corpo = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = String((corpo.error && corpo.error.message) || '');
+    if (r.status === 401 || r.status === 403) return erro(502, 'chave_invalida', 'A chave do Claude no servidor foi recusada. Confira o segredo ANTHROPIC_API_KEY.');
+    if (/credit balance|billing/i.test(msg)) return erro(402, 'sem_credito', 'Acabou o crédito da conta do Claude (Console). Adicione crédito e tente de novo.');
+    if (r.status === 429 || r.status === 529) return erro(429, 'rate_limited', 'O Claude está ocupado. Tente de novo em instantes.');
+    console.error('anthropic', r.status, msg);
+    return erro(502, 'unavailable', 'O Claude não conseguiu ler agora. Tente de novo.');
+  }
+  const texto = (corpo.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
+  return json({ text: texto });
+}
+
 /* ---------- API do banco ---------- */
 async function api(request, env, partes) {
   // partes: ['db', colecao, id?]  |  ['backup']
@@ -158,7 +196,8 @@ async function tratar(request, env) {
       const o = request.headers.get('origin');
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
-    try { return await api(request, env, url.pathname.slice(5).split('/').filter(Boolean)); }
+    const partes = url.pathname.slice(5).split('/').filter(Boolean);
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

@@ -630,6 +630,11 @@
     padding:24px 16px;overflow-y:auto;z-index:100;
   }
   .overlay.show{display:flex;}
+  .ld-lista{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .ld-lin{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border);}
+  .ld-lin:last-child{border-bottom:0;}
+  .ld-lin span{color:var(--text-soft,var(--muted));flex-shrink:0;}
+  .ld-lin b{text-align:right;font-weight:600;word-break:break-word;}
   .modal{
     background:var(--surface);border-radius:var(--radius-lg);max-width:600px;width:100%;
     box-shadow:var(--shadow);margin:auto 0;border:1px solid var(--border);
@@ -1239,9 +1244,12 @@
   .fin-detalhes summary{font-weight:600;cursor:pointer;color:var(--accent);padding:8px 0;}
   /* "Recebi R$" no celular */
   .fab-recebi{display:none;}
+  .fab-camera{display:none;}
   @media (max-width:999.98px){
     body[data-tab="inicio"] .fab-recebi{display:flex;position:fixed;right:18px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:65;align-items:center;gap:8px;border:none;border-radius:99px;padding:14px 22px;font-weight:600;font-size:0.92rem;background:var(--gold-btn);color:var(--gold-ink);box-shadow:0 12px 28px rgba(201,133,0,0.38);cursor:pointer;}
-    body[data-tab="inicio"]{padding-bottom:170px;}
+    body[data-tab="inicio"] .fab-camera.ok{display:flex;position:fixed;right:18px;bottom:calc(96px + 52px + 12px + env(safe-area-inset-bottom));z-index:65;align-items:center;justify-content:center;gap:8px;border:none;border-radius:99px;padding:14px 22px;width:164px;font-weight:600;font-size:0.92rem;background:var(--accent);color:var(--accent-ink);box-shadow:0 12px 28px rgba(0,0,0,0.28);cursor:pointer;}
+    body[data-tab="inicio"] .fab-recebi{width:164px;justify-content:center;}
+    body[data-tab="inicio"]{padding-bottom:236px;}
     /* formulários como folha que sobe de baixo */
     .overlay{padding:0;align-items:flex-end;}
     .overlay .modal{margin:0;max-width:none;border-radius:26px 26px 0 0;border-bottom:none;max-height:92vh;display:flex;flex-direction:column;animation:folhaSobe .24s ease;}
@@ -1375,6 +1383,7 @@
       <button type="button" class="dr-it" data-tab="obra" title="Construção da casa"><svg><use href="#ic-house"/></svg><span class="lab">Construção</span></button>
       <div class="dr-grp">Ferramentas</div>
       <button type="button" class="dr-it" data-tab="extratos" title="Extratos do banco"><svg><use href="#ic-bank"/></svg><span class="lab">Extratos do banco</span><span class="dr-n red" id="menuNExtratos"></span></button>
+      <button type="button" class="dr-it" id="abrirLerDocBtn" style="display:none;" title="Cadastrar por foto ou PDF"><svg><use href="#ic-file"/></svg><span class="lab">Ler foto ou PDF</span></button>
       <button type="button" class="dr-it" id="abrirRecebiBtn" title="Recebi R$ (registrar recebimento)"><svg><use href="#ic-coin"/></svg><span class="lab">Recebi R$</span></button>
       <button type="button" class="dr-it" id="abrirRelMuriloBtn" title="Cobranças e relatório do Murilo"><svg><use href="#ic-send"/></svg><span class="lab">Cobranças e relatório do Murilo</span></button>
       <button type="button" class="dr-it" id="abrirFechamentoBtn" title="Fechamento do mês"><svg><use href="#ic-cal"/></svg><span class="lab">Fechamento do mês</span></button>
@@ -1636,6 +1645,7 @@
           <button type="button" class="btn btn-ghost" data-novo="acordo">+ Acordo</button>
           <button type="button" class="btn btn-ghost" data-novo="alvara">+ Alvará</button>
           <button type="button" class="btn btn-ghost" data-novo="despesa">+ Despesa</button>
+          <button type="button" class="btn btn-ghost" id="inicioLerDoc" style="display:none;">Ler foto ou PDF</button>
         </div>
       </div>
     </div>
@@ -1710,6 +1720,7 @@
 
 
 <div class="toast" id="toast" style="display:none;"></div>
+<button type="button" class="fab-camera" id="fabLerDoc" title="Cadastrar por foto ou PDF"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>Foto ou PDF</button>
 <button type="button" class="fab-recebi" id="fabRecebi"><svg width="20" height="20"><use href="#ic-coin"/></svg>Recebi R$</button>
 <button class="fab" id="fabNew" title="Nova petição">
 
@@ -2346,6 +2357,19 @@
   </div>
 </div>
 
+<div class="overlay" id="overlayLerDoc">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="ldTitulo">Ler documento</h2>
+      <button class="icon-btn" id="ldFechar" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="modal-body" id="ldCorpo"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="ldSec" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="ldPrim" type="button">Ler documento</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="overlayObraForm">
   <div class="modal">
     <div class="modal-head">
@@ -14454,6 +14478,283 @@ function moneyVarrer(raiz){
 moneyVarrer(document.body);
 new MutationObserver(function(muts){ muts.forEach(function(m){ Array.prototype.forEach.call(m.addedNodes, moneyVarrer); }); }).observe(document.body, { childList: true, subtree: true });
 
+
+/* ---------- Etapa A: cadastro por foto ou PDF (Claude lê o documento; você confere no formulário) ---------- */
+var ldSample = null, ldSemImg = false, ldPronto = false, ldCtrl = null, ldBlobs = [], ldTipoSel = 'auto', ldRes = null, ldBusy = false;
+var LD_TIPOS = [['auto', 'Descobrir sozinho'], ['peticao', 'Petição / contrato de honorários'], ['acordo', 'Termo de acordo'], ['alvara', 'Alvará'], ['obra', 'Nota ou recibo da obra'], ['despesa', 'Despesa (conta, boleto, nota)']];
+var LD_NOMES = { peticao: 'Petição / honorários', acordo: 'Termo de acordo', alvara: 'Alvará', obra: 'Gasto da obra', despesa: 'Despesa' };
+function ldIniciar(){
+  Promise.resolve().then(function(){ return window.claude && window.claude.use ? window.claude.use('sample') : null; }).then(function(s){
+    ldSample = (typeof s === 'function') ? s : null;
+    if (!ldSample) return;
+    return Promise.resolve(ldSample.limits ? ldSample.limits() : null).then(function(lim){ ldSemImg = !(lim && lim.images); }, function(){ ldSemImg = true; });
+  }).catch(function(){ ldSample = null; }).then(function(){
+    ldPronto = true;
+    ['inicioLerDoc', 'abrirLerDocBtn'].forEach(function(id){ var b = qs(id); if (b) b.style.display = ldSample ? '' : 'none'; });
+    qs('fabLerDoc').classList.toggle('ok', !!ldSample);
+  });
+}
+function ldAbrir(tipo){
+  if (!ldSample){ toast('A leitura de foto/PDF não está disponível nesta tela.'); return; }
+  ldBlobs = []; ldRes = null; ldTipoSel = tipo || 'auto';
+  ldTela('entrada');
+  qs('overlayLerDoc').classList.add('show');
+}
+function ldFechar(){ if (ldCtrl){ try{ ldCtrl.abort(); }catch(e){} } ldBusy = false; qs('overlayLerDoc').classList.remove('show'); }
+function ldTela(nome, extra){
+  var corpo = qs('ldCorpo'), pe = qs('ldPrim'), sec = qs('ldSec');
+  sec.style.display = ''; sec.textContent = 'Cancelar';
+  if (nome === 'entrada'){
+    qs('ldTitulo').textContent = 'Ler documento';
+    corpo.innerHTML = '<div class="saldo-data" style="margin-bottom:10px;">Tire uma foto ou escolha um arquivo (foto ou PDF). O Claude lê os dados e abre o formulário já preenchido para você conferir. Nada é salvo sem você confirmar.</div>' +
+      '<div class="field"><label class="field-label">Tipo de documento</label><select class="filter-select" id="ldTipo">' + LD_TIPOS.map(function(t){ return '<option value="' + t[0] + '"' + (t[0] === ldTipoSel ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>' +
+      (ldSemImg ? '<div class="saldo-data" style="color:var(--danger);margin-bottom:10px;">Neste aparelho/tela o Claude não recebe fotos. Dá para ler <b>PDF com texto</b> (comprovante baixado do banco, contrato digital). Para ler foto ou print, abra este app pelo navegador (claude.ai) no computador.</div>' : '') +
+      '<div class="field"><label class="field-label">' + (ldSemImg ? 'PDF' : 'Foto ou PDF') + '</label><input type="file" id="ldArq" accept="' + (ldSemImg ? 'application/pdf' : 'image/*,application/pdf') + '" multiple></div>' +
+      '<div class="saldo-data" id="ldInfo"></div><div class="form-error" id="ldErro"></div>';
+    pe.style.display = ''; pe.textContent = 'Ler documento'; pe.onclick = ldLer;
+    qs('ldTipo').addEventListener('change', function(){ ldTipoSel = qs('ldTipo').value; });
+    qs('ldArq').addEventListener('change', function(){ ldBlobs = Array.prototype.slice.call(qs('ldArq').files || []); qs('ldInfo').textContent = ldBlobs.length ? ldBlobs.length + ' arquivo(s) escolhido(s).' : ''; });
+  } else if (nome === 'lendo'){
+    qs('ldTitulo').textContent = 'Lendo o documento…';
+    corpo.innerHTML = '<div class="parcela-sum" id="ldStatus">Preparando as imagens…</div><div class="saldo-data">Pode levar alguns segundos.</div>';
+    pe.style.display = 'none'; sec.textContent = 'Parar';
+  } else if (nome === 'revisao'){
+    var r = ldRes, linhas = ldLinhas(r);
+    qs('ldTitulo').textContent = 'Conferir o que foi lido';
+    corpo.innerHTML = '<div class="field"><label class="field-label">Tipo</label><select class="filter-select" id="ldTipoRev">' + LD_TIPOS.slice(1).map(function(t){ return '<option value="' + t[0] + '"' + (t[0] === r.tipo ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>' +
+      '<div class="ld-lista" id="ldLinhas">' + linhas.map(function(l){ return '<div class="ld-lin"><span>' + escapeHtml(l[0]) + '</span><b>' + escapeHtml(l[1]) + '</b></div>'; }).join('') + '</div>' +
+      ((r.avisos && r.avisos.length) ? '<div class="saldo-data" style="color:var(--danger);margin-top:8px;">' + r.avisos.map(escapeHtml).join('<br>') + '</div>' : '') +
+      '<div class="saldo-data" style="margin-top:8px;">Abra no formulário para corrigir qualquer campo antes de salvar.</div>';
+    pe.style.display = ''; pe.textContent = 'Abrir no formulário'; pe.onclick = ldAplicar;
+    qs('ldTipoRev').addEventListener('change', function(){ ldRes.tipo = qs('ldTipoRev').value; qs('ldLinhas').innerHTML = ldLinhas(ldRes).map(function(l){ return '<div class="ld-lin"><span>' + escapeHtml(l[0]) + '</span><b>' + escapeHtml(l[1]) + '</b></div>'; }).join(''); });
+    sec.textContent = 'Descartar';
+  }
+}
+function ldMoeda(v){ return (typeof v === 'number' && isFinite(v)) ? fmtMoedaReal(v) : ''; }
+function ldLinhas(r){
+  var L = [], t = r.tipo;
+  function add(rot, v){ if (v !== undefined && v !== null && v !== '') L.push([rot, String(v)]); }
+  if (t === 'peticao' || t === 'acordo' || t === 'alvara') add(t === 'peticao' ? 'Cliente' : 'Partes', r.partes);
+  if (t === 'peticao') add('Ação', r.acao);
+  if (t !== 'obra' && t !== 'despesa') add('Processo', r.processo);
+  if (t === 'acordo' || t === 'alvara') add('Valor total', ldMoeda(r.valor_total));
+  if (t === 'peticao' || t === 'acordo' || t === 'alvara') add(t === 'peticao' ? 'Honorários' : 'Valor para mim', ldMoeda(r.valor_honorarios));
+  if (t === 'peticao'){ add('Modalidade', r.modalidade); add('Percentual', r.percentual != null ? r.percentual + '%' : ''); add('Pagamento', r.forma_pagamento); }
+  if (t === 'obra' || t === 'despesa'){ add('Descrição', r.descricao); add('Fornecedor', r.fornecedor); add('Valor', ldMoeda(r.valor)); add('Nº da nota', r.numero_nota); add('Categoria / etapa', r.categoria); }
+  add('Data', r.data); if (t === 'despesa') add('Vencimento', r.vencimento);
+  if (r.parcelas && r.parcelas.length) add('Parcelas', r.parcelas.length + 'x (' + r.parcelas.map(function(p){ return ldMoeda(p.valor) + ' em ' + (p.data || '?'); }).join('; ') + ')');
+  add('Observação', r.obs);
+  if (!L.length) L.push(['Nada reconhecido', 'Tente outra foto, mais nítida.']);
+  return L;
+}
+function ldImagem(file, maxLado){
+  return new Promise(function(res, rej){
+    var url = URL.createObjectURL(file), im = new Image();
+    im.onload = function(){
+      var w = im.naturalWidth, h = im.naturalHeight, k = Math.min(1, maxLado / Math.max(w, h)), c = document.createElement('canvas');
+      c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){ b ? res(b) : rej(new Error('Não consegui preparar a imagem.')); }, 'image/jpeg', 0.85);
+    };
+    im.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('Não consegui abrir a imagem "' + (file.name || '') + '". Use JPEG, PNG ou WebP.')); };
+    im.src = url;
+  });
+}
+function ldPdf(file, limite){
+  return extCarregarPdfJs().then(function(pdfjs){
+    return file.arrayBuffer().then(function(buf){ return pdfjs.getDocument({ data: buf }).promise; });
+  }).then(function(pdf){
+    var n = Math.min(pdf.numPages, limite), out = [], p = Promise.resolve();
+    for (var i = 1; i <= n; i++) (function(i){
+      p = p.then(function(){ return pdf.getPage(i); }).then(function(pg){
+        var v0 = pg.getViewport({ scale: 1 }), k = 1600 / Math.max(v0.width, v0.height), v = pg.getViewport({ scale: k }), c = document.createElement('canvas');
+        c.width = Math.round(v.width); c.height = Math.round(v.height);
+        return pg.render({ canvasContext: c.getContext('2d'), viewport: v }).promise.then(function(){
+          return new Promise(function(res){ c.toBlob(function(b){ out.push(b); res(); }, 'image/jpeg', 0.85); });
+        });
+      });
+    })(i);
+    return p.then(function(){ return { imgs: out, total: pdf.numPages }; });
+  });
+}
+function ldPdfTexto(file){
+  return extCarregarPdfJs().then(function(pdfjs){
+    return file.arrayBuffer().then(function(buf){ return pdfjs.getDocument({ data: buf }).promise; });
+  }).then(function(pdf){
+    var n = Math.min(pdf.numPages, 8), out = [], p = Promise.resolve();
+    for (var i = 1; i <= n; i++) (function(i){
+      p = p.then(function(){ return pdf.getPage(i); }).then(function(pg){ return pg.getTextContent(); }).then(function(c){
+        var linhas = [], y = null, cur = '';
+        c.items.forEach(function(it){ var yy = Math.round(it.transform[5]); if (y !== null && Math.abs(yy - y) > 3){ linhas.push(cur); cur = ''; } y = yy; cur += it.str + ' '; });
+        if (cur) linhas.push(cur);
+        out.push(linhas.join('\n'));
+      });
+    })(i);
+    return p.then(function(){ return out.join('\n\n'); });
+  });
+}
+function ldPrompt(tipo, textoDoc){
+  var dica = { auto: 'Descubra o tipo do documento.', peticao: 'O documento é uma petição ou contrato de honorários.', acordo: 'O documento é um termo de acordo.', alvara: 'O documento é um alvará judicial.', obra: 'O documento é uma nota fiscal ou recibo de gasto de obra de construção.', despesa: 'O documento é uma conta, boleto ou nota de despesa.' }[tipo] || '';
+  return 'Você lê documentos de um escritório de advocacia brasileiro e devolve SOMENTE um objeto JSON válido, sem texto antes ou depois, sem markdown.\n' + dica + '\nHoje é ' + todayISO() + '.\n' +
+    'Campos (use null quando não houver no documento; nunca invente): {"tipo":"peticao|acordo|alvara|obra|despesa","partes":"nome do cliente ou das partes, separados por \' e \'","processo":"número do processo (CNJ)","acao":"nome da ação","valor_total":número em reais,"valor_honorarios":número em reais (honorários do advogado / valor que cabe ao escritório; em nota ou despesa deixe null),"modalidade":"fixo|exito|fixo_exito|fixo_no_exito|desfecho","percentual":número,"forma_pagamento":"avista|parcelado","parcelas":[{"valor":número,"data":"AAAA-MM-DD"}],"data":"AAAA-MM-DD (data do documento, do pagamento ou da previsão)","vencimento":"AAAA-MM-DD","descricao":"o que foi comprado/pago","fornecedor":"quem vendeu/recebeu","numero_nota":"número da nota ou recibo","valor":número em reais (valor total da nota/despesa),"categoria":"etapa da obra ou categoria da despesa, se houver","obs":"informação útil que não coube nos campos","avisos":["dúvidas ou partes ilegíveis, em português"]}\n' +
+    'Valores como número com ponto decimal (1234.56). Datas sempre AAAA-MM-DD. Se o texto estiver ilegível, preencha o que conseguir e explique em "avisos".' +
+    (textoDoc ? '\nTexto extraído do PDF (comprovantes de Pix ou transferência que paguei devem ser tipo "despesa", com o favorecido em "fornecedor" e o valor em "valor"):\n---\n' + textoDoc + '\n---' : '');
+}
+function ldParse(txt){
+  var t = String(txt || '').replace(/```json|```/g, ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('A resposta não veio no formato esperado.');
+  var o = JSON.parse(t.slice(a, b + 1));
+  function num(v){ if (v === null || v === undefined || v === '') return null; if (typeof v === 'number') return isFinite(v) ? v : null; var s = String(v).replace(/[^\d,.-]/g, ''); if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.'); var n = parseFloat(s); return isFinite(n) ? n : null; }
+  function dt(v){ return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null; }
+  function tx(v){ return (v === null || v === undefined || v === '') ? null : String(v).trim(); }
+  var r = { tipo: LD_NOMES[o.tipo] ? o.tipo : 'despesa', partes: tx(o.partes), processo: tx(o.processo), acao: tx(o.acao), valor_total: num(o.valor_total), valor_honorarios: num(o.valor_honorarios), modalidade: tx(o.modalidade), percentual: num(o.percentual), forma_pagamento: tx(o.forma_pagamento), parcelas: [], data: dt(o.data), vencimento: dt(o.vencimento), descricao: tx(o.descricao), fornecedor: tx(o.fornecedor), numero_nota: tx(o.numero_nota), valor: num(o.valor), categoria: tx(o.categoria), obs: tx(o.obs), avisos: Array.isArray(o.avisos) ? o.avisos.map(String).filter(Boolean) : [] };
+  if (Array.isArray(o.parcelas)) o.parcelas.forEach(function(p){ var v = num(p && p.valor); if (v > 0) r.parcelas.push({ valor: v, data: dt(p.data) || '' }); });
+  if (['fixo', 'exito', 'fixo_exito', 'fixo_no_exito', 'desfecho'].indexOf(r.modalidade) < 0) r.modalidade = null;
+  if (['avista', 'parcelado'].indexOf(r.forma_pagamento) < 0) r.forma_pagamento = r.parcelas.length > 1 ? 'parcelado' : null;
+  return r;
+}
+function ldErroMsg(e){
+  var c = e && e.code;
+  if (c === 'not_granted') return 'Sem permissão para usar o Claude. Autorize quando o aviso aparecer e tente de novo.';
+  if (c === 'rate_limited') return 'Muitos pedidos seguidos. Aguarde um minuto e tente de novo.';
+  if (c === 'images_unavailable') return 'Neste aparelho/tela o Claude não recebe fotos. Use um PDF com texto, ou abra o app pelo navegador (claude.ai) no computador.';
+  if (c === 'pdf_sem_texto') return 'Esse PDF não tem texto (é imagem/digitalizado). Aqui só consigo ler PDF com texto; para foto ou print, abra o app pelo navegador no computador.';
+  if (c === 'image_rejected') return 'A imagem foi recusada (tamanho ou formato). Tente uma foto menor, em JPEG ou PNG.';
+  if (c === 'cancelled') return '';
+  return (e && e.message) ? e.message : 'Não consegui ler o documento.';
+}
+function ldLer(){
+  if (ldBusy) return;
+  if (!ldBlobs.length){ qs('ldErro').textContent = 'Escolha uma foto ou PDF primeiro.'; return; }
+  var tipo = ldTipoSel; ldBusy = true; ldCtrl = new AbortController();
+  ldTela('lendo');
+  var st = function(t){ var e = qs('ldStatus'); if (e) e.textContent = t; };
+  Promise.resolve().then(function(){ return ldSample.limits ? ldSample.limits() : null; }).catch(function(){ return null; }).then(function(lim){
+    if (ldSemImg){
+      var textos = [], pt = Promise.resolve();
+      ldBlobs.forEach(function(f){
+        pt = pt.then(function(){
+          if (!(f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''))) throw { code: 'images_unavailable' };
+          st('Lendo o texto de ' + (f.name || 'PDF') + '…');
+          return ldPdfTexto(f).then(function(x){ textos.push(x); });
+        });
+      });
+      return pt.then(function(){
+        var all = textos.join('\n\n').trim();
+        if (all.replace(/\s/g, '').length < 30) throw { code: 'pdf_sem_texto' };
+        return { texto: all.slice(0, 40000), aviso: '' };
+      });
+    }
+    var max = (lim && lim.images && lim.images.maxCount) || 4, imgs = [], avisoPaginas = '', p = Promise.resolve();
+    ldBlobs.forEach(function(f){
+      p = p.then(function(){
+        var espaco = max - imgs.length;
+        if (espaco <= 0) { avisoPaginas = 'Só as primeiras ' + max + ' páginas/imagens foram lidas.'; return; }
+        st('Preparando ' + (f.name || 'arquivo') + '…');
+        if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '')) return ldPdf(f, espaco).then(function(r){ imgs = imgs.concat(r.imgs); if (r.total > r.imgs.length) avisoPaginas = 'Só as primeiras ' + max + ' páginas foram lidas.'; });
+        return ldImagem(f, 1600).then(function(b){ imgs.push(b); });
+      });
+    });
+    return p.then(function(){ return { imgs: imgs, aviso: avisoPaginas }; });
+  }).then(function(pre){
+    st('Lendo com o Claude…');
+    var opts = { modelTier: 'default', signal: ldCtrl.signal }; if (!pre.texto) opts.images = pre.imgs;
+    return Promise.resolve(ldSample(ldPrompt(tipo, pre.texto), opts)).then(function(txt){ return { txt: txt, aviso: pre.aviso }; });
+  }).then(function(o){
+    var r = ldParse(typeof o.txt === 'string' ? o.txt : (o.txt && o.txt.text) || JSON.stringify(o.txt));
+    if (tipo !== 'auto') r.tipo = tipo;
+    if (o.aviso) r.avisos.push(o.aviso);
+    ldBusy = false; ldRes = r; ldTela('revisao');
+  }).catch(function(e){
+    ldBusy = false;
+    var m = ldErroMsg(e);
+    if (!m){ ldTela('entrada'); return; }
+    ldTela('entrada'); var er = qs('ldErro'); if (er) er.textContent = m;
+  });
+}
+function ldSet(id, v){
+  var el = qs(id); if (!el || v === null || v === undefined || v === '') return;
+  el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+function ldSeg(grupo, valor){
+  var g = qs(grupo); if (!g) return;
+  Array.prototype.forEach.call(g.children, function(b){ if (b.getAttribute('data-value') === valor) b.click(); });
+}
+function ldClientes(kind, partes){
+  var avisos = [];
+  if (!partes) return avisos;
+  var nomes = String(partes).split(/\s+(?:x|e|versus|vs\.?)\s+|,|;/i).map(function(s){ return s.trim(); }).filter(Boolean);
+  var achou = 0, falta = [];
+  nomes.forEach(function(n){
+    var nq = normNome(n), c = clientes.filter(function(x){ return !x.arquivado && (normNome(x.nome) === nq || (nq.length >= 5 && normNome(x.nome).indexOf(nq) >= 0)); })[0];
+    if (c){ pickerAdicionar(kind, c.id); achou++; } else falta.push(n);
+  });
+  if (falta.length) avisos.push('Cliente não cadastrado: ' + falta.join(', ') + '. Digite o nome no campo de clientes e toque em “+ Cadastrar”.');
+  return avisos;
+}
+function ldAplicar(){
+  var r = ldRes, avisos = [];
+  qs('overlayLerDoc').classList.remove('show');
+  if (r.tipo === 'peticao'){
+    abrirNovo();
+    avisos = ldClientes('caso', r.partes);
+    if (!pickState.caso.ids.length && r.partes) ldSet('clienteInput', r.partes);
+    ldSet('nomeAcaoInput', r.acao); ldSet('processoInput', r.processo);
+    var mod = r.modalidade || (r.valor_honorarios ? 'fixo' : null);
+    if (mod) ldSeg('segModalidade', mod);
+    if (mod === 'fixo_no_exito') ldSet('valorExitoFixoInput', r.valor_honorarios);
+    else if (mod !== 'desfecho') ldSet('valorInput', r.valor_honorarios);
+    if (r.percentual != null) ldSet('percentualInput', r.percentual);
+    if (r.forma_pagamento === 'parcelado' && r.parcelas.length){
+      ldSeg('segPagamento', 'parcelado');
+      parcelasState = r.parcelas.map(function(p, i){ return { numero: i + 1, valor: p.valor, data: p.data, pago: false }; });
+      renderParcelasEditor();
+    } else { ldSeg('segPagamento', 'avista'); ldSet('dataAvistaInput', r.data); }
+    ldSet('obsInput', r.obs);
+  } else if (r.tipo === 'acordo'){
+    abrirNovoAcordo();
+    avisos = ldClientes('acordo', r.partes);
+    if (!pickState.acordo.ids.length && r.partes) ldSet('acordoPartesInput', r.partes);
+    ldSet('acordoProcessoInput', r.processo); ldSet('acordoValorTotalInput', r.valor_total); ldSet('acordoValorMeuInput', r.valor_honorarios);
+    ldSet('acordoDataInput', r.data); ldSet('acordoObsInput', r.obs);
+    if (r.parcelas.length > 1){
+      ldSeg('segAcordoPagamento', 'parcelado');
+      parcelasAcordoState = r.parcelas.map(function(p, i){ return { numero: i + 1, valor: p.valor, data: p.data, pago: false }; });
+      renderParcelasAcordoEditor();
+    }
+  } else if (r.tipo === 'alvara'){
+    abrirNovoAlvara();
+    avisos = ldClientes('alvara', r.partes);
+    if (!pickState.alvara.ids.length && r.partes) ldSet('alvaraPartesInput', r.partes);
+    ldSet('alvaraProcessoInput', r.processo); ldSet('alvaraValorTotalInput', r.valor_total); ldSet('alvaraValorMeuInput', r.valor_honorarios);
+    ldSet('alvaraPrevisaoInput', r.data); ldSet('alvaraObsInput', r.obs);
+  } else if (r.tipo === 'obra'){
+    obraAbrirGasto();
+    if (qs('of_desc')){
+      ldSet('of_desc', r.descricao); ldSet('of_forn', r.fornecedor); ldSet('of_valor', r.valor != null ? r.valor : r.valor_total); ldSet('of_nf', r.numero_nota); ldSet('of_data', r.data);
+      if (r.categoria && qs('of_etapa')){
+        var nq = normNome(r.categoria);
+        Array.prototype.forEach.call(qs('of_etapa').options, function(o){ if (nq && normNome(o.textContent).indexOf(nq) >= 0) qs('of_etapa').value = o.value; });
+      }
+      if (r.obs) ldSet('of_desc', (r.descricao || '') + (r.descricao ? ' — ' : '') + r.obs);
+    }
+  } else {
+    abrirNovaDespesa('pj');
+    ldSet('despesaNomeInput', r.descricao || r.fornecedor); ldSet('despesaValorInput', r.valor != null ? r.valor : r.valor_total);
+    var dd = r.vencimento || r.data;
+    if (dd){ ldSeg('segDespesaTipo', 'unica'); ldSet('despesaDataInput', dd); }
+    if (r.categoria){ var cq = normNome(r.categoria), ct = (CATEGORIAS_LISTA || []).filter(function(c){ return normNome(c.label) === cq; })[0]; if (ct) ldSeg('segDespesaCategoria', ct.id); }
+    ldSet('despesaObsInput', r.obs || r.numero_nota ? ((r.numero_nota ? 'Nota ' + r.numero_nota + '. ' : '') + (r.obs || '')) : '');
+  }
+  toast('Dados lidos do documento. Confira tudo antes de salvar.' + (avisos.length ? ' ' + avisos[0] : ''));
+}
+qs('ldSec').addEventListener('click', function(){ ldFechar(); });
+qs('ldFechar').addEventListener('click', ldFechar);
+qs('inicioLerDoc').addEventListener('click', function(){ ldAbrir(); });
+qs('fabLerDoc').addEventListener('click', function(){ ldAbrir(); });
+qs('abrirLerDocBtn').addEventListener('click', function(){ if (typeof fecharMenu === 'function') fecharMenu(); ldAbrir(); });
+ldIniciar();
 
 function obraAbrirGasto(id, pagarId){
   var cfg = obraCfg(), g = id ? obraMov.filter(function(x){ return x.id === id; })[0] : null, pagando = !!pagarId;

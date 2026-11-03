@@ -87,7 +87,34 @@
       return Promise.resolve({ status: 'saved' });
     } catch (e) { return Promise.reject({ code: 'failed', message: String(e) }); }
   } };
+  /* leitura de foto/PDF: o servidor chama o Claude com a chave guardada lá */
+  function paraBase64(blob) {
+    return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1]); }; fr.onerror = function () { rej({ code: 'image_rejected', message: 'Não consegui ler a imagem.' }); }; fr.readAsDataURL(blob); });
+  }
+  var amostra = null;
+  function sample() {
+    if (amostra) return Promise.resolve(amostra);
+    return fetch('/api/ler/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) return null;
+      var f = function (prompt, opts) {
+        opts = opts || {};
+        var imgs = opts.images ? (opts.images instanceof Blob ? [opts.images] : Array.prototype.slice.call(opts.images)) : [];
+        return Promise.all(imgs.map(function (b) { return paraBase64(b).then(function (d) { return { tipo: b.type || 'image/jpeg', dados: d }; }); })).then(function (lista) {
+          return fetch('/api/ler', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt: String(prompt), imagens: lista }), credentials: 'same-origin', signal: opts.signal })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j2) {
+              if (r.status === 401) { location.href = '/login'; }
+              if (!r.ok) throw (j2.error || { code: 'unavailable', message: 'Erro ' + r.status });
+              if (opts.onText) opts.onText({ text: j2.text, delta: j2.text });
+              return { text: j2.text, truncated: false };
+            }); }, function (e) { if (e && e.name === 'AbortError') throw { code: 'cancelled', message: 'Cancelado.' }; throw { code: 'unavailable', message: 'Sem conexão com o servidor.' }; });
+        });
+      };
+      f.limits = function () { return Promise.resolve({ maxPromptBytes: 60000, images: { maxCount: 4, maxInputBytes: 20e6, mediaTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] } }); };
+      amostra = f; return f;
+    }).catch(function () { return null; });
+  }
   window.claude = { use: function (nome) {
+    if (nome === 'sample') return sample();
     if (nome === 'db') return Promise.resolve(db);
     if (nome === 'downloads') return Promise.resolve(downloads);
     return Promise.resolve(null);   // mcp (Google Drive), sample e permissions: ainda não neste servidor

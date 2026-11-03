@@ -29,8 +29,12 @@ node test/login.test.mjs   # testes do login
 node test/e2e-local.mjs    # cadastra, recarrega e confere
 ```
 
+## Leitura de foto/PDF
+Crie o segredo `ANTHROPIC_API_KEY` (chave do Console do Claude) no Worker. Enquanto ele não existir, os botões de câmera ficam escondidos. Opcional: `MODELO_LEITURA` troca o modelo (padrão `claude-sonnet-5-5`). Limite de 200 leituras por dia.
+Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
+
 ## O que ainda não funciona aqui
 - **Extratos pelo Google Drive** (dependiam da conexão do Claude): voltam numa próxima etapa, escolhendo o arquivo direto no aparelho.
-- **Ler foto/recibo**: próxima etapa (usa a chave do Claude guardada no servidor).
+
 
 <!-- publicação disparada em 2026-11-03T03:19:47Z -->
