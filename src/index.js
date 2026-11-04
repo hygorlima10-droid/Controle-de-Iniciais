@@ -262,17 +262,26 @@ export async function enviarResumoDiario(env, opcoes = {}) {
   const subs = await inscricoes(env);
   if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
   const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Controle estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
-  const v = await vapid(env), assunto = env.PUSH_ASSUNTO || config.origem || 'https://controle.invalid';
+  const v = await vapid(env);
+  const origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
+  const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
+  let subUsado = config.subOk || null;
   let enviadas = 0; const falhas = [];
   for (const n of lista) {
     for (const s of subs) {
-      const r = await enviarPush(v, assunto, s, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
+      let r = null;
+      for (const a of assuntos) {
+        r = await enviarPush(v, a, s, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
+        if (r.ok) { subUsado = a; break; }
+        if (!(r.status === 403 && /BadJwtToken/i.test(r.motivo || ''))) break;   // só insiste com outro contato quando a recusa é do token
+      }
       if (r.ok) enviadas++;
       else falhas.push({ status: r.status, motivo: r.motivo || r.erro || '' });
       if (!r.ok && r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
     }
     if (n.chaveAlerta && !opcoes.teste) enviados.alertas[n.chaveAlerta] = mes;
   }
+  if (subUsado && subUsado !== config.subOk && enviadas) await gravarReservado(env, 'config', { ...config, subOk: subUsado });
   if (!opcoes.teste) {
     Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
     enviados.dia = hoje; await gravarReservado(env, 'enviados', enviados);
@@ -281,6 +290,8 @@ export async function enviarResumoDiario(env, opcoes = {}) {
 }
 async function notif(request, env, partes) {
   const acao = partes[1], m = request.method;
+  { const c0 = await lerReservado(env, 'config', { alertas: true, esconder: false }), o = new URL(request.url).origin;
+    if (c0.origem !== o && acao !== 'config') await gravarReservado(env, 'config', { ...c0, origem: o }); }
   if (acao === 'chave' && m === 'GET') return json({ publica: (await vapid(env)).publica });
   if (acao === 'estado' && m === 'GET') {
     const config = await lerReservado(env, 'config', { alertas: true, esconder: false }), subs = await inscricoes(env), resumo = await lerReservado(env, 'resumo', null);
@@ -289,8 +300,6 @@ async function notif(request, env, partes) {
   if (acao === 'inscrever' && m === 'POST') {
     const s = await request.json().catch(() => null);
     if (!s || !s.endpoint || !s.keys || !s.keys.p256dh || !s.keys.auth || !/^https:\/\//.test(s.endpoint) && !/^http:\/\/127\.0\.0\.1/.test(s.endpoint)) return erro(400, 'invalid', 'Inscrição inválida.');
-    const cfgAtual = await lerReservado(env, 'config', { alertas: true, esconder: false });
-    if (cfgAtual.origem !== new URL(request.url).origin) await gravarReservado(env, 'config', { ...cfgAtual, origem: new URL(request.url).origin });
     await gravarReservado(env, 'sub-' + (await hashCurto(s.endpoint)), { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth }, em: new Date().toISOString() });
     return json({ ok: true });
   }
@@ -303,7 +312,7 @@ async function notif(request, env, partes) {
     const c = await request.json().catch(() => null);
     if (!c || typeof c !== 'object') return erro(400, 'invalid', 'Configuração inválida.');
     const antigo = await lerReservado(env, 'config', {});
-    await gravarReservado(env, 'config', { alertas: c.alertas !== false, esconder: !!c.esconder, origem: antigo.origem });
+    await gravarReservado(env, 'config', { ...antigo, alertas: c.alertas !== false, esconder: !!c.esconder });
     return json({ ok: true });
   }
   if (acao === 'resumo' && m === 'PUT') {

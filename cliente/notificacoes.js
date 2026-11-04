@@ -76,7 +76,7 @@ function ntTeste(){
   ntEstado.msg = 'Enviando…'; ntDesenhar();
   return ntJson('/api/notif/teste', 'POST').then(function(r){
     if (r.enviadas) ntEstado.msg = 'Enviada. Ela deve chegar em alguns segundos.';
-    else if (r.falhas && r.falhas.length) ntEstado.msg = 'O serviço de notificações da Apple recusou o envio (código ' + (r.falhas[0].status || 'sem resposta') + (r.falhas[0].motivo ? ': ' + r.falhas[0].motivo : '') + '). Mande esta mensagem para o Claude.';
+    else if (r.falhas && r.falhas.length) ntEstado.msg = 'O serviço de notificações da Apple recusou o envio (código ' + (r.falhas[0].status || 'sem resposta') + (r.falhas[0].motivo ? ': ' + r.falhas[0].motivo : '') + '). Toque em Desativar e depois em Ativar de novo e repita o teste. Se continuar, mande esta mensagem para o Claude.';
     else ntEstado.msg = 'Nenhum aparelho recebeu. Ative as notificações neste aparelho primeiro.';
     return ntCarregar();
   }).catch(function(e){ ntEstado.msg = e.message; }).then(ntDesenhar);

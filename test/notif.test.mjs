@@ -6,7 +6,8 @@ const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright'
 const B = process.env.BASE || 'http://127.0.0.1:8804', SENHA = 'senha-de-teste-123';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const caixa = []; let resp = 201;
-const srv = http.createServer((q, s) => { const p = []; q.on('data', c => p.push(c)); q.on('end', () => { caixa.push({ url: q.url, headers: q.headers, corpo: Buffer.concat(p) }); s.writeHead(resp); s.end(resp === 403 ? '{"reason":"BadJwtToken"}' : ''); }); }).listen(9995);
+let recusaHttps = false;
+const srv = http.createServer((q, s) => { const p = []; q.on('data', c => p.push(c)); q.on('end', () => { const jwt = /t=([^,]+)/.exec(q.headers.authorization || '')[1], sub = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url')).sub; if (recusaHttps && /^https?:/.test(sub)) { s.writeHead(403); s.end('{"reason":"BadJwtToken"}'); return; } caixa.push({ url: q.url, headers: q.headers, corpo: Buffer.concat(p), sub }); s.writeHead(resp); s.end(resp === 403 ? '{"reason":"BadJwtToken"}' : ''); }); }).listen(9995);
 const hojeBR = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), somar = n => new Date(Date.now() - 3 * 3600e3 + n * 86400000).toISOString().slice(0, 10);
 let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.8' } }); const ck = r.headers.get('set-cookie').split(';')[0];
 const api = (m, p, b) => fetch(B + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
@@ -52,6 +53,10 @@ resp = 410; caixa.length = 0; await api('POST', '/api/notif/teste'); j = await (
 resp = 403; caixa.length = 0; await api('POST', '/api/notif/inscrever', sub); r = await api('POST', '/api/notif/teste'); j = await r.json(); const est403 = await (await api('GET', '/api/notif/estado')).json();
 check(j.enviadas === 0 && j.falhas && j.falhas[0].status === 403 && /BadJwtToken/.test(j.falhas[0].motivo), 'quando o serviço recusa (403), a resposta traz o código e o motivo para diagnóstico');
 check(est403.aparelhos === 1, 'recusa 403 não remove o aparelho (só 404/410 removem)'); resp = 201;
+// contato VAPID: se a Apple recusar o endereço, o servidor tenta um e-mail e lembra o que funcionou
+recusaHttps = true; caixa.length = 0; r = await api('POST', '/api/notif/teste'); j = await r.json();
+check(j.enviadas === 1 && caixa.length === 1 && /^mailto:/.test(caixa[0].sub), 'se o serviço recusa o contato (403 BadJwtToken), o servidor tenta outro formato de contato e o envio passa');
+caixa.length = 0; await api('POST', '/api/notif/teste'); check(caixa.length === 1 && /^mailto:/.test(caixa[0].sub), 'na vez seguinte já usa direto o contato que funcionou'); recusaHttps = false;
 // pelo agendamento das 10h (13:00 UTC)
 await api('POST', '/api/notif/inscrever', sub); await api('PUT', '/api/notif/resumo', resumo);
 caixa.length = 0; r = await fetch(B.replace('http://', 'http://') + '/__scheduled?cron=0+13+*+*+*'); await new Promise(z => setTimeout(z, 1500));
