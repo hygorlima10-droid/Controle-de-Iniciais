@@ -83,3 +83,7 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 ## Análises: visão "Último mês"
 
 Novo primeiro botão no seletor da aba Análises (Último mês · 6 meses · 12 meses · Próx. 3 meses); a aba abre já nele. Mostra o mês fechado mais recente (setas ‹ › para outros meses): recebi, gastei e sobrou, comparação com a média dos até 6 meses fechados anteriores, origem das receitas, gastos por categoria (toque para ver as despesas), "o que mais mudou", o quadro dos 4 cenários (mês, média 6 m, média 12 m, próximos 3 meses) e uma leitura rápida. Só leitura: não grava nada. Teste: `test/analises-ultimo.test.mjs`.
+
+## Tipografia unificada
+
+Uma só fonte (Inter, pesos 400/600/700) e 8 tamanhos de letra, definidos em `:root` como `--t1` a `--t8` (11, 12, 13, 14, 16, 20, 24 e 36 px). Todo `font-size` do app usa essas variáveis. Exceções de propósito: o "⋯" dos botões de mais opções, a letra da marca, os rótulos minúsculos dos gráficos (SVG) e os campos de data/texto de 16 px (evita o zoom automático do iPhone).

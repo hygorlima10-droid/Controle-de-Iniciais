@@ -169,8 +169,8 @@ function ob7Extras(){
   var orig = renderObra;
   renderObra = function(){ var r = orig.apply(this, arguments); try{ ob7Extras(); }catch(e){ console.error('obra 7', e); } return r; };
   var st = document.createElement('style');
-  st.textContent = '.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:14px 16px}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
-    '.ob7-chart{display:flex;align-items:flex-end;gap:6px;height:120px;margin:10px 0 6px;border-bottom:1px solid var(--border)}.ob7-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}.ob7-col i{display:block;width:100%;border-radius:5px 5px 0 0}.ob7-col small{position:absolute;bottom:-17px;font-size:.62rem;color:var(--ink-soft)}.ob7-chart{margin-bottom:22px}';
+  st.textContent = '.ini-card.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:14px 16px}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
+    '.ob7-chart{display:flex;align-items:flex-end;gap:6px;height:120px;margin:10px 0 6px;border-bottom:1px solid var(--border)}.ob7-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}.ob7-col i{display:block;width:100%;border-radius:5px 5px 0 0}.ob7-col small{position:absolute;bottom:-17px;font-size:var(--t1);color:var(--ink-soft)}.ob7-chart{margin-bottom:22px}';
   document.head.appendChild(st);
   document.addEventListener('toggle', function(e){ var d = e.target; if (d && d.getAttribute && d.getAttribute('data-ob7-sec')) ob7Abertos[d.getAttribute('data-ob7-sec')] = d.open; }, true);
 })();
