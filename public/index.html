@@ -1371,6 +1371,20 @@
   .info-btn[aria-expanded="true"]{color:var(--accent);border-color:var(--accent);}
   .financeiro-totais .info-nota.aberto{display:block!important;}
   .financeiro-secao-head h4{display:inline-flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;}
+
+  /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
+  @media (max-width:640px){
+    .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
+    .kpi-row .ini-card{padding:14px 14px;min-width:0;}
+    .kpi-row .kpi-val{white-space:nowrap;}
+    .kpi-row .lbl{white-space:nowrap;}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:8px;}
+    .stats .stat{min-width:0;padding:11px 12px;align-items:flex-start;}
+    .stats .stat:last-child:nth-child(odd){grid-column:1/-1;}
+    .stats .stat > div:last-child{overflow:visible;}
+    .stats .stat .lbl{white-space:nowrap;overflow:visible;font-size:var(--t1);}
+    .stats .stat .val{white-space:nowrap;overflow-wrap:normal;}
+  }
 </style>
 </head>
 <body>
