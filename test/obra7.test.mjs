@@ -106,6 +106,15 @@ await page.evaluate(() => document.querySelector('[data-tab="obra"]').click()); 
 await page.evaluate(() => document.querySelectorAll('[data-ob7-sec]').forEach(d => d.open = true));
 const cx = await page.evaluate(() => document.querySelector('[data-ob7-sec="cx"]').innerText);
 check(!/Mês mais pesado/.test(cx) && /início e o prazo da obra/.test(cx), 'sem cronograma, o caixa não inventa mês pesado e explica o que falta informar');
+// ordem da Central: tudo por data de vencimento, obra misturada com o resto
+await api('PUT', 'casos/co1', { tipo: 'inicial', cliente: 'Cliente Ordem', nomeAcao: 'Cobrança', origem: 'proprio', prioridade: 'normal', status: 'pendente', statusDesde: agora, modalidadeHonorario: 'fixo', formaPagamento: 'parcelado', valorHonorarios: 2000, parcelas: [{ numero: 1, valor: 1000, data: dia(-5), pago: false }, { numero: 2, valor: 1000, data: dia(3), pago: false }], clienteIds: [], criadoEm: agora, atualizadoEm: agora });
+await api('PUT', 'obraMov/s4', { tipo: 'gasto', etapaId: 'e1', descricao: 'Areia', valor: 300, status: 'apagar', data: dia(-1), vencimento: dia(8), criadoEm: agora });
+await page.reload(); await page.waitForTimeout(2800);
+await page.evaluate(() => { const m = document.getElementById('atencaoMais'); if (m && /Ver todos/.test(m.textContent)) m.click(); }); await page.waitForTimeout(400);
+const ordem = await page.evaluate(() => Array.from(document.querySelectorAll('#atencaoLista > *')).map(e => { const b = e.querySelector('.up-data b'); const s = e.querySelector('.up-data span'); return b && s ? b.textContent + '/' + s.textContent : null; }).filter(Boolean));
+const ds = [dia(-5), dia(-2), dia(3), dia(8)].map(d => d.slice(8) + '/');
+const pos = ds.map(d => ordem.findIndex(o => o.startsWith(d)));
+check(pos.every(p => p >= 0) && pos.every((p, i) => i === 0 || p > pos[i - 1]), 'Central em ordem de vencimento, com os gastos da obra no meio dos outros itens (' + ordem.join(' ') + ')');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close();
 console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

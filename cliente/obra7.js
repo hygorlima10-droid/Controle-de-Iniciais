@@ -362,15 +362,6 @@ function ob7LinhaAviso(a){
   return '<div class="stall-chip ob7-aviso' + (urgente ? '' : ' tipo-murilo') + '" data-ob7-aviso="' + a.tipo + '|' + escapeHtml(a.id) + '"><div class="up-data' + (a.atraso ? ' up-d-atraso' : (hoje ? ' up-d-hoje' : '')) + '">' + (a.tipo === 'juros' ? '<svg><use href="#ic-coin"/></svg>' : '<b>' + dd + '</b><span>' + mm + '</span>') + '</div>' +
     '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span>' + (a.valor != null ? '<span>' + fmtMoeda(a.valor) + '</span>' : '') + '</div><div class="up-when">' + escapeHtml(a.detalhe) + '</div></div>';
 }
-function ob7InserirAvisos(){
-  var lista = qs('atencaoLista'), sec = qs('atencaoSection'); if (!lista || !sec) return;
-  Array.prototype.forEach.call(lista.querySelectorAll('[data-ob7-aviso]'), function(e){ e.remove(); });
-  var a = ob7Avisos(); if (!a.length) return;
-  sec.style.display = ''; var vz = qs('atencaoVazio'); if (vz) vz.style.display = 'none';
-  var html = a.slice(0, 4).map(ob7LinhaAviso).join(''), ult = lista.querySelectorAll('[data-pa-alerta], [data-pa-rest]');
-  if (ult.length) ult[ult.length - 1].insertAdjacentHTML('afterend', html); else lista.insertAdjacentHTML('afterbegin', html);
-  var bd = qs('atencaoBadge'); if (bd) bd.textContent = (parseInt(bd.textContent, 10) || 0) + Math.min(4, a.length);
-}
 function ob7MontarEscolha(){
   if (qs('overlayObAviso')) return;
   var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayObAviso';
@@ -407,10 +398,6 @@ document.addEventListener('click', function(ev){
   qs('obAvData').min = todayISO(); qs('obAvData').value = ''; qs('obAvErro').textContent = '';
   qs('overlayObAviso').classList.add('show');
 });
-(function(){
-  var orig = renderPainelAtencao;
-  renderPainelAtencao = function(){ var r = orig.apply(this, arguments); try{ ob7InserirAvisos(); }catch(e){ console.error('avisos da obra', e); } return r; };
-})();
 /* itens da obra para as notificações das 10h (o que vence hoje) */
 function ob7Itens(hoje, lim){
   return ob7Avisos().filter(function(a){ return a.d >= hoje && a.d <= lim && a.tipo !== 'juros'; }).map(function(a){ return { d: a.d, t: 'obra', n: a.titulo, l: '', v: a.valor }; });
