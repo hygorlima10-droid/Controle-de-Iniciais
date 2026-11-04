@@ -47,6 +47,8 @@ export async function enviarPush(vapid, assunto, inscricao, carga, ttl = 43200) 
     const corpo = await cifrar(carga, inscricao.keys.p256dh, inscricao.keys.auth);
     const jwt = await jwtVapid(vapid, inscricao.endpoint, assunto);
     const r = await fetch(inscricao.endpoint, { method: 'POST', headers: { 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: String(ttl), urgency: 'normal', authorization: `vapid t=${jwt}, k=${vapid.publica}` }, body: corpo });
-    return { ok: r.status >= 200 && r.status < 300, status: r.status, remover: r.status === 404 || r.status === 410 };
+    const ok = r.status >= 200 && r.status < 300;
+    let motivo = ''; if (!ok) { try { motivo = String(await r.text()).replace(/\s+/g, ' ').slice(0, 160); } catch (e) {} }
+    return { ok, status: r.status, remover: r.status === 404 || r.status === 410, motivo };
   } catch (e) { return { ok: false, status: 0, remover: false, erro: String(e && e.message || e) }; }
 }

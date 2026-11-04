@@ -262,13 +262,14 @@ export async function enviarResumoDiario(env, opcoes = {}) {
   const subs = await inscricoes(env);
   if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
   const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Controle estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
-  const v = await vapid(env), assunto = env.PUSH_ASSUNTO || 'mailto:contato@controle.local';
-  let enviadas = 0;
+  const v = await vapid(env), assunto = env.PUSH_ASSUNTO || config.origem || 'https://controle.invalid';
+  let enviadas = 0; const falhas = [];
   for (const n of lista) {
     for (const s of subs) {
       const r = await enviarPush(v, assunto, s, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
       if (r.ok) enviadas++;
-      else if (r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
+      else falhas.push({ status: r.status, motivo: r.motivo || r.erro || '' });
+      if (!r.ok && r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
     }
     if (n.chaveAlerta && !opcoes.teste) enviados.alertas[n.chaveAlerta] = mes;
   }
@@ -276,7 +277,7 @@ export async function enviarResumoDiario(env, opcoes = {}) {
     Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
     enviados.dia = hoje; await gravarReservado(env, 'enviados', enviados);
   }
-  return { enviadas, notificacoes: lista.length };
+  return { enviadas, notificacoes: lista.length, falhas: falhas.slice(0, 3) };
 }
 async function notif(request, env, partes) {
   const acao = partes[1], m = request.method;
@@ -288,6 +289,8 @@ async function notif(request, env, partes) {
   if (acao === 'inscrever' && m === 'POST') {
     const s = await request.json().catch(() => null);
     if (!s || !s.endpoint || !s.keys || !s.keys.p256dh || !s.keys.auth || !/^https:\/\//.test(s.endpoint) && !/^http:\/\/127\.0\.0\.1/.test(s.endpoint)) return erro(400, 'invalid', 'Inscrição inválida.');
+    const cfgAtual = await lerReservado(env, 'config', { alertas: true, esconder: false });
+    if (cfgAtual.origem !== new URL(request.url).origin) await gravarReservado(env, 'config', { ...cfgAtual, origem: new URL(request.url).origin });
     await gravarReservado(env, 'sub-' + (await hashCurto(s.endpoint)), { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth }, em: new Date().toISOString() });
     return json({ ok: true });
   }
@@ -299,7 +302,8 @@ async function notif(request, env, partes) {
   if (acao === 'config' && m === 'PUT') {
     const c = await request.json().catch(() => null);
     if (!c || typeof c !== 'object') return erro(400, 'invalid', 'Configuração inválida.');
-    await gravarReservado(env, 'config', { alertas: c.alertas !== false, esconder: !!c.esconder });
+    const antigo = await lerReservado(env, 'config', {});
+    await gravarReservado(env, 'config', { alertas: c.alertas !== false, esconder: !!c.esconder, origem: antigo.origem });
     return json({ ok: true });
   }
   if (acao === 'resumo' && m === 'PUT') {

@@ -6,7 +6,7 @@ const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright'
 const B = process.env.BASE || 'http://127.0.0.1:8804', SENHA = 'senha-de-teste-123';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const caixa = []; let resp = 201;
-const srv = http.createServer((q, s) => { const p = []; q.on('data', c => p.push(c)); q.on('end', () => { caixa.push({ url: q.url, headers: q.headers, corpo: Buffer.concat(p) }); s.writeHead(resp); s.end(); }); }).listen(9995);
+const srv = http.createServer((q, s) => { const p = []; q.on('data', c => p.push(c)); q.on('end', () => { caixa.push({ url: q.url, headers: q.headers, corpo: Buffer.concat(p) }); s.writeHead(resp); s.end(resp === 403 ? '{"reason":"BadJwtToken"}' : ''); }); }).listen(9995);
 const hojeBR = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), somar = n => new Date(Date.now() - 3 * 3600e3 + n * 86400000).toISOString().slice(0, 10);
 let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.8' } }); const ck = r.headers.get('set-cookie').split(';')[0];
 const api = (m, p, b) => fetch(B + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
@@ -32,7 +32,7 @@ check(resumoHoje.titulo === '2 itens vencem hoje' && /Joana Murilo · Parcela 2 
 check(!/Atrasada|Futura/.test(JSON.stringify(m)), 'atrasados e vencimentos futuros NÃO entram na notificação');
 check(m.filter(x => /^alerta-/.test(x.tag)).length === 2, 'os 2 alertas do app chegam, cada um em sua notificação');
 const h = caixa[0].headers; const [, t, k] = /^vapid t=(.+), k=(.+)$/.exec(h.authorization); const jw = await verificarJwt(t, k);
-check(k === chave && jw.ok && jw.corpo.aud === 'http://127.0.0.1:9995', 'assinatura VAPID válida com a chave do servidor');
+check(k === chave && jw.ok && jw.corpo.aud === 'http://127.0.0.1:9995' && jw.corpo.sub === B, 'assinatura VAPID válida com a chave do servidor, e o contato (sub) é o endereço do próprio app');
 caixa.length = 0; r = await api('POST', '/api/notif/agora'); j = await r.json();
 check(j.enviadas === 0 && /já enviado hoje/.test(j.motivo), 'rodar de novo no mesmo dia não envia nada (sem repetição)');
 caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); j = await r.json(); m = await lidas();
@@ -49,6 +49,9 @@ await api('PUT', '/api/notif/resumo', { itens: [{ d: somar(-1), t: 'pagamento', 
 caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); check((await r.json()).enviadas === 0 && caixa.length === 0, 'sem nada vencendo hoje e sem alerta novo: nenhuma notificação');
 caixa.length = 0; r = await api('POST', '/api/notif/teste'); m = await lidas(); check(m.length === 1 && m[0].titulo === 'Notificação de teste', 'o botão de teste envia a notificação de teste');
 resp = 410; caixa.length = 0; await api('POST', '/api/notif/teste'); j = await (await api('GET', '/api/notif/estado')).json(); check(j.aparelhos === 0, 'aparelho que cancelou (resposta 410) é removido sozinho'); resp = 201;
+resp = 403; caixa.length = 0; await api('POST', '/api/notif/inscrever', sub); r = await api('POST', '/api/notif/teste'); j = await r.json(); const est403 = await (await api('GET', '/api/notif/estado')).json();
+check(j.enviadas === 0 && j.falhas && j.falhas[0].status === 403 && /BadJwtToken/.test(j.falhas[0].motivo), 'quando o serviço recusa (403), a resposta traz o código e o motivo para diagnóstico');
+check(est403.aparelhos === 1, 'recusa 403 não remove o aparelho (só 404/410 removem)'); resp = 201;
 // pelo agendamento das 10h (13:00 UTC)
 await api('POST', '/api/notif/inscrever', sub); await api('PUT', '/api/notif/resumo', resumo);
 caixa.length = 0; r = await fetch(B.replace('http://', 'http://') + '/__scheduled?cron=0+13+*+*+*'); await new Promise(z => setTimeout(z, 1500));
