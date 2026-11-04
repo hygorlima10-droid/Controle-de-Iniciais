@@ -1022,7 +1022,13 @@
   .an-topo{display:flex;flex-direction:column;gap:6px;}
   .an-ult-nav{display:flex;align-items:center;justify-content:space-between;margin:10px 4px 2px;font-size:1.05rem;} .an-ult-nav .icon-btn:disabled{opacity:.3}
   .an-ult-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;} .an-ult-cat>summary{list-style:none;cursor:pointer} .an-ult-cat>summary::-webkit-details-marker{display:none} .an-ult-det{padding:2px 0 8px 10px;font-size:.82rem} .an-ult-quadro table{width:100%;font-size:.76rem} .an-ult-quadro td,.an-ult-quadro th{white-space:nowrap;padding:6px 3px} .an-ult-quadro th[scope=row]{text-align:left;font-weight:600} .an-ult-quadro thead th{font-size:.7rem}
-  #anPeriodoSeg{display:flex;} #anPeriodoSeg .seg-btn{flex:1;padding:8px 2px;font-size:.76rem;white-space:nowrap;text-align:center;}
+  #anPeriodoSeg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;} #anPeriodoSeg .seg-btn{padding:0 2px;font-size:.78rem;font-weight:600;white-space:nowrap;text-align:center;display:flex;align-items:center;justify-content:center;min-height:38px;border-radius:12px;} #anPeriodoSeg .seg-btn.active{font-weight:700;}
+  .an-tile{border-radius:16px;padding:12px 13px;} .an-tile .lbl{font-size:.74rem;font-weight:700;letter-spacing:.02em;} .an-tile .big{font-family:var(--font-display);font-weight:800;font-size:1.28rem;font-variant-numeric:tabular-nums;margin-top:3px;}
+  .an-tile.in{background:rgba(31,138,76,.12);} .an-tile.in .lbl,.an-tile.in .big{color:var(--success);} .an-tile.out{background:rgba(220,47,47,.10);} .an-tile.out .lbl,.an-tile.out .big{color:var(--urgente);}
+  .an-sobra{display:flex;justify-content:space-between;align-items:center;border-radius:14px;padding:11px 14px;margin-top:2px;font-weight:700;} .an-sobra b{font-family:var(--font-display);font-size:1.35rem;font-variant-numeric:tabular-nums;} .an-sobra.pos{background:rgba(31,138,76,.14);color:var(--success);} .an-sobra.neg{background:rgba(220,47,47,.12);color:var(--urgente);}
+  .an-card .an-bom,.an-bom{color:var(--success)!important;font-weight:700;} .an-card .an-mau,.an-mau{color:var(--urgente)!important;font-weight:700;} .an-pt{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;}
+  .plan-alerta.ok{border-left:3px solid var(--success);background:rgba(31,138,76,.10);} .plan-alerta.aviso.forte{background:rgba(237,161,0,.14);} .plan-alerta.ruim{border-left:3px solid var(--urgente);background:rgba(220,47,47,.09);}
+  .an-ult-quadro tr.sobra td,.an-ult-quadro tr.sobra th{border-top:1px solid var(--line);} .an-ult-quadro td.col-mes,.an-ult-quadro th.col-mes{background:var(--surface-2);}
   .an-topo .seg-btn{min-height:36px;}
   .an-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   @media (min-width:700px){ .an-kpis{grid-template-columns:repeat(4,minmax(0,1fr));} }
@@ -13805,18 +13811,18 @@ function renderAnaliseUltimo(el){
   h += topo + nav + '<div class="saldo-data" style="text-align:center;margin-top:-4px;">mês fechado</div>';
   /* resumo */
   h += anCard('Resumo do mês', '',
-    '<div class="an-ult-kpis"><div><div class="lbl">Recebi</div><div class="val ok">' + fmtMoeda(R.total) + '</div></div><div><div class="lbl">Gastei</div><div class="val">' + fmtMoeda(D.total) + '</div></div></div>' +
-    '<div class="plan-linha"><span><b>' + (sobra >= 0 ? 'Sobrou' : 'Faltou') + '</b></span><strong class="' + (sobra >= 0 ? 'ok' : 'neg') + '">' + fmtMoeda(Math.abs(sobra)) + '</strong></div>' +
+    '<div class="an-ult-kpis"><div class="an-tile in"><div class="lbl">▲ Recebi</div><div class="big">' + fmtMoeda(R.total) + '</div></div><div class="an-tile out"><div class="lbl">▼ Gastei</div><div class="big">' + fmtMoeda(D.total) + '</div></div></div>' +
+    '<div class="an-sobra ' + (sobra >= 0 ? 'pos' : 'neg') + '"><span>' + (sobra >= 0 ? 'Sobrou' : 'Faltou') + '</span><b>' + fmtMoeda(Math.abs(sobra)) + '</b></div>' +
     '<div class="saldo-data an-nota">Em frase: você recebeu ' + fmtMoeda(R.total) + ', gastou ' + fmtMoeda(D.total) + (sobra >= 0 ? ' e sobraram ' + fmtMoeda(sobra) + (R.total > 0 ? ' (' + Math.round(sobra / R.total * 100) + '% do que entrou)' : '') : ' e faltaram ' + fmtMoeda(-sobra)) + '.</div>');
   /* comparação com a média */
   if (base){
     h += anCard('Comparado com a sua média', 'Média por mês dos ' + base.n + (base.n === 1 ? ' mês fechado anterior' : ' meses fechados anteriores') + ' (até 6).',
-      '<div class="plan-linha"><span>Recebido</span><strong>' + anDif(R.total, base.rec) + ' ' + anSeta(R.total, base.rec, false) + '</strong></div>' +
-      '<div class="plan-linha"><span>Gasto</span><strong>' + anDif(D.total, base.gas) + ' ' + anSeta(D.total, base.gas, true) + '</strong></div>' +
-      '<div class="plan-linha"><span>Sobra</span><strong>' + anDif(sobra, base.sobra) + '</strong></div>');
+      '<div class="plan-linha"><span>Recebido</span><strong class="' + (R.total >= base.rec ? 'an-bom' : 'an-mau') + '">' + anDif(R.total, base.rec) + ' ' + anSeta(R.total, base.rec, false) + '</strong></div>' +
+      '<div class="plan-linha"><span>Gasto</span><strong class="' + (D.total <= base.gas ? 'an-bom' : 'an-mau') + '">' + anDif(D.total, base.gas) + ' ' + anSeta(D.total, base.gas, true) + '</strong></div>' +
+      '<div class="plan-linha"><span>Sobra</span><strong class="' + (sobra >= base.sobra ? 'an-bom' : 'an-mau') + '">' + anDif(sobra, base.sobra) + '</strong></div>');
   } else h += anCard('Comparado com a sua média', '', '<div class="financeiro-vazio">Ainda não há meses fechados anteriores para comparar.</div>');
   /* origem */
-  h += anCard('De onde veio', '', [['Clientes próprios', R.proprio], ['Murilo', R.murilo], ['Outras receitas', R.outras]].map(function(x){ return '<div class="plan-linha"><span>' + x[0] + '</span><strong>' + fmtMoeda(x[1]) + '</strong></div>'; }).join(''));
+  h += anCard('De onde veio', '', [['Clientes próprios', R.proprio, 'var(--an-1)'], ['Murilo', R.murilo, 'var(--an-2)'], ['Outras receitas', R.outras, 'var(--an-3)']].map(function(x){ return '<div class="plan-linha"><span><i class="an-pt" style="background:' + x[2] + '"></i>' + x[0] + '</span><strong class="' + (x[1] > 0.004 ? 'an-bom' : '') + '" ' + (x[1] > 0.004 ? '' : 'style="color:var(--ink-soft)"') + '>' + fmtMoeda(x[1]) + '</strong></div>'; }).join(''));
   /* categorias */
   var lista = Object.keys(cats).map(function(k){ return { k: k, v: cats[k] }; }).filter(function(x){ return x.v > 0.004; }).sort(function(a, b){ return b.v - a.v; });
   var total = lista.reduce(function(t, x){ return t + x.v; }, 0), topo8 = lista.slice(0, 8), resto = lista.slice(8).reduce(function(t, x){ return t + x.v; }, 0);
@@ -13839,30 +13845,30 @@ function renderAnaliseUltimo(el){
     Object.keys(base.cats).forEach(function(k){ if (!(cats[k] > 0.004)) difs.push({ k: k, d: r2(-base.cats[k]) }); });
     var menos = difs.filter(function(x){ return x.d < -50; }).sort(function(a, b){ return a.d - b.d; }).slice(0, 2), mais = difs.filter(function(x){ return x.d > 50; }).sort(function(a, b){ return b.d - a.d; }).slice(0, 2);
     if (menos.length || mais.length) h += anCard('O que mais mudou', '',
-      (menos.length ? '<div class="plan-alerta info">Gastou menos em: ' + menos.map(function(x){ return escapeHtml(x.k) + ' (− ' + fmtMoeda(-x.d) + ')'; }).join(' e ') + '</div>' : '') +
-      (mais.length ? '<div class="plan-alerta aviso">Gastou mais em: ' + mais.map(function(x){ return escapeHtml(x.k) + ' (+ ' + fmtMoeda(x.d) + ')'; }).join(' e ') + '</div>' : ''));
+      (menos.length ? '<div class="plan-alerta ok">▼ Gastou menos em: ' + menos.map(function(x){ return escapeHtml(x.k) + ' (− ' + fmtMoeda(-x.d) + ')'; }).join(' e ') + '</div>' : '') +
+      (mais.length ? '<div class="plan-alerta ruim">▲ Gastou mais em: ' + mais.map(function(x){ return escapeHtml(x.k) + ' (+ ' + fmtMoeda(x.d) + ')'; }).join(' e ') + '</div>' : ''));
   }
   /* quadro dos 4 cenários */
   var b6 = anMediaMeses(anMesesFechados(anMesesAte(6))), b12 = anMediaMeses(anMesesFechados(anMesesAte(12))), pr = anProjecao(3), L = pr.linhas, n3 = L.length || 1;
   var pEnt = r2(L.reduce(function(t, l){ return t + l.parc + l.fixas; }, 0) / n3), pSai = r2(L.reduce(function(t, l){ return t + l.desp + l.dia; }, 0) / n3), pSob = r2(pEnt - pSai);
   var pc = function(s, r){ return r > 0.004 ? Math.round(s / r * 100) + '%' : '—'; }, mk = function(v){ return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); };
   var cols = [{ rec: R.total, gas: D.total, sob: sobra }, b6 && { rec: b6.rec, gas: b6.gas, sob: b6.sobra }, b12 && { rec: b12.rec, gas: b12.gas, sob: b12.sobra }, { rec: pEnt, gas: pSai, sob: pSob }];
-  var ln = function(rot, f, forte){ return '<tr><th scope="row">' + rot + '</th>' + cols.map(function(c){ return '<td class="n">' + (forte ? '<b>' : '') + (c ? f(c) : '—') + (forte ? '</b>' : '') + '</td>'; }).join('') + '</tr>'; };
+  var ln = function(rot, f, forte){ return '<tr' + (forte ? ' class="sobra"' : '') + '><th scope="row">' + rot + '</th>' + cols.map(function(c, i){ var cor = forte && c ? (c.sob >= 0 ? 'an-bom' : 'an-mau') : ''; return '<td class="n' + (i === 0 ? ' col-mes' : '') + '">' + (forte ? '<b class="' + cor + '">' : '') + (c ? f(c) : '—') + (forte ? '</b>' : '') + '</td>'; }).join('') + '</tr>'; };
   h += anCard('Os 4 cenários lado a lado', 'Valores por mês, arredondados. Os próximos 3 meses são a previsão do app (parcelas a receber, despesas e média do dia a dia).',
-    '<div class="an-tab-rolar an-ult-quadro"><table><thead><tr><th></th><th class="n">' + escapeHtml(mesCurto(m)) + '</th><th class="n">Média 6 m</th><th class="n">Média 12 m</th><th class="n">Próx. 3 m</th></tr></thead><tbody>' +
+    '<div class="an-tab-rolar an-ult-quadro"><table><thead><tr><th></th><th class="n col-mes">' + escapeHtml(mesCurto(m)) + '</th><th class="n">Média 6 m</th><th class="n">Média 12 m</th><th class="n">Próx. 3 m</th></tr></thead><tbody>' +
     ln('Recebido', function(c){ return mk(c.rec); }) + ln('Gasto', function(c){ return mk(c.gas); }) + ln('Sobra', function(c){ return mk(c.sob); }, true) + ln('% que sobra', function(c){ return pc(c.sob, c.rec); }) + '</tbody></table></div>' +
     (b6 && b6.n < 6 ? '<div class="saldo-data an-nota">A média de 6 meses usa só os ' + b6.n + ' meses fechados que o app já tem.</div>' : ''));
   /* leitura rápida */
   var ler = '', hist = anMesesFechados(anMesesAte(12)).map(function(x){ return { m: x, r: anRecebidoMes(x).total }; });
   if (hist.length >= 4 && hist.some(function(x){ return x.m === m; })){
     var pos = hist.slice().sort(function(a, b){ return b.r - a.r; }).findIndex(function(x){ return x.m === m; }) + 1;
-    if (pos <= 3) ler += '<div class="plan-alerta info">' + (pos === 1 ? 'Foi o melhor mês' : 'Foi o ' + pos + 'º melhor mês') + ' em recebimentos entre os últimos ' + hist.length + ' meses fechados.</div>';
+    if (pos <= 3) ler += '<div class="plan-alerta ok">★ ' + (pos === 1 ? 'Foi o melhor mês' : 'Foi o ' + pos + 'º melhor mês') + ' em recebimentos entre os últimos ' + hist.length + ' meses fechados.</div>';
   }
   if (base && base.gas > 0.004){
     var pg = Math.round((D.total - base.gas) / base.gas * 100);
     if (Math.abs(pg) >= 10){
       var top = lista.map(function(x){ return { k: x.k, d: x.v - (base.cats[x.k] || 0) }; }).sort(function(a, b){ return pg > 0 ? b.d - a.d : a.d - b.d; })[0];
-      ler += '<div class="plan-alerta ' + (pg > 0 ? 'aviso' : 'info') + '">Os gastos ficaram ' + Math.abs(pg) + '% ' + (pg > 0 ? 'acima' : 'abaixo') + ' da média' + (top && Math.abs(top.d) > 50 ? '. O maior motivo foi: ' + escapeHtml(top.k) : '') + '.</div>';
+      ler += '<div class="plan-alerta ' + (pg > 0 ? 'ruim' : 'ok') + '">' + (pg > 0 ? '▲ ' : '▼ ') + 'Os gastos ficaram ' + Math.abs(pg) + '% ' + (pg > 0 ? 'acima' : 'abaixo') + ' da média' + (top && Math.abs(top.d) > 50 ? '. O maior motivo foi: ' + escapeHtml(top.k) : '') + '.</div>';
     }
   }
   if (typeof paTemSample === 'function' && paTemSample()) ler += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-pa-abrir="Como foi meu mês de ' + escapeHtml(mesLabel(m)) + ' comparado com a média dos meses anteriores?">Perguntar ao app sobre isso</button></div>';
