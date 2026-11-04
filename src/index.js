@@ -219,6 +219,26 @@ async function recebidos(request, env, partes) {
   return erro(405, 'method', 'Método não permitido.');
 }
 
+async function anexos(request, env, partes) {
+  const id = partes[1];
+  if (!id && request.method === 'POST') {
+    const b = await request.json().catch(() => null);
+    if (!b || typeof b.b64 !== 'string' || !/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(b.tipo || '')) return erro(400, 'invalid', 'Arquivo inválido.');
+    if (b.b64.length > MAX_B64) return erro(413, 'quota_exceeded', 'Arquivo grande demais (limite de uns 600 KB).');
+    const novo = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+    await gravar(env, '_anexos', novo, { nome: String(b.nome || 'nota').slice(0, 80), tipo: b.tipo, b64: b.b64, em: new Date().toISOString() });
+    return json({ ok: true, id: novo });
+  }
+  if (!id || !NOME.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
+  if (request.method === 'GET') {
+    const r = await env.DB.prepare("SELECT dados FROM docs WHERE colecao = '_anexos' AND id = ?").bind(id).first();
+    if (!r) return erro(404, 'not_found', 'Comprovante não encontrado.');
+    const d = JSON.parse(r.dados); return json({ nome: d.nome, tipo: d.tipo, b64: d.b64 });
+  }
+  if (request.method === 'DELETE') { await env.DB.prepare("DELETE FROM docs WHERE colecao = '_anexos' AND id = ?").bind(id).run(); return json({ ok: true }); }
+  return erro(405, 'method', 'Método não permitido.');
+}
+
 
 /* ---------- notificações push: resumo do que vence hoje (10h, horário de Brasília) e alertas novos ---------- */
 const FUSO_MS = -3 * 3600e3, MAX_NOTIF_ITENS = 4;
@@ -414,7 +434,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

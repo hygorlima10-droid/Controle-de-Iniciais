@@ -71,3 +71,11 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - `src/push.js`: cifragem aes128gcm (RFC 8291) e assinatura VAPID (RFC 8292) só com WebCrypto. As chaves VAPID são geradas na primeira vez e ficam na área reservada do banco (`_notif`), fora dos backups.
 - `public/sw.js`: service worker que mostra a notificação e abre o app ao tocar.
 - Testes: `node test/push.test.mjs` (cifragem) e `node test/notif.test.mjs` (ponta a ponta; veja o cabeçalho).
+
+## Construção 7B e 7C (financiamento, juros, caixa próprio, comprovantes e avisos)
+
+- **Editar a obra** ganhou taxa de juros ao ano, sistema (SAC/Price), prazo do financiamento, início e prazo da obra e recursos próprios exigidos.
+- Na aba **Construção**: *Financiamento e medições* (cronograma de liberações, "Registrar liberação" cria o lançamento e marca a medição), *Juros de obra* (estimativa mensal sobre o saldo liberado, "Lançar" cria o gasto), *Caixa próprio necessário* (mês a mês, pior mês e comparação com a sobra das Análises), *Checklist da obra* (lista padrão opcional, prazos) e *Conferência do extrato e comprovantes*.
+- **Comprovantes**: botão *Anexar* em cada gasto (até 4 fotos/PDFs, até ~600 KB cada). Ficam no servidor (`/api/anexos`, coleção reservada `_anexos`) e **não entram no backup**. *Ler a nota e preencher o gasto* usa a IA sobre a foto.
+- **Central de atenção** e notificações das 10h: gastos a pagar (10 dias), medições (15 dias), itens do checklist e juros do mês, com "Marcar como pago/feito" e "Adiar".
+- Teste: `test/obra7.test.mjs` (porta 8802).

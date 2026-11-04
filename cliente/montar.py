@@ -16,6 +16,13 @@ if '/*NT-INICIO*/' in s:
 else:
     assert s.count('/*PA-FIM*/\n') == 1
     s = s.replace('/*PA-FIM*/\n', '/*PA-FIM*/\n' + bloco_nt)
+ob = open(R + 'cliente/obra7.js', encoding='utf-8').read()
+bloco_ob = '/*OB7-INICIO*/\n' + ob + '\n/*OB7-FIM*/\n'
+if '/*OB7-INICIO*/' in s:
+    s = re.sub(r'/\*OB7-INICIO\*/.*?/\*OB7-FIM\*/\n', lambda m: bloco_ob, s, flags=re.S)
+else:
+    assert s.count('/*NT-FIM*/\n') == 1
+    s = s.replace('/*NT-FIM*/\n', '/*NT-FIM*/\n' + bloco_ob)
 def rep(old, new):
     global s
     if new in s: return
