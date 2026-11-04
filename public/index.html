@@ -937,7 +937,7 @@
   .ini-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:13px 15px;}
   .ini-card .lbl,.ini-div-grid .lbl{font-size:0.78rem;color:var(--ink-soft);margin-bottom:3px;}
   .hero-val{font-size:1.9rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--success);line-height:1.15;}
-  .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .kpi-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   .kpi-val{font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;}
   .kpi-val.destaque{color:var(--accent);}
   .kpi-val.vencido{color:var(--urgente);}
@@ -945,7 +945,7 @@
   .seg-mur{background:var(--accent-2);opacity:0.6;}
   .seg-out{background:var(--info);}
   .ini-div-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
-  .ini-div-grid .val{font-weight:800;font-size:1.02rem;font-variant-numeric:tabular-nums;}
+  .ini-div-grid .val{font-weight:800;font-size:clamp(.78rem,3.45vw,1rem);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .ini-div-grid .val.ok{color:var(--success);}
   .ini-div-grid .val.neg{color:var(--urgente);}
   .atalhos{display:flex;gap:8px;flex-wrap:wrap;}
@@ -9197,6 +9197,7 @@
     qs('bodyAlvaras').style.display = (tab === 'alvaras') ? '' : 'none';
     qs('bodyClientes').style.display = (tab === 'clientes') ? '' : 'none';
     qs('bodyFinanceiro').style.display = (tab === 'financeiro') ? '' : 'none';
+    qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
     qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra') ? 'none' : '';
     if (tab !== 'financeiro') qs('finFabMenu').style.display = 'none';
     qs('fabNew').title = (tab === 'peticoes') ? 'Nova petição' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
@@ -15322,7 +15323,7 @@ function paInserirAlertas(){
   if (!a.length && !(nd && sec.style.display !== 'none')) return;
   sec.style.display = ''; var vz = qs('atencaoVazio'); if (vz) vz.style.display = 'none';
   lista.insertAdjacentHTML('afterbegin', a.map(paLinhaAlerta).join('') + (nd ? '<div class="pa-rest" data-pa-rest="1"><button type="button" class="btn-text" data-pa-restaurar="1">' + nd + ' alerta' + (nd > 1 ? 's' : '') + ' dispensado' + (nd > 1 ? 's' : '') + ' neste mês · mostrar de novo</button></div>' : ''));
-  var bd = qs('atencaoBadge'); if (bd) bd.textContent = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length;
+  var bd = qs('atencaoBadge'); if (bd){ var tot = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length; bd.textContent = tot; try{ atualizarContagensMenu(tot); }catch(e){} var mais = qs('atencaoMais'); if (mais && tot > 5){ mais.style.display = ''; if (!/Mostrar menos/.test(mais.textContent)) mais.textContent = 'Ver todos (' + tot + ')'; } }
 }
 
 /* ---------- metas com plano ---------- */

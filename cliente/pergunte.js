@@ -268,7 +268,7 @@ function paInserirAlertas(){
   if (!a.length && !(nd && sec.style.display !== 'none')) return;
   sec.style.display = ''; var vz = qs('atencaoVazio'); if (vz) vz.style.display = 'none';
   lista.insertAdjacentHTML('afterbegin', a.map(paLinhaAlerta).join('') + (nd ? '<div class="pa-rest" data-pa-rest="1"><button type="button" class="btn-text" data-pa-restaurar="1">' + nd + ' alerta' + (nd > 1 ? 's' : '') + ' dispensado' + (nd > 1 ? 's' : '') + ' neste mês · mostrar de novo</button></div>' : ''));
-  var bd = qs('atencaoBadge'); if (bd) bd.textContent = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length;
+  var bd = qs('atencaoBadge'); if (bd){ var tot = (parseInt(bd.getAttribute('data-itens') || bd.textContent, 10) || 0) + a.length; bd.textContent = tot; try{ atualizarContagensMenu(tot); }catch(e){} var mais = qs('atencaoMais'); if (mais && tot > 5){ mais.style.display = ''; if (!/Mostrar menos/.test(mais.textContent)) mais.textContent = 'Ver todos (' + tot + ')'; } }
 }
 
 /* ---------- metas com plano ---------- */
