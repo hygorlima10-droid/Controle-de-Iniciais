@@ -1020,6 +1020,9 @@
   .an-wrap{--an-1:#2a78d6;--an-2:#eb6834;--an-3:#1baf7a;--an-ref:#8a93ad;position:relative;display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:820px;margin:0 auto;}
   :root[data-theme="dark"] .an-wrap{--an-1:#3987e5;--an-2:#d95926;--an-3:#199e70;--an-ref:#8890ac;}
   .an-topo{display:flex;flex-direction:column;gap:6px;}
+  .an-ult-nav{display:flex;align-items:center;justify-content:space-between;margin:10px 4px 2px;font-size:1.05rem;} .an-ult-nav .icon-btn:disabled{opacity:.3}
+  .an-ult-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;} .an-ult-cat>summary{list-style:none;cursor:pointer} .an-ult-cat>summary::-webkit-details-marker{display:none} .an-ult-det{padding:2px 0 8px 10px;font-size:.82rem} .an-ult-quadro table{width:100%;font-size:.76rem} .an-ult-quadro td,.an-ult-quadro th{white-space:nowrap;padding:6px 3px} .an-ult-quadro th[scope=row]{text-align:left;font-weight:600} .an-ult-quadro thead th{font-size:.7rem}
+  #anPeriodoSeg{display:flex;} #anPeriodoSeg .seg-btn{flex:1;padding:8px 2px;font-size:.76rem;white-space:nowrap;text-align:center;}
   .an-topo .seg-btn{min-height:36px;}
   .an-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   @media (min-width:700px){ .an-kpis{grid-template-columns:repeat(4,minmax(0,1fr));} }
@@ -13421,8 +13424,7 @@ qs('overlayExt').addEventListener('click', function(e){ if (e.target === qs('ove
    ANÁLISES (Etapa 6): gráficos do que já foi recebido e gasto, evolução do patrimônio, projeção de caixa e comparativo anual.
    Tudo é calculado na hora a partir dos registros que já existem (não grava nada), com as mesmas regras das outras telas.
    ============================================================ */
-var anPeriodo = 6, anVisaoDesp = 'cat', anTips = [], anTipEl = null, anUltimo = null;
-try{ var anBruto = localStorage.getItem('controlePeticoes.anPeriodo.v1'), anSalvo = parseInt(anBruto, 10); if (anBruto === 'proj') anPeriodo = 'proj'; else if (anSalvo === 6 || anSalvo === 12) anPeriodo = anSalvo; }catch(e){}
+var anPeriodo = 'ult', anVisaoDesp = 'cat', anTips = [], anTipEl = null, anUltimo = null;
 var AN_HORIZONTE = 6;
 var AN_MESES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -13739,7 +13741,7 @@ function anMarcarObra(chave){
   }).catch(function(err){ console.error('erro ao marcar', err); toast('Não consegui salvar. Tente de novo.'); });
 }
 function anSegBotoes(){
-  return [[6, '6 meses'], [12, '12 meses'], ['proj', 'Próximos 3 meses']].map(function(o){
+  return [['ult', 'Último mês'], [6, '6 meses'], [12, '12 meses'], ['proj', 'Próx. 3 meses']].map(function(o){
     return '<button type="button" data-an-periodo="' + o[0] + '" class="seg-btn' + (anPeriodo === o[0] ? ' active' : '') + '">' + o[1] + '</button>';
   }).join('');
 }
@@ -13759,6 +13761,114 @@ function anListaEventos(lista, vazio, sinal, modo){
     return '<div class="ob-gasto"><div class="ob-gasto-info"><b>' + escapeHtml(e.nome) + '</b><span class="saldo-data">' + (e.data ? escapeHtml(fmtData(e.data)) : 'sem previsão') + (e.atrasado ? ' · atrasado' : '') + (e.tipo === 'alvara' ? ' · alvará' + (e.fase ? ' (' + escapeHtml(e.fase) + ')' : '') : '') + (e.tipo === 'fixa' ? ' · receita fixa' : '') + '</span></div>' +
       '<div class="ob-gasto-val"><strong>' + sinal + ' ' + fmtMoeda(e.valor) + '</strong>' + (modo ? '<span>' + anBotaoObra(e, modo === 'marcar') + '</span>' : '') + '</div></div>';
   }).join('');
+}
+/* ---------- visão "Último mês" ---------- */
+var anMesUlt = null;
+function anCatsMes(m){
+  var d = anDespesasMes(m), c = {};
+  Object.keys(d.porCat).forEach(function(k){ var r = CATEGORIA_LABEL[k] || 'Outros'; c[r] = r2((c[r] || 0) + d.porCat[k]); });
+  Object.keys(d.diaADiaCats).forEach(function(k){ var r = 'Dia a dia · ' + k; c[r] = r2((c[r] || 0) + d.diaADiaCats[k]); });
+  return c;
+}
+function anMesesFechados(lista){
+  var pri = anPrimeiroDia(), m0 = todayISO().slice(0, 7), parcialIni = pri.slice(8) > '05';
+  return lista.filter(function(m){ return m < m0 && m >= pri.slice(0, 7) && !(m === pri.slice(0, 7) && parcialIni); });
+}
+function anMediaMeses(lista){
+  if (!lista.length) return null;
+  var n = lista.length, rec = 0, gas = 0, cats = {};
+  lista.forEach(function(m){ rec += anRecebidoMes(m).total; gas += anDespesasMes(m).total; var c = anCatsMes(m); Object.keys(c).forEach(function(k){ cats[k] = (cats[k] || 0) + c[k]; }); });
+  Object.keys(cats).forEach(function(k){ cats[k] = r2(cats[k] / n); });
+  return { n: n, rec: r2(rec / n), gas: r2(gas / n), sobra: r2((rec - gas) / n), cats: cats };
+}
+function anSeta(v, base, invertido){
+  if (!(base > 0.004)) return '';
+  var p = Math.round((v - base) / base * 100);
+  if (Math.abs(p) < 1) return '<span class="est est-bom">= igual</span>';
+  var sobe = p > 0, bom = invertido ? !sobe : sobe;
+  return '<span class="est ' + (bom ? 'est-bom' : 'est-atraso') + '">' + (sobe ? '▲ ' : '▼ ') + Math.abs(p) + '%</span>';
+}
+function anDif(v, base){ var d = r2(v - base); return (d >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(d)); }
+function renderAnaliseUltimo(el){
+  var m0 = todayISO().slice(0, 7), ultFechado = deslocarMes(m0, -1), pri = anPrimeiroMes();
+  if (!anMesUlt || anMesUlt > ultFechado) anMesUlt = ultFechado;
+  var m = anMesUlt, h = '';
+  var topo = '<div class="an-topo"><div class="segmented" id="anPeriodoSeg" role="group" aria-label="Período">' + anSegBotoes() + '</div></div>';
+  if (ultFechado < pri){
+    el.innerHTML = topo + '<div class="ini-card an-card"><div class="financeiro-vazio">Ainda não há um mês fechado com movimento. Assim que o primeiro mês terminar, o resumo aparece aqui.</div></div>';
+    return;
+  }
+  var R = anRecebidoMes(m), D = anDespesasMes(m), sobra = r2(R.total - D.total), cats = anCatsMes(m);
+  var anteriores = anMesesFechados([-6, -5, -4, -3, -2, -1].map(function(i){ return deslocarMes(m, i); }));
+  var base = anMediaMeses(anteriores);
+  var nav = '<div class="an-ult-nav"><button type="button" class="icon-btn" data-an-ult="-1" aria-label="Mês anterior"' + (m <= pri ? ' disabled' : '') + '>‹</button><b>' + escapeHtml(mesLabel(m)) + '</b><button type="button" class="icon-btn" data-an-ult="1" aria-label="Mês seguinte"' + (m >= ultFechado ? ' disabled' : '') + '>›</button></div>';
+  h += topo + nav + '<div class="saldo-data" style="text-align:center;margin-top:-4px;">mês fechado</div>';
+  /* resumo */
+  h += anCard('Resumo do mês', '',
+    '<div class="an-ult-kpis"><div><div class="lbl">Recebi</div><div class="val ok">' + fmtMoeda(R.total) + '</div></div><div><div class="lbl">Gastei</div><div class="val">' + fmtMoeda(D.total) + '</div></div></div>' +
+    '<div class="plan-linha"><span><b>' + (sobra >= 0 ? 'Sobrou' : 'Faltou') + '</b></span><strong class="' + (sobra >= 0 ? 'ok' : 'neg') + '">' + fmtMoeda(Math.abs(sobra)) + '</strong></div>' +
+    '<div class="saldo-data an-nota">Em frase: você recebeu ' + fmtMoeda(R.total) + ', gastou ' + fmtMoeda(D.total) + (sobra >= 0 ? ' e sobraram ' + fmtMoeda(sobra) + (R.total > 0 ? ' (' + Math.round(sobra / R.total * 100) + '% do que entrou)' : '') : ' e faltaram ' + fmtMoeda(-sobra)) + '.</div>');
+  /* comparação com a média */
+  if (base){
+    h += anCard('Comparado com a sua média', 'Média por mês dos ' + base.n + (base.n === 1 ? ' mês fechado anterior' : ' meses fechados anteriores') + ' (até 6).',
+      '<div class="plan-linha"><span>Recebido</span><strong>' + anDif(R.total, base.rec) + ' ' + anSeta(R.total, base.rec, false) + '</strong></div>' +
+      '<div class="plan-linha"><span>Gasto</span><strong>' + anDif(D.total, base.gas) + ' ' + anSeta(D.total, base.gas, true) + '</strong></div>' +
+      '<div class="plan-linha"><span>Sobra</span><strong>' + anDif(sobra, base.sobra) + '</strong></div>');
+  } else h += anCard('Comparado com a sua média', '', '<div class="financeiro-vazio">Ainda não há meses fechados anteriores para comparar.</div>');
+  /* origem */
+  h += anCard('De onde veio', '', [['Clientes próprios', R.proprio], ['Murilo', R.murilo], ['Outras receitas', R.outras]].map(function(x){ return '<div class="plan-linha"><span>' + x[0] + '</span><strong>' + fmtMoeda(x[1]) + '</strong></div>'; }).join(''));
+  /* categorias */
+  var lista = Object.keys(cats).map(function(k){ return { k: k, v: cats[k] }; }).filter(function(x){ return x.v > 0.004; }).sort(function(a, b){ return b.v - a.v; });
+  var total = lista.reduce(function(t, x){ return t + x.v; }, 0), topo8 = lista.slice(0, 8), resto = lista.slice(8).reduce(function(t, x){ return t + x.v; }, 0);
+  if (resto > 0.004) topo8.push({ k: 'Outras (' + (lista.length - 8) + ')', v: r2(resto), agrupado: true });
+  var nomesPorCat = {}; /* despesas lançadas de cada categoria, para abrir ao tocar */
+  comMes(m, function(){ ['pj', 'pf'].forEach(function(col){ getDespesasParaMes(col).forEach(function(it){
+    if (it.despesa.transferenciaId) return; var v = valorDespesaItem(it); if (!(v > 0.004)) return;
+    var rot = CATEGORIA_LABEL[catIdValida(it.despesa.categoria)] || 'Outros', n = String(it.despesa.nome || 'Sem nome').trim();
+    (nomesPorCat[rot] = nomesPorCat[rot] || {})[n] = r2(((nomesPorCat[rot] || {})[n] || 0) + v);
+  }); }); });
+  var corpoCat = topo8.length ? topo8.map(function(x){
+    var linha = '<div class="an-hb"><span class="an-hb-n">' + escapeHtml(x.k) + '</span><span class="an-hb-t"><span class="an-hb-f" style="width:' + Math.max(1.5, x.v / topo8[0].v * 100) + '%;background:var(--an-1)"></span></span><span class="an-hb-v">' + fmtMoeda(x.v) + ' ' + (base && !x.agrupado ? anSeta(x.v, base.cats[x.k] || 0, true) : '') + '</span></div>';
+    var det = nomesPorCat[x.k] ? Object.keys(nomesPorCat[x.k]).sort(function(a, b){ return nomesPorCat[x.k][b] - nomesPorCat[x.k][a]; }).map(function(n){ return '<div class="plan-linha"><span>' + escapeHtml(n) + '</span><strong>' + fmtMoeda(nomesPorCat[x.k][n]) + '</strong></div>'; }).join('') : '';
+    return det ? '<details class="an-ult-cat"><summary>' + linha + '</summary><div class="an-ult-det">' + det + '</div></details>' : linha;
+  }).join('') : '<div class="financeiro-vazio">Sem despesas neste mês.</div>';
+  h += anCard('Para onde o dinheiro foi', fmtMoeda(total) + ' no total. ' + (base ? 'As setas comparam com a média por mês dos meses anteriores. ' : '') + 'Toque numa categoria para ver as despesas dela.', corpoCat);
+  /* o que mais mudou */
+  if (base){
+    var difs = lista.map(function(x){ return { k: x.k, d: r2(x.v - (base.cats[x.k] || 0)) }; });
+    Object.keys(base.cats).forEach(function(k){ if (!(cats[k] > 0.004)) difs.push({ k: k, d: r2(-base.cats[k]) }); });
+    var menos = difs.filter(function(x){ return x.d < -50; }).sort(function(a, b){ return a.d - b.d; }).slice(0, 2), mais = difs.filter(function(x){ return x.d > 50; }).sort(function(a, b){ return b.d - a.d; }).slice(0, 2);
+    if (menos.length || mais.length) h += anCard('O que mais mudou', '',
+      (menos.length ? '<div class="plan-alerta info">Gastou menos em: ' + menos.map(function(x){ return escapeHtml(x.k) + ' (− ' + fmtMoeda(-x.d) + ')'; }).join(' e ') + '</div>' : '') +
+      (mais.length ? '<div class="plan-alerta aviso">Gastou mais em: ' + mais.map(function(x){ return escapeHtml(x.k) + ' (+ ' + fmtMoeda(x.d) + ')'; }).join(' e ') + '</div>' : ''));
+  }
+  /* quadro dos 4 cenários */
+  var b6 = anMediaMeses(anMesesFechados(anMesesAte(6))), b12 = anMediaMeses(anMesesFechados(anMesesAte(12))), pr = anProjecao(3), L = pr.linhas, n3 = L.length || 1;
+  var pEnt = r2(L.reduce(function(t, l){ return t + l.parc + l.fixas; }, 0) / n3), pSai = r2(L.reduce(function(t, l){ return t + l.desp + l.dia; }, 0) / n3), pSob = r2(pEnt - pSai);
+  var pc = function(s, r){ return r > 0.004 ? Math.round(s / r * 100) + '%' : '—'; }, mk = function(v){ return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); };
+  var cols = [{ rec: R.total, gas: D.total, sob: sobra }, b6 && { rec: b6.rec, gas: b6.gas, sob: b6.sobra }, b12 && { rec: b12.rec, gas: b12.gas, sob: b12.sobra }, { rec: pEnt, gas: pSai, sob: pSob }];
+  var ln = function(rot, f, forte){ return '<tr><th scope="row">' + rot + '</th>' + cols.map(function(c){ return '<td class="n">' + (forte ? '<b>' : '') + (c ? f(c) : '—') + (forte ? '</b>' : '') + '</td>'; }).join('') + '</tr>'; };
+  h += anCard('Os 4 cenários lado a lado', 'Valores por mês, arredondados. Os próximos 3 meses são a previsão do app (parcelas a receber, despesas e média do dia a dia).',
+    '<div class="an-tab-rolar an-ult-quadro"><table><thead><tr><th></th><th class="n">' + escapeHtml(mesCurto(m)) + '</th><th class="n">Média 6 m</th><th class="n">Média 12 m</th><th class="n">Próx. 3 m</th></tr></thead><tbody>' +
+    ln('Recebido', function(c){ return mk(c.rec); }) + ln('Gasto', function(c){ return mk(c.gas); }) + ln('Sobra', function(c){ return mk(c.sob); }, true) + ln('% que sobra', function(c){ return pc(c.sob, c.rec); }) + '</tbody></table></div>' +
+    (b6 && b6.n < 6 ? '<div class="saldo-data an-nota">A média de 6 meses usa só os ' + b6.n + ' meses fechados que o app já tem.</div>' : ''));
+  /* leitura rápida */
+  var ler = '', hist = anMesesFechados(anMesesAte(12)).map(function(x){ return { m: x, r: anRecebidoMes(x).total }; });
+  if (hist.length >= 4 && hist.some(function(x){ return x.m === m; })){
+    var pos = hist.slice().sort(function(a, b){ return b.r - a.r; }).findIndex(function(x){ return x.m === m; }) + 1;
+    if (pos <= 3) ler += '<div class="plan-alerta info">' + (pos === 1 ? 'Foi o melhor mês' : 'Foi o ' + pos + 'º melhor mês') + ' em recebimentos entre os últimos ' + hist.length + ' meses fechados.</div>';
+  }
+  if (base && base.gas > 0.004){
+    var pg = Math.round((D.total - base.gas) / base.gas * 100);
+    if (Math.abs(pg) >= 10){
+      var top = lista.map(function(x){ return { k: x.k, d: x.v - (base.cats[x.k] || 0) }; }).sort(function(a, b){ return pg > 0 ? b.d - a.d : a.d - b.d; })[0];
+      ler += '<div class="plan-alerta ' + (pg > 0 ? 'aviso' : 'info') + '">Os gastos ficaram ' + Math.abs(pg) + '% ' + (pg > 0 ? 'acima' : 'abaixo') + ' da média' + (top && Math.abs(top.d) > 50 ? '. O maior motivo foi: ' + escapeHtml(top.k) : '') + '.</div>';
+    }
+  }
+  if (typeof paTemSample === 'function' && paTemSample()) ler += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-pa-abrir="Como foi meu mês de ' + escapeHtml(mesLabel(m)) + ' comparado com a média dos meses anteriores?">Perguntar ao app sobre isso</button></div>';
+  if (ler) h += anCard('Leitura rápida', '', ler);
+  el.innerHTML = h + '<div id="anTip" class="an-tip" role="status" style="display:none;"></div>';
+  anTipEl = qs('anTip');
 }
 function renderAnaliseProjecao(el){
   var w = Math.floor((el.clientWidth || 360) - 30), S1 = 'var(--an-1)', S2 = 'var(--an-2)', S3 = 'var(--an-3)', m0 = todayISO().slice(0, 7);
@@ -13821,6 +13931,7 @@ function renderAnalises(){
     el.innerHTML = '<div class="ini-card an-card"><div class="financeiro-vazio">O modo discreto está ligado: os gráficos mostrariam os valores pelo tamanho das barras, então ficam ocultos. Toque no olho no topo para voltar a ver.</div></div>';
     return;
   }
+  if (anPeriodo === 'ult'){ renderAnaliseUltimo(el); return; }
   if (anPeriodo === 'proj'){ renderAnaliseProjecao(el); return; }
   var w = Math.floor((el.clientWidth || 360) - 30), hoje = todayISO(), m0 = hoje.slice(0, 7), meses = anMesesVisiveis();
   var S1 = 'var(--an-1)', S2 = 'var(--an-2)', S3 = 'var(--an-3)';
@@ -13936,7 +14047,9 @@ function anMostrarTip(ev, alvo){
     if (at){ anMarcarObra(at.getAttribute('data-an-atip')); return; }
     var v = ev.target.closest ? ev.target.closest('[data-an-visao]') : null;
     if (v){ anVisaoDesp = v.getAttribute('data-an-visao'); renderAnalises(); return; }
-    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = pv === 'proj' ? 'proj' : parseInt(pv, 10); try{ localStorage.setItem('controlePeticoes.anPeriodo.v1', String(anPeriodo)); }catch(e){} renderAnalises(); return; }
+    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = (pv === 'proj' || pv === 'ult') ? pv : parseInt(pv, 10); renderAnalises(); return; }
+    var un = ev.target.closest ? ev.target.closest('[data-an-ult]') : null;
+    if (un && !un.disabled){ anMesUlt = deslocarMes(anMesUlt || deslocarMes(todayISO().slice(0, 7), -1), parseInt(un.getAttribute('data-an-ult'), 10)); renderAnalises(); return; }
     var a = ev.target.closest ? ev.target.closest('[data-tip]') : null;
     if (a) anMostrarTip(ev, a); else if (anTipEl) anTipEl.style.display = 'none';
   });

@@ -79,3 +79,7 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 - **Comprovantes**: botão *Anexar* em cada gasto (até 4 fotos/PDFs, até ~600 KB cada). Ficam no servidor (`/api/anexos`, coleção reservada `_anexos`) e **não entram no backup**. *Ler a nota e preencher o gasto* usa a IA sobre a foto.
 - **Central de atenção** e notificações das 10h: gastos a pagar (10 dias), medições (15 dias), itens do checklist e juros do mês, com "Marcar como pago/feito" e "Adiar".
 - Teste: `test/obra7.test.mjs` (porta 8802).
+
+## Análises: visão "Último mês"
+
+Novo primeiro botão no seletor da aba Análises (Último mês · 6 meses · 12 meses · Próx. 3 meses); a aba abre já nele. Mostra o mês fechado mais recente (setas ‹ › para outros meses): recebi, gastei e sobrou, comparação com a média dos até 6 meses fechados anteriores, origem das receitas, gastos por categoria (toque para ver as despesas), "o que mais mudou", o quadro dos 4 cenários (mês, média 6 m, média 12 m, próximos 3 meses) e uma leitura rápida. Só leitura: não grava nada. Teste: `test/analises-ultimo.test.mjs`.
