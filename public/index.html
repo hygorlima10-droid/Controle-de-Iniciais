@@ -15541,8 +15541,10 @@ function ob7Caixa(){
   var cfg = ob7Cfg(), fin = cfg.financiamento, r = obraResumo(), m0 = todayISO().slice(0, 7);
   var meds = ob7Medicoes().filter(function(m){ return m.status !== 'liberada' && !m.liberacaoId && m.data; });
   var ultMed = meds.length ? ob7Mes(meds[meds.length - 1].data) : m0;
-  var fimObra = fin.inicioObra ? deslocarMes(ob7Mes(fin.inicioObra), Math.max(1, fin.prazoObraMeses) - 1) : deslocarMes(m0, 5);
-  var fim = [fimObra, ultMed, m0].sort().pop();
+  var temCronograma = !!fin.inicioObra;
+  var fimObra = temCronograma ? deslocarMes(ob7Mes(fin.inicioObra), Math.max(1, fin.prazoObraMeses) - 1) : m0;
+  var ultPagar = obraMov.filter(function(m){ return m.tipo === 'gasto' && m.status === 'apagar'; }).map(function(m){ return ob7Mes(m.vencimento || m.data); }).sort().pop() || m0;
+  var fim = [fimObra, ultMed, ultPagar, m0].sort().pop();
   var meses = ob7Meses(m0, fim, 36);
   var aPagar = {}, aPagarTotal = 0;
   obraMov.forEach(function(m){
@@ -15550,12 +15552,12 @@ function ob7Caixa(){
     var mm = ob7Mes(m.vencimento || m.data); if (mm < m0) mm = m0;
     aPagar[mm] = r2((aPagar[mm] || 0) + (Number(m.valor) || 0)); aPagarTotal += Number(m.valor) || 0;
   });
-  var resto = Math.max(0, r2(r.faltaGastar - aPagarTotal)), porMes = meses.length ? resto / meses.length : 0;
+  var resto = Math.max(0, r2(r.faltaGastar - aPagarTotal)), mesesResto = temCronograma ? ob7Meses(m0, fimObra, 36).length : 0, porMes = mesesResto ? resto / mesesResto : 0;
   var jur = ob7Juros(), jurPorMes = {}; if (jur) jur.rows.forEach(function(x){ if (x.mes >= m0 && !x.lancado) jurPorMes[x.mes] = x.juros; });
   var lib = {}; meds.forEach(function(m){ var mm = ob7Mes(m.data); if (mm < m0) mm = m0; lib[mm] = r2((lib[mm] || 0) + (Number(m.valor) || 0)); });
   var saldo = r.saldo, rows = [], total = 0, pior = null;
   meses.forEach(function(m){
-    var entra = lib[m] || 0, sai = r2((aPagar[m] || 0) + porMes + (jurPorMes[m] || 0));
+    var entra = lib[m] || 0, sai = r2((aPagar[m] || 0) + (m <= fimObra ? porMes : 0) + (jurPorMes[m] || 0));
     saldo = r2(saldo + entra - sai);
     var aportar = 0; if (saldo < 0){ aportar = r2(-saldo); saldo = 0; }
     total += aportar;
@@ -15563,7 +15565,7 @@ function ob7Caixa(){
     rows.push(x); if (aportar > 0 && (!pior || aportar > pior.aportar)) pior = x;
   });
   var sobra = 0; try{ var pj = anProjecao(6); sobra = pj.linhas.length ? r2((pj.linhas[pj.linhas.length - 1].saldoBase - pj.ini) / pj.linhas.length) : 0; }catch(e){}
-  return { rows: rows, total: r2(total), pior: pior, sobra: sobra, saldoInicial: r.saldo, resto: resto, meses: meses.length };
+  return { rows: rows, total: r2(total), pior: pior, sobra: sobra, saldoInicial: r.saldo, resto: resto, meses: meses.length, temCronograma: temCronograma, semDistribuir: temCronograma ? 0 : resto, aPagarTotal: r2(aPagarTotal) };
 }
 
 /* ---------- desenho das seções ---------- */
@@ -15611,13 +15613,14 @@ function ob7HtmlJuros(cfg){
 }
 function ob7HtmlCaixa(cfg){
   var c = ob7Caixa(), maxA = c.rows.reduce(function(t, x){ return Math.max(t, x.aportar); }, 0);
-  var corpo = '<div class="saldo-data">Cruza o que a obra ainda vai gastar com as liberações previstas do banco. Gastos “a pagar” entram no mês do vencimento, e o que falta do orçamento é dividido igualmente pelos meses que restam (' + c.meses + ').</div>' +
+  var corpo = '<div class="saldo-data">Cruza o dinheiro da conta da obra com o que já está combinado: gastos “a pagar” (no mês do vencimento), juros e liberações previstas do banco.' + (c.temCronograma ? ' O que falta do orçamento é dividido igualmente entre o início e o fim da obra.' : ' O restante do orçamento ainda não é distribuído nos meses: informe o <b>início e o prazo da obra</b> em Editar a obra para incluir essa parte.') + '</div>' +
     '<div class="ob7-chart">' + c.rows.map(function(x){ var h = maxA > 0 ? Math.max(4, Math.round(x.aportar / maxA * 100)) : 4; return '<div class="ob7-col" title="' + escapeHtml(mesLabel(x.mes)) + ': aportar ' + fmtMoeda(x.aportar) + '"><i style="height:' + h + '%;background:' + (c.pior && c.pior.mes === x.mes ? 'var(--urgente)' : (x.aportar > 0 ? 'var(--ink)' : 'var(--border)')) + '"></i><small>' + escapeHtml(mesLabel(x.mes).slice(0, 3)) + '</small></div>'; }).join('') + '</div>' +
     '<div class="plan-linha"><span>Dinheiro hoje na conta da obra</span><strong>' + fmtMoeda(c.saldoInicial) + '</strong></div>' +
     '<div class="plan-linha"><span>Total que você ainda precisa colocar</span><strong>' + fmtMoeda(c.total) + '</strong></div>' +
+    (!c.temCronograma && c.semDistribuir > 0 ? '<div class="plan-linha"><span>Orçamento ainda sem data (não entra na conta)</span><strong>' + fmtMoeda(c.semDistribuir) + '</strong></div>' : '') +
     (c.pior ? '<div class="plan-linha"><span>Mês mais pesado</span><strong style="color:var(--urgente)">' + escapeHtml(mesLabel(c.pior.mes)) + ': ' + fmtMoeda(c.pior.aportar) + '</strong></div>' : '<div class="saldo-data" style="color:var(--success)">Com o que há na conta da obra e as liberações previstas, não falta caixa nos próximos meses.</div>') +
     '<div class="plan-linha"><span>Sobra prevista na sua conta (Análises)</span><strong>' + fmtMoeda(c.sobra) + '/mês</strong></div>' +
-    (c.pior && c.sobra < c.pior.aportar ? '<div class="plan-alerta aviso">Em ' + escapeHtml(mesLabel(c.pior.mes)) + ' a obra pede ' + fmtMoeda(c.pior.aportar) + ' e o seu caixa livre prevê ' + fmtMoeda(c.sobra) + ' por mês. Não cobre sem usar a reserva ou um alvará.' + (paTemSample() ? ' <button type="button" class="btn-text" data-pa-abrir="Consigo aportar ' + Math.round(c.pior.aportar) + ' reais na obra em ' + escapeHtml(mesLabel(c.pior.mes)) + '?">Perguntar ao app</button>' : '') + '</div>' : '');
+    (c.pior && c.sobra < c.pior.aportar  ? '<div class="plan-alerta aviso">Em ' + escapeHtml(mesLabel(c.pior.mes)) + ' a obra pede ' + fmtMoeda(c.pior.aportar) + ' e o seu caixa livre prevê ' + fmtMoeda(c.sobra) + ' por mês. Não cobre sem usar a reserva ou um alvará.' + (paTemSample() ? ' <button type="button" class="btn-text" data-pa-abrir="Consigo aportar ' + Math.round(c.pior.aportar) + ' reais na obra em ' + escapeHtml(mesLabel(c.pior.mes)) + '?">Perguntar ao app</button>' : '') + '</div>' : '');
   return ob7Sec('cx', 'Caixa próprio necessário', c.pior ? 'pior mês: ' + mesLabel(c.pior.mes) + ' · ' + fmtMoeda(c.pior.aportar) : (c.total > 0 ? 'total ' + fmtMoeda(c.total) : 'sem falta de caixa'), corpo);
 }
 var OB7_PADRAO = [
@@ -15857,8 +15860,9 @@ function ob7Avisos(){
 }
 function ob7LinhaAviso(a){
   var dd = a.tipo === 'juros' ? '' : a.d.slice(8, 10), mm = a.tipo === 'juros' ? '' : MES_CURTO_AT[Number(a.d.slice(5, 7)) - 1].toUpperCase();
-  return '<div class="stall-chip ob7-aviso" data-ob7-aviso="' + a.tipo + '|' + escapeHtml(a.id) + '"><div class="up-data' + (a.atraso ? ' up-d-atraso' : '') + '">' + (a.tipo === 'juros' ? '<svg><use href="#ic-coin"/></svg>' : '<b>' + dd + '</b><span>' + mm + '</span>') + '</div>' +
-    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span>' + (a.valor != null ? '<span>' + fmtMoeda(a.valor) + '</span>' : '') + '</div><div class="up-when"' + (a.atraso ? ' style="color:var(--urgente)"' : '') + '>' + escapeHtml(a.detalhe) + '</div></div>';
+  var hoje = a.d === todayISO() && a.tipo !== 'juros', urgente = a.atraso || hoje;
+  return '<div class="stall-chip ob7-aviso' + (urgente ? '' : ' tipo-murilo') + '" data-ob7-aviso="' + a.tipo + '|' + escapeHtml(a.id) + '"><div class="up-data' + (a.atraso ? ' up-d-atraso' : (hoje ? ' up-d-hoje' : '')) + '">' + (a.tipo === 'juros' ? '<svg><use href="#ic-coin"/></svg>' : '<b>' + dd + '</b><span>' + mm + '</span>') + '</div>' +
+    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span>' + (a.valor != null ? '<span>' + fmtMoeda(a.valor) + '</span>' : '') + '</div><div class="up-when">' + escapeHtml(a.detalhe) + '</div></div>';
 }
 function ob7InserirAvisos(){
   var lista = qs('atencaoLista'), sec = qs('atencaoSection'); if (!lista || !sec) return;

@@ -86,6 +86,26 @@ if (await clip.count()) {
   await page.evaluate(() => document.querySelector('#overlayAnexos [data-an=rem]').click()); await page.waitForTimeout(1200);
   check(!((await getDoc('obraMov', 'g1')).anexos || []).length, 'remover limpa o gasto');
 } else check(false, 'botão Anexar presente no gasto');
+// obra simples: só uma etapa, sem financiamento, sem cronograma -> nada inventado no caixa
+await api('PUT', 'config/obra', { nome: 'Casa', orcamentoTotal: 450000, criadoEm: agora, financiamento: { status: 'estimado', valor: 0 }, etapas: [{ id: 'e1', nome: 'Terraplanagem', orcado: 22000, status: 'andamento', ordem: 1 }], medicoes: [], checklist: [] });
+for (const d of (await (await api('GET', 'obraMov')).json()).docs) await api('DELETE', 'obraMov/' + d.id);
+await api('PUT', 'obraMov/s1', { tipo: 'aporte', origem: 'pf', data: dia(-5), valor: 30000, criadoEm: agora });
+await api('PUT', 'obraMov/s2', { tipo: 'gasto', etapaId: 'e1', descricao: 'Máquina', valor: 14870, status: 'pago', data: dia(-3), dataPagamento: dia(-3), criadoEm: agora });
+await api('PUT', 'obraMov/s3', { tipo: 'gasto', etapaId: 'e1', descricao: 'Frete', valor: 500, status: 'apagar', data: dia(-1), vencimento: dia(9), criadoEm: agora });
+await page.reload(); await page.waitForTimeout(2500);
+const ce = await page.evaluate(() => { const e = document.querySelector('[data-ob7-aviso="gasto|s3"]'); return e ? { cls: e.className, data: e.querySelector('.up-data').className } : null; });
+check(ce && /tipo-murilo/.test(ce.cls) && !/up-d-atraso|up-d-hoje/.test(ce.data), 'aviso a 9 dias do vencimento não fica em vermelho');
+await api('PUT', 'obraMov/s3', { tipo: 'gasto', etapaId: 'e1', descricao: 'Frete', valor: 500, status: 'apagar', data: dia(-1), vencimento: dia(0), criadoEm: agora });
+await page.reload(); await page.waitForTimeout(2500);
+const ch = await page.evaluate(() => { const e = document.querySelector('[data-ob7-aviso="gasto|s3"]'); return e ? { cls: e.className, data: e.querySelector('.up-data').className } : null; });
+check(ch && !/tipo-murilo/.test(ch.cls) && /up-d-hoje/.test(ch.data), 'vencendo hoje fica em vermelho/destaque');
+await api('PUT', 'obraMov/s3', { tipo: 'gasto', etapaId: 'e1', descricao: 'Frete', valor: 500, status: 'apagar', data: dia(-1), vencimento: dia(-2), criadoEm: agora });
+await page.reload(); await page.waitForTimeout(2500);
+check(await page.evaluate(() => { const e = document.querySelector('[data-ob7-aviso="gasto|s3"]'); return !!e && !/tipo-murilo/.test(e.className) && /up-d-atraso/.test(e.querySelector('.up-data').className); }), 'atrasado fica em vermelho');
+await page.evaluate(() => document.querySelector('[data-tab="obra"]').click()); await page.waitForTimeout(800);
+await page.evaluate(() => document.querySelectorAll('[data-ob7-sec]').forEach(d => d.open = true));
+const cx = await page.evaluate(() => document.querySelector('[data-ob7-sec="cx"]').innerText);
+check(!/Mês mais pesado/.test(cx) && /início e o prazo da obra/.test(cx), 'sem cronograma, o caixa não inventa mês pesado e explica o que falta informar');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close();
 console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
