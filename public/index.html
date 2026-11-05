@@ -1367,8 +1367,8 @@
   /* ===== Financeiro mais limpo: notas atrás do ícone "i" ===== */
   .info-nota{max-height:0;overflow:hidden;opacity:0;margin:0!important;padding:0!important;display:block!important;transition:max-height .2s ease,opacity .2s ease;}
   .info-nota.aberto{max-height:500px;opacity:1;margin-top:8px!important;-webkit-line-clamp:unset;}
-  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-width:20px;border-radius:50%;border:1px solid var(--ink-soft);color:var(--ink-soft);background:none;font:italic 700 0.7rem/1 var(--font-sans);cursor:pointer;margin-left:8px;vertical-align:middle;padding:0;}
-  .info-btn[aria-expanded="true"]{color:var(--accent);border-color:var(--accent);}
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;min-width:24px;border-radius:50%;border:0;color:var(--accent);background:none;cursor:pointer;margin-left:8px;vertical-align:middle;padding:0;transition:transform .15s ease,color .15s ease;} .info-btn svg{width:22px;height:22px;display:block;} .info-btn:active{transform:scale(.92);}
+  .info-btn[aria-expanded="true"]{color:var(--ink);} .info-btn[aria-expanded="true"] svg circle:first-child{opacity:.28;}
   .financeiro-totais .info-nota.aberto{display:block!important;}
   .financeiro-secao-head h4{display:inline-flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;}
 
@@ -6078,7 +6078,7 @@
       var ancora = g.querySelector('h4, .bolso-tit strong, .meta-nome, .lbl') || g.firstElementChild;
       if (!ancora) return;
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'info-btn'; b.textContent = 'i';
+      b.type = 'button'; b.className = 'info-btn'; b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".16"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="7.4" r="1.4" fill="currentColor"/></svg>';
       b.setAttribute('aria-label', 'Mais informações'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('data-info-btn', String(k));
       ancora.appendChild(b);
       g.setAttribute('data-info-id', String(k));
@@ -16925,6 +16925,12 @@ function obIcone(nome){
   return v;
 }
 function obIc(nome){ var v = obIcone(nome); return fvIc(v.ic, v.cor); }
+document.addEventListener('click', function(ev){
+  var b = ev.target.closest ? ev.target.closest('[data-ob-info]') : null; if (!b) return;
+  var bloco = b.closest('.financeiro-bloco'), n = bloco && bloco.querySelector('[data-ob-nota]'); if (!n) return;
+  var abrir = b.getAttribute('aria-expanded') !== 'true';
+  b.setAttribute('aria-expanded', abrir ? 'true' : 'false'); n.classList.toggle('aberto', abrir);
+});
 function renderObra(){
   var el = qs('obraWrap');
   if (!el) return;
@@ -16939,8 +16945,8 @@ function renderObra(){
   var folga = (fin.valor > 0 && cfg.orcamentoTotal > 0) ? r2(fin.valor - cfg.orcamentoTotal) : null;
   var notaSaldo = 'aportes ' + fmtMoeda(r.aportado) + (r.liberado > 0.004 ? ' + liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' − devolvido à PF/PJ ' + fmtMoeda(r.retirado) : '') + ' − gastos pagos' + (r.sobra > 0.004 && r.etapas.length ? '<br>Sobra acima do que falta gastar nas etapas: <b id="obSobra">' + fmtMoeda(r.sobra) + '</b>' : '') + (r.faltaGastar > 0.004 ? '<br>Ainda a gastar nas etapas: ' + fmtMoeda(r.faltaGastar) + (r.saldo < r.faltaGastar - 0.004 ? ' · <b id="obFaltaDinheiro">faltam ' + fmtMoeda(r2(r.faltaGastar - r.saldo)) + ' de dinheiro</b>' : ' · o dinheiro cobre') : '');
   var chipGasto = '<span class="fv-chip ' + (r.pago > 0.004 ? 'pend' : '') + '">Gasto ' + fmtMoeda(r.pago) + ' · ' + fmtPerc(perc) + ' do orçamento</span>' + (r.aPagar > 0.004 ? ' <span class="fv-chip neg">a pagar ' + fmtMoeda(r.aPagar) + '</span>' : '');
-  h += '<div class="ob-cards ob-novo"><div class="financeiro-bloco rs-hero"><span class="fv-k">Dinheiro na conta da obra</span><div class="fv-big' + (r.saldo < -0.004 ? ' neg' : '') + '">' + fmtMoeda(r.saldo) + '</div><div class="fv-pat-l"><span>' + chipGasto + '</span></div>' +
-    obBarra(r.pago, r.aPagar, r.orcamento) + '<div class="fp-nota">Escuro = pago · claro = a pagar</div><div class="fp-nota" style="margin-top:6px;">' + notaSaldo + '</div></div>' +
+  h += '<div class="ob-cards ob-novo"><div class="financeiro-bloco rs-hero"><span class="fv-k">Dinheiro na conta da obra</span><button type="button" class="info-btn" data-ob-info="1" aria-expanded="false" aria-label="Mais informações"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".16"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="7.4" r="1.4" fill="currentColor"/></svg></button><div class="fv-big' + (r.saldo < -0.004 ? ' neg' : '') + '">' + fmtMoeda(r.saldo) + '</div><div class="fv-pat-l"><span>' + chipGasto + '</span></div>' +
+    obBarra(r.pago, r.aPagar, r.orcamento) + '<div class="info-nota fp-nota" data-ob-nota="1"><div>Escuro = pago · claro = a pagar</div><div style="margin-top:6px;">' + notaSaldo + '</div></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('hammer', '#B7791E') + 'Orçamento</span><b>' + fmtMoeda(r.orcamento) + '</b><small>' + (r.orcamento > 0 ? fmtPerc(r.detalhado / r.orcamento * 100) + ' detalhado em etapas' : 'sem orçamento') + '</small></div>' +
     '<div class="fv-tile"><span class="fv-tl">' + fvIc('bank', '#2A78D6') + 'Financiamento</span><b>' + (fin.valor > 0 ? fmtMoeda(fin.valor) : '—') + '</b><small>' + (fin.status === 'aprovado' ? 'aprovado' : 'estimado') + (fin.banco ? ' · ' + escapeHtml(fin.banco) : '') + '</small></div></div>' +
     '<div class="fp-nota ob-notas">Detalhado em etapas: ' + fmtMoeda(r.detalhado) + (r.semDetalhar > 0.004 ? ' · falta detalhar ' + fmtMoeda(r.semDetalhar) : '') + (folga !== null ? '<br>Financiamento: ' + (folga >= 0 ? 'folga de ' + fmtMoeda(folga) + ' sobre o orçamento' : 'faltam ' + fmtMoeda(-folga) + ' para o orçamento') : '') + '</div></div>';
