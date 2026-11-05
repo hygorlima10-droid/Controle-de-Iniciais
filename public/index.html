@@ -1372,7 +1372,29 @@
   .financeiro-totais .info-nota.aberto{display:block!important;}
   .financeiro-secao-head h4{display:inline-flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;}
 
-  /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
+  
+  /* Finanças · Visão geral */
+  .fv-k{font-size:var(--t1);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .fv-big{font-size:var(--t8);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:4px 0;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .fv-pat-l{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .fv-chip{display:inline-block;font-size:var(--t1);font-weight:700;padding:2px 9px;border-radius:99px;background:var(--surface-2);color:var(--ink-soft);white-space:nowrap;}
+  .fv-chip.ok{background:rgba(31,138,76,.14);color:var(--success);} .fv-chip.neg{background:rgba(220,47,47,.12);color:var(--urgente);} .fv-chip.pend{background:rgba(237,161,0,.2);color:var(--accent);}
+  .fv-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+  .fv-tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;background:var(--surface);border:0;border-radius:16px;padding:10px;box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.06));cursor:pointer;min-width:0;}
+  .fv-tl{display:flex;align-items:center;gap:6px;font-size:var(--t2);color:var(--ink-soft);}
+  .fv-tile b{font-size:var(--t5);white-space:nowrap;font-variant-numeric:tabular-nums;} .fv-tile b.ok{color:var(--success);} .fv-tile b.neg{color:var(--urgente);} .fv-tile small{font-size:var(--t1);color:var(--ink-soft);}
+  .fv-res-t{display:flex;justify-content:space-between;align-items:center;gap:8px;} .fv-res-t b{font-size:var(--t5);white-space:nowrap;}
+  .fv-bar{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin:8px 0 5px;} .fv-bar i{display:block;height:100%;border-radius:5px;}
+  .fv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;} .fv-head h4{margin:0;font-size:var(--t5);} .fv-head-d{display:flex;align-items:center;gap:8px;}
+  .fv-selo{position:relative;cursor:pointer;} .fv-selo select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:var(--t5);}
+  .fv-stk{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:10px 0 8px;background:var(--surface-2);} .fv-stk i{display:block;height:100%;}
+  .fv-lin{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);} .fv-lin:last-child{border:0;}
+  .fv-ln{font-size:var(--t4);font-weight:600;} .fv-lin b{font-size:var(--t4);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums;} .fv-lin em{grid-column:2/4;font-style:normal;font-size:var(--t2);color:var(--ink-soft);text-align:right;} .fv-lin em:empty{display:none;}
+  .fv-acao{background:linear-gradient(135deg,var(--surface),rgba(237,161,0,.10));border:1px solid rgba(237,161,0,.3);}
+  .fv-ac-top{display:flex;justify-content:space-between;align-items:center;} .fv-ac-top .fv-k{color:var(--accent);}
+  .fv-ac-b .btn{width:100%;justify-content:center;margin-top:10px;} .fv-ac-s{display:flex;flex-direction:column;gap:8px;margin-top:8px;} .fv-ac-s .btn,.fv-ac-s .btn-text{width:100%;justify-content:center;}
+  .fv-entenda>details>summary{font-weight:600;font-size:var(--t4);cursor:pointer;}
+/* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
   @media (max-width:640px){
     .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
     .kpi-row .ini-card{padding:14px 14px;min-width:0;}
@@ -8502,6 +8524,49 @@
     return n <= 0 ? 'atualizado hoje' : 'atualizado há ' + n + (n === 1 ? ' dia' : ' dias');
   }
   function bolsoLinha(rotulo, valor, classe){ return '<div class="bolso-linha' + (classe ? ' ' + classe : '') + '"><span>' + rotulo + '</span><strong>' + valor + '</strong></div>'; }
+
+  /* ---------- Visão geral (novo desenho): patrimônio, 3 indicadores, reserva, divisão, próxima ação ---------- */
+  function fvIc(k, cor){ return '<span class="ct-ic sm" style="background:' + cor + '" aria-hidden="true"><svg viewBox="0 0 24 24">' + CT_SVG[k] + '</svg></span>'; }
+  function fvMontar(d, cl, pat, optNivel, frase, acoes, avisosTopo, detalhes){
+    var m0 = todayISO().slice(0, 7), prev = null, h = '';
+    try{ prev = anPatrimonioEm(deslocarMes(m0, -1)); }catch(e){}
+    var delta = prev ? r2(pat.total - prev.total) : null;
+    var chipDelta = delta === null ? '' : '<span class="fv-chip ' + (delta >= 0 ? 'ok' : 'neg') + '">' + (delta >= 0 ? '▲ ' : '▼ ') + fmtMoeda(Math.abs(delta)) + '</span> <span class="saldo-data">vs. mês passado</span>';
+    var linhaComp = 'PJ ' + fmtMoeda(pat.saldoPj) + ' · PF ' + fmtMoeda(pat.saldoPf) + ' · Metas ' + fmtMoeda(pat.totalMetas) + (Math.abs(pat.obraSaldo) > 0.004 ? ' · Obra ' + fmtMoeda(pat.obraSaldo) : '') + (pat.repasseAPagar > 0.004 ? ' · Repasses a pagar −' + fmtMoeda(pat.repasseAPagar) : '');
+    h += '<div class="financeiro-bloco fv-pat"><span class="fv-k">Patrimônio líquido</span><div class="fv-big">' + fmtMoeda(pat.total) + '</div>' +
+      '<div class="fv-pat-l"><button type="button" class="btn-text" data-ir-fin-tab="patrimonio">Ver composição ›</button><span>' + chipDelta + '</span></div><div class="saldo-data">' + escapeHtml(linhaComp) + '</div></div>';
+    var pctAlvo = d.res.alvo > 0 ? Math.min(100, d.res.atual / d.res.alvo * 100) : 0;
+    h += '<div class="fv-tiles">' +
+      '<button type="button" class="fv-tile" data-ir-fin-tab="pj"><span class="fv-tl">' + fvIc('build', '#B7791E') + (d.folgaPJ >= 0 ? 'PJ · folga' : 'PJ · falta') + '</span><b class="' + (d.folgaPJ >= 0 ? 'ok' : 'neg') + '">' + fmtMoeda(Math.abs(d.folgaPJ)) + '</b><small>após despesas</small></button>' +
+      '<button type="button" class="fv-tile" data-ir-fin-tab="pf"><span class="fv-tl">' + fvIc('user', '#0D9488') + 'PF · fecha</span><b class="' + (d.pfFecha >= -0.005 ? 'ok' : 'neg') + '">' + (d.pfFecha < -0.005 ? '−' : '') + fmtMoeda(Math.abs(d.pfFecha)) + '</b><small>' + (d.faltaPF > 0.005 ? 'com a transf. da PJ' : 'no mês') + '</small></button>' +
+      '<button type="button" class="fv-tile" data-ir-fin-tab="patrimonio"><span class="fv-tl">' + fvIc('shield', '#2A78D6') + 'Reserva</span><b>' + (d.reservaMeta && d.res.alvo > 0 ? fmtPerc(pctAlvo) : '—') + '</b><small>da meta</small></button></div>';
+    if (d.reservaMeta){
+      h += '<div class="financeiro-bloco fv-res"><div class="fv-res-t"><span class="fv-tl">' + fvIc('shield', '#2A78D6') + 'Reserva de emergência</span><b>' + fmtMoeda(d.res.atual) + '</b></div>' +
+        '<div class="fv-bar"><i style="width:' + pctAlvo.toFixed(1) + '%;background:var(--success)"></i></div>' +
+        '<div class="saldo-data">' + (d.res.alvo > 0 ? 'Meta ' + fmtMoeda(d.res.alvo) + (d.res.alvo > d.res.atual ? ' · faltam ' + fmtMoeda(d.res.alvo - d.res.atual) : ' · meta atingida') : 'Sem alvo definido') + '</div></div>';
+    } else {
+      h += '<div class="financeiro-bloco fv-res"><div class="fv-res-t"><span class="fv-tl">' + fvIc('shield', '#2A78D6') + 'Reserva de emergência</span></div><div class="saldo-data">Ainda não há meta de reserva no app.</div><div class="bolso-acoes"><button type="button" class="btn-text acao-pagar" data-div-criar-reserva="1">Criar meta de reserva</button></div></div>';
+    }
+    var tot = Math.max(0, d.metaPF) + Math.max(0, d.metaRes) + Math.max(0, d.metaPJ);
+    function seg(v, cor){ return v > 0.005 && tot > 0 ? '<i style="width:' + (v / tot * 100).toFixed(1) + '%;background:' + cor + '"></i>' : ''; }
+    function lin(k, cor, nome, v, st){ return '<div class="fv-lin">' + fvIc(k, cor) + '<span class="fv-ln">' + nome + '</span><b>' + fmtMoeda(v) + '</b><em>' + st + '</em></div>'; }
+    var selo = '<span class="fv-selo termo termo-' + cl.nivel + '">Mês ' + NIVEL_LABEL[cl.nivel] + ' ▾<select data-div-nivel="1" aria-label="Classificação do mês">' + optNivel + '</select></span>';
+    h += '<div class="financeiro-bloco"><div class="fv-head"><div><h4>Divisão de ' + escapeHtml(mesLabel(mesSelecionado)) + '</h4><span class="saldo-data">' + (d.folgaPJ >= 0 ? 'Folga da PJ: ' + fmtMoeda(d.folgaPJ) : 'A PJ não fecha: faltam ' + fmtMoeda(-d.folgaPJ)) + '</span></div><div class="fv-head-d">' + selo + '<button type="button" class="btn-text" data-plan-config="1">Ajustar</button></div></div>' +
+      (tot > 0 ? '<div class="fv-stk">' + seg(d.metaPF, '#2A78D6') + seg(d.metaRes, 'var(--success)') + seg(d.metaPJ, '#B7791E') + '</div>' : '') +
+      lin('arrows', '#2A78D6', d.dispensado ? 'Para a PF (cobrir despesas)' : 'Pró-labore para a PF', d.metaPF, d.faltaPF > 0.005 ? 'falta ' + fmtMoeda(d.faltaPF) : (d.metaPF > 0.005 ? '✓ feito' : '')) +
+      lin('shield', '#17895A', 'Aporte na reserva', d.metaRes, d.faltaRes > 0.005 ? 'falta ' + fmtMoeda(d.faltaRes) : (d.metaRes > 0.005 ? '✓ feito' : '')) +
+      lin('build', '#B7791E', 'Fica no caixa da PJ', d.metaPJ, '') + '</div>';
+    var L = acoes.split('</button>').filter(function(x){ return x.trim(); }).map(function(x){ return x + '</button>'; });
+    h += '<div class="financeiro-bloco fv-acao"><div class="fv-ac-top"><span class="fv-k">Próxima ação</span><span class="fv-chip ' + (L.length ? 'pend' : 'ok') + '">' + (L.length ? 'Pendente' : 'Em dia') + '</span></div>';
+    if (L.length){
+      h += '<div class="fin-frase">' + escapeHtml(frase) + '</div><div class="fv-ac-b">' + L[0].replace('btn btn-ghost acao-btn', 'btn btn-primary acao-btn') + '</div>' + (L.length > 1 ? '<div class="fv-ac-s">' + L.slice(1).join('') + '</div>' : '');
+    } else h += '<div class="fin-frase">' + escapeHtml(frase) + '</div>';
+    if (d.dispensado) h += '<div class="saldo-data" style="margin-top:8px;">Pró-labore dispensado neste mês. <button type="button" class="btn-text" data-div-dispensar="0">Desfazer</button></div>';
+    if (d.reservaRecusada > 0) h += '<div class="saldo-data" style="margin-top:8px;">Aporte de ' + fmtMoeda(d.reservaRecusada) + ' na reserva dispensado neste mês. <button type="button" class="btn-text" data-div-reserva="0">Desfazer</button></div>';
+    h += '</div>';
+    h += avisosTopo.map(function(a){ return '<div class="plan-alerta ' + a.nivel + '">' + escapeHtml(a.texto) + '</div>'; }).join('');
+    return h + '<div class="financeiro-bloco fv-entenda">' + detalhes + '</div>';
+  }
   function renderFinGeral(){
     var el = qs('finGeral');
     if (!el) return;
@@ -8515,7 +8580,7 @@
         '<button type="button" class="btn-text" data-ir-fin-tab="patrimonio">Ver patrimônio ›</button></div>';
     var cabeca = '<div class="financeiro-secao-head"><h4>Divisão de ' + escapeHtml(mesLabel(mesSelecionado)) + '</h4><button type="button" class="btn-text" data-plan-config="1">Ajustar</button></div>';
     var btnAtipico = '<button type="button" class="btn-text" data-div-atipico="1">' + (atipico ? 'Mês atípico (fora da média) — remover' : 'Marcar este mês como atípico') + '</button>';
-    var corpo;
+    var corpo, fvHtml = null;
     if (!ehAtual){
       corpo = '<div class="financeiro-vazio">A divisão usa o caixa de hoje. Volte para o mês atual para ver a divisão.</div><div class="div-rodape">' + btnAtipico + '</div>';
     } else {
@@ -8580,7 +8645,11 @@
       var avisos = d.alertas.slice().sort(function(a, b){ return (a.nivel === 'aviso' ? 0 : 1) - (b.nivel === 'aviso' ? 0 : 1); });
       var avisosTopo = avisos.slice(0, 3), avisosResto = avisos.slice(3);
       var detalhes =
-        '<details class="fin-detalhes"><summary>Ver como calculei</summary>' +
+        '<details class="fin-detalhes"><summary>Entenda sua divisão mensal</summary>' +
+          '<div class="bolsos">' + bPJ + bPF + bRes + '</div>' +
+          '<div class="plano-tab"><div class="plano-tit">Divisão do mês <span class="saldo-data">(valores em R$)</span></div>' + linhasPlano + '</div>' +
+          '<div class="termo-linha"><span class="termo termo-' + cl.nivel + '">Mês ' + NIVEL_LABEL[cl.nivel] + (cl.manual ? ' (definido por você)' : '') + '</span>' +
+            '<span class="saldo-data">' + escapeHtml((function(t){ return t.charAt(0).toUpperCase() + t.slice(1); })(cl.motivos.join('; '))) + '.</span></div>' +
           '<div class="plan-linhas">' +
             linhaPlan('Folga da PJ hoje <em>(tenho − a pagar − mínimo)</em>', fmtMoeda(d.folgaPJ)) +
             linhaPlan('+ já movido neste mês <em>(PF ' + fmtMoeda(d.jaTransf) + ' · reserva ' + fmtMoeda(d.aportadoRes) + ')</em>', fmtMoeda(d.jaTransf + d.aportadoRes)) +
@@ -8614,8 +8683,9 @@
         (d.reservaRecusada > 0 ? '<div class="saldo-data" style="margin-top:8px;">Aporte de ' + fmtMoeda(d.reservaRecusada) + ' na reserva dispensado neste mês. <button type="button" class="btn-text" data-div-reserva="0">Desfazer</button></div>' : '') +
         avisosTopo.map(function(a){ return '<div class="plan-alerta ' + a.nivel + '">' + escapeHtml(a.texto) + '</div>'; }).join('') +
         detalhes;
+      fvHtml = fvMontar(d, cl, pat, optNivel, frase, acoes, avisosTopo, detalhes);
     }
-    el.innerHTML = blocoPat + '<div class="financeiro-bloco">' + cabeca + corpo + '</div>' + repasseBlocoHtml();
+    el.innerHTML = fvHtml ? fvHtml + repasseBlocoHtml() : blocoPat + '<div class="financeiro-bloco">' + cabeca + corpo + '</div>' + repasseBlocoHtml();
     repasseLigarBloco(el);
     Array.prototype.forEach.call(el.querySelectorAll('[data-atualizar-saldo]'), function(btn){
       btn.addEventListener('click', function(){ abrirModalSaldo(btn.getAttribute('data-atualizar-saldo')); });
@@ -9236,7 +9306,7 @@
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
   var TITULOS_TELA = { inicio:'Início', peticoes:'Petições', acordos:'Termos de Acordo', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos do banco', analises:'Análises', obra:'Construção', financeiro:'Financeiro' };
-  var FIN_NOMES = { geral:'Divisão do mês', pj:'Hygor (PJ)', pf:'Pessoa física', patrimonio:'Patrimônio e metas' };
+  var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Pessoa física', patrimonio:'Patrimônio e metas' };
   var atencaoExpandida = false;
   var menuAberto = false;
   function ehTelaLarga(){ return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }
@@ -16065,6 +16135,8 @@ var CT_SVG = {
   pill: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="M9.2 7.2l5.6 5.6" transform="rotate(0)"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>',
   bank: '<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  arrows: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
   gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M8 8a2.5 2.5 0 010-5c2.5 0 4 5 4 5s1.5-5 4-5a2.5 2.5 0 010 5"/>'
 };
 var CT_PALETA = ['#8B5CF6', '#DB2777', '#0D9488', '#EA580C', '#0284C7', '#16A34A', '#92400E', '#475569'];

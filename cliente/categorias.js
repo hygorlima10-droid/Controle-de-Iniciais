@@ -24,6 +24,8 @@ var CT_SVG = {
   pill: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="M9.2 7.2l5.6 5.6" transform="rotate(0)"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>',
   bank: '<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  arrows: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
   gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M8 8a2.5 2.5 0 010-5c2.5 0 4 5 4 5s1.5-5 4-5a2.5 2.5 0 010 5"/>'
 };
 var CT_PALETA = ['#8B5CF6', '#DB2777', '#0D9488', '#EA580C', '#0284C7', '#16A34A', '#92400E', '#475569'];
