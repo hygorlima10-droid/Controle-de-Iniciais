@@ -1597,7 +1597,7 @@
     </div>
 
     <div id="headAlvaras" style="display:none;">
-      <div class="stats" id="statsAlvaras"></div>
+      <div class="rs-wrap" id="statsAlvaras"></div>
       <div class="alvara-view-bar">
         <div class="segmented" id="segAlvaraView">
           <button type="button" class="seg-btn" data-value="fases">Fases (Kanban)</button>
@@ -4448,6 +4448,10 @@
   }
   function rsChipRecebido(v){ return v > 0.004 ? '<span class="fv-chip ok">▲ ' + fmtMoeda(v) + ' recebidos em ' + escapeHtml(mesLabel(mesSelecionado)) + '</span>' : '<span class="fv-chip">Nenhum recebimento em ' + escapeHtml(mesLabel(mesSelecionado)) + '</span>'; }
   function rsChip(txt, cls){ return '<span class="fv-chip' + (cls ? ' ' + cls : '') + '">' + txt + '</span>'; }
+  function rsIconeFase(k, rot){
+    var m = { protocolada: ['clip', '#B7791E'], aguardando: ['user', '#8A93AD'], expedido: ['doc', '#2A78D6'], banco: ['bank', '#2A78D6'], depositado: ['check', '#17895A'], sem: ['list', '#8A93AD'] }[k];
+    return m ? fvIc(m[0], m[1]) : rsIconeColuna(rot);
+  }
   function rsIconeColuna(rot){
     var n = ctNorm(rot);
     if (/protocol|conclu|deposit|pago|feito/.test(n)) return fvIc('check', '#17895A');
@@ -5391,15 +5395,17 @@
 
   /* ---------- alvarás: cálculos e render ---------- */
   function computeStatsAlvaras(){
-    var total = 0, recebido = 0, pendente = 0;
+    var total = 0, recebido = 0, pendente = 0, prox7 = 0, atrasado = 0, hoje = todayISO(), lim = somarDias(hoje, 7);
     alvaras.forEach(function(a){ if (!a.arquivado) total += (Number(a.valorMeuHonorario) || 0) * fatorDoc('alvara', a); });
     total = r2(total);
     listarUnidades().forEach(function(u){
       if (u.docTipo !== 'alvara') return;
       recebido += recebidoMesMeu(u, mesSelecionado);
-      pendente += restanteMeu(u);
+      var r = restanteMeu(u);
+      pendente += r;
+      if (r > 0.004 && u.data){ if (u.data < hoje) atrasado += r; else if (u.data <= lim) prox7 += r; }
     });
-    return { count: alvaras.filter(function(a){ return !a.arquivado; }).length, total: total, recebido: recebido, pendente: pendente, vencido: 0 };
+    return { count: alvaras.filter(function(a){ return !a.arquivado; }).length, total: total, recebido: recebido, pendente: pendente, vencido: 0, prox7: r2(prox7), atrasado: r2(atrasado) };
   }
 
   /* ---------- financeiro: cálculos ---------- */
@@ -5732,13 +5738,9 @@
 
   function renderStatsAlvaras(){
     var s = computeStatsAlvaras();
-    var icoHonor = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>';
-    var icoPendente = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-    var icoRecebido = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
-    qs('statsAlvaras').innerHTML =
-      '<div class="stat"><div class="stat-icon">'+icoHonor+'</div><div><div class="lbl">Meus honorários (total)</div><div class="val">'+fmtMoeda(s.total)+'</div></div></div>' +
-      '<div class="stat pendente"><div class="stat-icon">'+icoPendente+'</div><div><div class="lbl">Pendente</div><div class="val">'+fmtMoeda(s.pendente)+'</div>'+pendenteArquivadoTxt('alvara')+'</div></div>' +
-      '<div class="stat recebido"><div class="stat-icon">'+icoRecebido+'</div><div><div class="lbl">Recebido em '+mesLabel(mesSelecionado)+'</div><div class="val">'+fmtMoeda(s.recebido)+'</div></div></div>';
+    rsResumo('statsAlvaras', { rot: 'Pendente a receber', valor: fmtMoeda(s.pendente), chip: rsChipRecebido(s.recebido), nota: pendenteArquivadoTxt('alvara'),
+      tiles: [{ k: 'doc', cor: '#B7791E', rot: 'Meus honorários', v: fmtMoeda(s.total) },
+        s.atrasado > 0.004 ? { k: 'alert', cor: '#D93B3B', rot: 'Previsão vencida', v: fmtMoeda(s.atrasado), cls: 'neg' } : { k: 'bank', cor: '#2A78D6', rot: 'Previsão em 7 dias', v: fmtMoeda(s.prox7) }] });
   }
 
   function passaFiltroAlvara(a){
@@ -5842,13 +5844,17 @@
     var idx = FASES_ALVARA.indexOf(f);
     var id = escapeHtml(a.id);
     var conf = (confirmarMoverAlvara && confirmarMoverAlvara.id === a.id) ? confirmarMoverAlvara : null;
-    var extra = '';
-    if (a.previsaoLevantamento && f !== 'depositado') extra += '<div class="kc-sub">Previsão: ' + fmtData(a.previsaoLevantamento) + '</div>';
+    var extra = '<div class="kc-chips">' + rsChip(escapeHtml(ORIGEM_LABEL[a.origem] || a.origem || '—'), a.origem === 'murilo' ? 'azul' : 'pend');
+    if (a.previsaoLevantamento && f !== 'depositado'){
+      var hj = todayISO(), dp = Math.round((new Date(a.previsaoLevantamento + 'T12:00:00') - new Date(hj + 'T12:00:00')) / 86400000), pd = a.previsaoLevantamento.slice(8, 10) + '/' + a.previsaoLevantamento.slice(5, 7);
+      extra += dp < 0 ? rsChip('Previsão vencida (' + pd + ')', 'neg') : rsChip('Previsão ' + pd + (dp === 0 ? ' · hoje' : ' · em ' + dp + (dp === 1 ? ' dia' : ' dias')), dp <= 7 ? 'ok' : '');
+    }
     if (f !== 'depositado' && f !== 'sem' && a.faseDesde){
       var d = diasDesde(a.faseDesde);
-      extra += '<div class="kc-sub">' + (d >= 1 ? 'Há ' + d + (d === 1 ? ' dia' : ' dias') + ' nesta fase' : 'Nesta fase desde hoje') + '</div>';
+      extra += rsChip(d >= 1 ? 'Há ' + d + (d === 1 ? ' dia' : ' dias') + ' nesta fase' : 'Nesta fase desde hoje', '');
     }
-    if (f === 'depositado' && a.dataRecebimento) extra += '<div class="kc-sub">Depositado em ' + fmtData(a.dataRecebimento) + '</div>';
+    if (f === 'depositado' && a.dataRecebimento) extra += rsChip('Depositado em ' + fmtData(a.dataRecebimento), 'ok');
+    extra += '</div>';
     var acoes;
     if (conf){
       acoes = '<div class="kc-confirm">' + textoConfirmaMover(conf.fase) + '</div>' +
@@ -5865,9 +5871,9 @@
           '<button type="button" data-arq-doc="alvara|' + id + '">Arquivar</button><button type="button" class="kc-del" data-del-doc="alvara|' + id + '">Excluir</button>') + '</div>';
     }
     return '<div class="kanban-card" draggable="true" data-kcard="' + id + '">' +
-      '<div class="kc-nome">' + escapeHtml(a.partes || 'Sem nome') + '</div>' +
-      '<div class="kc-sub">Processo ' + escapeHtml(a.numeroProcesso || '—') + ' · <span class="badge origem-' + a.origem + '">' + (ORIGEM_LABEL[a.origem] || a.origem || '—') + '</span></div>' +
-      '<div class="kc-valor">' + fmtMoeda(a.valorMeuHonorario) + '</div>' + repasseBadge(a, 'alvara') + extra + acoes + '</div>';
+      '<div class="kc-top">' + fvIc('bank', '#2A78D6') + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(a.partes || 'Sem nome') + '</div>' +
+      '<div class="kc-sub">Processo ' + escapeHtml(a.numeroProcesso || '—') + '</div></div></div>' + extra +
+      '<div class="kc-valor">' + fmtMoeda(a.valorMeuHonorario) + '</div>' + repasseBadge(a, 'alvara') + acoes + '</div>';
   }
   function renderKanbanAlvaras(){
     var el = qs('kanbanAlvaras');
@@ -5892,7 +5898,7 @@
       itens.forEach(function(a){ soma += Number(a.valorMeuHonorario) || 0; });
       var titulo = FASE_LABEL[k] + (k === 'depositado' ? ' \u2014 ' + mesLabel(mesSelecionado) : '');
       return '<div class="kanban-col fase-' + k + '" data-kcol="' + k + '">' +
-        '<div class="kanban-col-head"><h4>' + escapeHtml(titulo) + '</h4><div class="kc-soma">' + itens.length + (itens.length === 1 ? ' alvará' : ' alvarás') + ' · ' + fmtMoeda(soma) + '</div></div>' +
+        '<div class="kanban-col-head"><h4>' + rsIconeFase(k, FASE_LABEL[k]) + ' ' + escapeHtml(titulo) + ' <span class="fv-chip">' + itens.length + '</span></h4><div class="kc-soma">' + (itens.length === 1 ? '1 alvará' : itens.length + ' alvarás') + ' · ' + fmtMoeda(soma) + '</div></div>' +
         (itens.length ? itens.map(cardKanbanAlvara).join('') : '<div class="kanban-vazio">Nenhum alvará nesta fase.</div>') +
         '</div>';
     }).join('') + '<div class="kanban-add" data-add-col="alvara">+ Fase</div>';
@@ -5979,7 +5985,7 @@
       }
       return '<div class="card status-'+statusClasse+(open?' open':'')+'" data-alvara-card="'+escapeHtml(a.id)+'">' +
         '<div class="alvara-main" data-alvara-toggle="'+escapeHtml(a.id)+'">' +
-          '<div class="cliente-cell"><div class="nome">'+escapeHtml(a.partes||'Sem nome')+'</div><div class="sub">Processo '+escapeHtml(a.numeroProcesso||'—')+' <span class="fase-tag fase-'+faseDoAlvara(a)+'">'+FASE_CURTA[faseDoAlvara(a)]+'</span></div></div>' +
+          '<div class="cliente-cell"><div class="nome">'+fvIc('bank', '#2A78D6')+' <span>'+escapeHtml(a.partes||'Sem nome')+'</span></div><div class="sub">Processo '+escapeHtml(a.numeroProcesso||'—')+' <span class="fase-tag fase-'+faseDoAlvara(a)+'">'+FASE_CURTA[faseDoAlvara(a)]+'</span></div></div>' +
           '<div class="origem-cell"><span class="badge origem-'+a.origem+'">'+(ORIGEM_LABEL[a.origem]||a.origem||'—')+'</span>'+repasseBadge(a, 'alvara')+'</div>' +
           '<div class="valor-cell"><div class="v">'+fmtMoeda(a.valorMeuHonorario)+'</div><div class="status '+(statusClasse==='recebido'?'pago':'pendente')+'">'+statusTextoCard+'</div></div>' +
           '<div class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>' +

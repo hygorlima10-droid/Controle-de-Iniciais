@@ -115,3 +115,4 @@ Patrimônio líquido com "vs. mês passado", rosca com ícones (nas contas, rese
 
 `rsResumo` (cabeçalho: número principal, selo do recebido no mês e dois cartões com ícone) e cartões com ícone, selos coloridos e barra de parcelas. **Petições**: Kanban e Lista (o Kanban continua igual; só a casca mudou). Teste: `test/peticoes-layout.test.mjs`.
 **Acordos** usa o mesmo cabeçalho (`rsResumo`) e cartões com ícone, selo da próxima parcela e barra de parcelas recebidas (`acordoChipsHtml`). O título da tela passou a ser "Acordos" (e "Extratos"), para não ser cortado. Teste: `test/acordos-layout.test.mjs`.
+**Alvarás** (Kanban mantido): cabeçalho com "Previsão em 7 dias" (ou "Previsão vencida", em vermelho, quando há), colunas com ícone por fase e cartões com ícone, selo de previsão, tempo na fase e origem. Teste: `test/alvaras-layout.test.mjs`.
