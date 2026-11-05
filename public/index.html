@@ -8862,17 +8862,52 @@
     } else {
       acoes = '<div class="financeiro-item-actions">' +
         '<button type="button" class="acao-pagar" data-meta-mov="' + id + '|aporte">Aportar</button>' +
-        '<button type="button" data-meta-mov="' + id + '|retirada">Retirar</button>' +
-        '<button type="button" data-meta-mov="' + id + '|atualizar">Atualizar valor</button>' +
         '<button type="button" class="btn-mais" data-menu-toggle="' + id + '" title="Mais ações">\u22EF</button></div>' +
         (menusAbertos[m.id] ? '<div class="financeiro-item-actions menu-aberto">' +
+          '<button type="button" data-menu-item="1" data-meta-mov="' + id + '|retirada">Retirar</button>' +
+          '<button type="button" data-menu-item="1" data-meta-mov="' + id + '|atualizar">Atualizar valor</button>' +
           '<button type="button" data-menu-item="1" data-meta-editar="' + id + '">Editar</button>' +
           '<button type="button" data-menu-item="1" data-meta-hist="' + id + '">Histórico</button>' +
           '<button type="button" class="acao-excluir" data-menu-item="1" data-meta-excluir="' + id + '">Excluir</button></div>' : '');
     }
-    return '<div class="meta-card"><div class="meta-head"><span class="meta-nome">' + escapeHtml(m.nome) +
+    var vis = ehRes ? { ic: 'shield', cor: '#2A78D6' } : ctVisual(m.nome);
+    if (!ehRes && vis.ic === 'tag') vis = { ic: 'plane', cor: '#8B5CF6' };
+    return '<div class="meta-card"><div class="meta-head"><span class="meta-nome">' + fvIc(vis.ic, vis.cor) + ' ' + escapeHtml(m.nome) +
       (ehRes ? ' <span class="tag-variavel">reserva de emergência</span>' : '') + ' <span class="tag-variavel">' + (m.coluna === 'pj' ? 'PJ' : 'PF') + '</span></span>' +
       '<span class="meta-valor">' + fmtMoeda(v) + '</span></div>' + info + acoes + '</div>';
+  }
+
+  /* ---------- Finanças · Patrimônio (novo desenho): rosca com ícones e variação do mês ---------- */
+  function patDonut(segs, total){
+    var r = 50, C = 2 * Math.PI * r, off = 0, o = '';
+    segs.forEach(function(x){
+      if (!(x.v > 0.004)) return;
+      var L = x.v / total * C, g = Math.min(2, L * 0.4);
+      o += '<circle cx="70" cy="70" r="' + r + '" fill="none" stroke="' + x.cor + '" stroke-width="20" stroke-dasharray="' + (L - g).toFixed(1) + ' ' + (C - L + g).toFixed(1) + '" stroke-dashoffset="' + (-off).toFixed(1) + '" transform="rotate(-90 70 70)"/>';
+      off += L;
+    });
+    return '<svg class="ct-donut" viewBox="0 0 140 140" role="img" aria-label="Onde está o dinheiro">' + o + '<text x="70" y="66" text-anchor="middle" class="ct-dt1">Líquido</text><text x="70" y="85" text-anchor="middle" class="ct-dt2">' + escapeHtml(fmtMoeda(total).replace(',00', '')) + '</text></svg>';
+  }
+  function patTopoHtml(pat){
+    var m0 = todayISO().slice(0, 7), prev = null;
+    try{ prev = anPatrimonioEm(deslocarMes(m0, -1)); }catch(e){}
+    var delta = prev ? r2(pat.total - prev.total) : null;
+    var chipDelta = delta === null ? '' : '<span class="fv-chip ' + (delta >= 0 ? 'ok' : 'neg') + '">' + (delta >= 0 ? '▲ ' : '▼ ') + fmtMoeda(Math.abs(delta)) + '</span> <span class="fp-nota">vs. mês passado</span>';
+    var reservaV = 0, reservaAlvo = 0, outrasV = 0;
+    pat.metas.forEach(function(x){ if (x.meta.tipo === 'reserva'){ reservaV += x.valor; reservaAlvo += metaAlvo(x.meta) || 0; } else outrasV += x.valor; });
+    var contas = r2(pat.saldoPj + pat.saldoPf - pat.repasseAPagar), temObra = obraCfg().criada;
+    var itens = [
+      { k: 'wallet', cor: '#B7791E', nome: 'Nas contas (livre)', sub: 'PJ ' + fmtMoeda(pat.saldoPj) + ' · PF ' + fmtMoeda(pat.saldoPf) + (pat.repasseAPagar > 0.004 ? ' · repasses a pagar −' + fmtMoeda(pat.repasseAPagar) : ''), v: contas },
+      { k: 'shield', cor: '#2A78D6', nome: 'Reserva de emergência', sub: reservaAlvo > 0 ? fmtPerc(Math.min(100, reservaV / reservaAlvo * 100)) + ' da meta' : 'em metas, separado do mês', v: reservaV },
+      { k: 'plane', cor: '#8B5CF6', nome: 'Outras metas', sub: 'fora do planejamento do mês', v: outrasV }
+    ];
+    if (temObra) itens.push({ k: 'home', cor: '#17895A', nome: 'Conta da obra', sub: 'investido (gasto) na obra: ' + fmtMoeda(pat.obraInvestido) + ', fora do líquido', v: pat.obraSaldo });
+    var totalSeg = itens.reduce(function(t, x){ return t + Math.max(0, x.v); }, 0);
+    var h = '<div class="financeiro-bloco fv-pat"><span class="fv-k">Patrimônio líquido</span><div class="fv-big">' + fmtMoeda(pat.total) + '</div><div class="fv-pat-l"><span>' + chipDelta + '</span></div>' +
+      (totalSeg > 0 ? '<div class="ct-topo">' + patDonut(itens.map(function(x){ return { v: Math.max(0, x.v), cor: x.cor }; }), totalSeg) + '<div class="ct-leg">Onde está o seu dinheiro.<br>Cada cor é uma parte do patrimônio.</div></div>' : '') +
+      itens.map(function(x){ return '<div class="fv-lin">' + fvIc(x.k, x.cor) + '<span class="fv-ln">' + x.nome + '<br><span class="fp-nota">' + x.sub + '</span></span><b>' + fmtMoeda(x.v) + '</b></div>'; }).join('') +
+      '<div class="fp-nota" style="margin-top:8px;">Por titular: PJ ' + fmtMoeda(pat.totalPj) + ' · PF ' + fmtMoeda(pat.totalPf) + '.' + (pat.repasseAPagar > 0.004 ? ' O total já desconta ' + fmtMoeda(pat.repasseAPagar) + ' de repasses a parceiros que ainda não foram pagos.' : '') + '</div></div>';
+    return h;
   }
   function renderFinPatrimonio(){
     var el = qs('finPatrimonio');
@@ -8880,14 +8915,7 @@
     var pat = computePatrimonio();
     var cards = pat.metas.length ? pat.metas.map(cardMeta).join('') :
       '<div class="financeiro-vazio">Nenhuma meta criada. Use "+ Nova meta" para separar dinheiro (ex.: construção da casa) do planejamento do mês.</div>';
-    el.innerHTML =
-      '<div class="financeiro-bloco"><div class="lbl">Patrimônio líquido</div><div class="val-grande">' + fmtMoeda(pat.total) + '</div>' +
-        '<div class="resultado-mes-grid" style="margin-top:10px;">' +
-          '<div class="resultado-mes-item"><div class="lbl">Nas contas (livre)</div><div class="val">' + fmtMoeda(pat.saldoPj + pat.saldoPf) + '</div><div class="saldo-data">PJ ' + fmtMoeda(pat.saldoPj) + ' · PF ' + fmtMoeda(pat.saldoPf) + '</div></div>' +
-          '<div class="resultado-mes-item"><div class="lbl">Em metas (separado)</div><div class="val">' + fmtMoeda(pat.totalMetas) + '</div><div class="saldo-data">fora do planejamento do mês</div></div>' +
-          (obraCfg().criada ? '<div class="resultado-mes-item"><div class="lbl">Na conta da obra</div><div class="val">' + fmtMoeda(pat.obraSaldo) + '</div><div class="saldo-data">investido (gasto) na obra: ' + fmtMoeda(pat.obraInvestido) + ', fora do líquido</div></div>' : '') +
-        '</div>' +
-        '<div class="saldo-data" style="margin-top:8px;">Por titular: PJ ' + fmtMoeda(pat.totalPj) + ' · PF ' + fmtMoeda(pat.totalPf) + '.' + (pat.repasseAPagar > 0.004 ? ' O total já desconta ' + fmtMoeda(pat.repasseAPagar) + ' de repasses a parceiros que ainda não foram pagos.' : '') + '</div></div>' +
+    el.innerHTML = patTopoHtml(pat) +
       '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Metas</h4><button type="button" class="btn-text" data-nova-meta="1">+ Nova meta</button></div>' + cards + '</div>';
     Array.prototype.forEach.call(el.querySelectorAll('[data-nova-meta]'), function(b){ b.addEventListener('click', function(){ abrirNovaMeta(); }); });
     Array.prototype.forEach.call(el.querySelectorAll('[data-menu-item]'), function(b){ b.addEventListener('click', function(){ menusAbertos = {}; }); });
@@ -9400,7 +9428,7 @@
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
   var TITULOS_TELA = { inicio:'Início', peticoes:'Petições', acordos:'Termos de Acordo', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos do banco', analises:'Análises', obra:'Construção', financeiro:'Financeiro' };
-  var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Pessoa física', patrimonio:'Patrimônio e metas' };
+  var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
   var atencaoExpandida = false;
   var menuAberto = false;
   function ehTelaLarga(){ return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }

@@ -1,0 +1,37 @@
+// Testa o novo Patrimônio de Finanças.
+// Suba antes:  npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8802
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8802', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const dia = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10), agora = new Date().toISOString();
+const mes = n => { const d = new Date(new Date().getFullYear(), new Date().getMonth() + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.1' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+const get = async (col, id) => (await (await api('GET', col)).json()).docs.find(d => d.id === id)?.data;
+for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
+await api('PUT', 'config/backup', { ultimoEm: agora });
+await api('PUT', 'saldos/pj', { coluna: 'pj', saldoAtual: 4000, atualizadoEm: agora, historico: [{ valor: 1000, data: mes(-1) + '-10T12:00:00.000Z' }, { valor: 4000, data: agora }] });
+await api('PUT', 'saldos/pf', { coluna: 'pf', saldoAtual: 500, atualizadoEm: agora, historico: [{ valor: 500, data: agora }] });
+await api('PUT', 'metas/m1', { tipo: 'reserva', coluna: 'pj', nome: 'Reserva de emergência', movimentos: [{ id: 'i1', tipo: 'inicial', valor: 2000, dia: dia(-60), data: agora }], criadoEm: agora });
+await api('PUT', 'metas/m2', { tipo: 'comum', coluna: 'pf', nome: 'Viagem', valorAlvo: 6000, prazo: dia(150), movimentos: [{ id: 'i2', tipo: 'inicial', valor: 1200, dia: dia(-10), data: agora }], criadoEm: agora });
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
+await page.evaluate(() => document.querySelector('[data-tab="financeiro"][data-fin="patrimonio"]').click()); await page.waitForTimeout(900);
+const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const tx = await t('#finPatrimonio');
+check(/PATRIMÔNIO LÍQUIDO/i.test(tx) && /R\$\s*7\.700,00/.test(tx), 'patrimônio líquido no topo (4.000 + 500 + 2.000 + 1.200 = 7.700)');
+check(await page.evaluate(() => document.querySelectorAll('#finPatrimonio .ct-donut circle').length) >= 3, 'rosca com os segmentos');
+check(await page.evaluate(() => document.querySelectorAll('#finPatrimonio .fv-pat .fv-lin .ct-ic svg').length) >= 3, 'cada parte tem ícone');
+check(/Nas contas \(livre\)/.test(tx) && /R\$\s*4\.500,00/.test(tx) && /Reserva de emergência/.test(tx) && /Outras metas/.test(tx), 'composição: contas, reserva e outras metas');
+const partes = await page.evaluate(() => Array.from(document.querySelectorAll('#finPatrimonio .fv-pat .fv-lin b')).map(b => parseFloat(b.innerText.replace(/[^\d,]/g, '').replace(',', '.'))));
+check(partes.reduce((a, b) => a + b, 0).toFixed(2) === '7700.00', 'as partes somam o patrimônio líquido: ' + partes.join(' + '));
+check(await page.evaluate(() => /▲|▼/.test(document.querySelector('.fv-pat').innerText) && /mês passado/.test(document.querySelector('.fv-pat').innerText)), 'mostra a variação "vs. mês passado"');
+check(await page.evaluate(() => document.querySelectorAll('#finPatrimonio .meta-card .meta-nome .ct-ic').length) === 2, 'as metas têm ícone');
+check(await page.evaluate(() => !!document.querySelector('#finPatrimonio [data-meta-mov$="|aporte"]')) && await page.evaluate(() => !document.querySelector('#finPatrimonio [data-meta-mov$="|retirada"]')), '"Aportar" visível; Retirar e Atualizar valor ficam no menu ···');
+await page.click('#finPatrimonio [data-menu-toggle="m2"]'); await page.waitForTimeout(400);
+check(await page.evaluate(() => !!document.querySelector('#finPatrimonio [data-meta-mov="m2|retirada"]') && !!document.querySelector('#finPatrimonio [data-meta-mov="m2|atualizar"]')), 'o menu ··· traz Retirar e Atualizar valor');
+await page.click('#finPatrimonio [data-meta-mov="m2|atualizar"]'); await page.waitForTimeout(500);
+check(await page.evaluate(() => !!document.querySelector('.overlay.show')), 'Atualizar valor continua abrindo o formulário');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

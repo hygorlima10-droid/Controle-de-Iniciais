@@ -106,3 +106,7 @@ Saldo atual em destaque, botão "Transferir R$ X para a PF" (valor sugerido = pr
 ## Finanças · PF (novo desenho)
 
 Saldo atual no topo (botões "Atualizar saldo", "Histórico" e "Lançamentos" alinhados na mesma linha, também na PJ), bloco "Como o mês fecha" (saldo − despesas pendentes = sem a transferência; + transferência prevista da PJ, como entrada futura = fechamento previsto, o mesmo número da Visão geral), despesas pendentes agrupadas em Fixas, Variáveis (valor variável) e Avulsas (únicas) com barra do quanto já foi pago, e receitas em uma linha discreta quando não há nenhuma. Teste: `test/financas-pf.test.mjs`.
+
+## Finanças · Patrimônio (novo desenho)
+
+Patrimônio líquido com "vs. mês passado", rosca com ícones (nas contas, reserva, outras metas e conta da obra; as partes somam o líquido), e as metas com ícone, barra de progresso e plano. "Aportar" fica visível; "Retirar", "Atualizar valor", Editar, Histórico e Excluir ficam no menu ···. Os títulos da tela de Finanças ficaram mais curtos ("Minha PF", "Patrimônio") para não serem cortados. Teste: `test/financas-patrimonio.test.mjs`.
