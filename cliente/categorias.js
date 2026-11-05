@@ -35,6 +35,22 @@ var CT_SVG = {
   coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.5 2.5 1.5-1 1.5-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  shovel: '<path d="M15 3l6 6-3 3-6-6z"/><path d="M12 9l-7 7a2.5 2.5 0 003.5 3.5l7-7"/>',
+  pillar: '<path d="M4 20h16M6 20V9M12 20V9M18 20V9M3 9h18l-9-5z"/>',
+  brick: '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 10h18M3 14.5h18M9 5v5M15 10v4.5M9 14.5V19"/>',
+  roof: '<path d="M2 14L12 5l10 9H2z"/><path d="M6 14v6h12v-6"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/>',
+  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  door: '<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M15 12h.01"/>',
+  window: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/>',
+  grid: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/>',
+  brush: '<rect x="4" y="3" width="14" height="5" rx="1"/><path d="M18 5h2v5h-8v4M12 14v7"/>',
+  leaf: '<path d="M5 19c0-8 5-13 15-14 0 10-5 15-13 14zM5 19l7-7"/>',
+  hardhat: '<path d="M4 15v-1a8 8 0 0116 0v1"/><path d="M2 15h20v3H2z"/><path d="M12 6v5M9 8l1.5 3M15 8l-1.5 3"/>',
+  wrench: '<path d="M14.5 6.5a4 4 0 00-5 5L3 18l3 3 6.5-6.5a4 4 0 005-5l-2.5 2.5-2-2z"/>',
+  ruler: '<path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
+  truck: '<rect x="2" y="7" width="12" height="9"/><path d="M14 10h4l4 3v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M8 8a2.5 2.5 0 010-5c2.5 0 4 5 4 5s1.5-5 4-5a2.5 2.5 0 010 5"/>'
 };
 var CT_PALETA = ['#8B5CF6', '#DB2777', '#0D9488', '#EA580C', '#0284C7', '#16A34A', '#92400E', '#475569'];

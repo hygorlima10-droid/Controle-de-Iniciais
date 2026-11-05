@@ -1422,6 +1422,8 @@
   .ob-acao{margin-top:12px;} .ob-acoes2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;} .ob-acoes2 .btn{justify-content:center;width:100%;} .ob-acoes2 #obraGastoBtn{grid-column:1/-1;} .ob-acoes2 #obraRetiradaBtn,.ob-acoes2 #obraEditarBtn{grid-column:1/-1;} .ob-acoes2 #obraEditarBtn{justify-self:center;}
   .ob-gasto{flex-wrap:wrap;} .ob-gasto-info{flex:1;} .ob-gasto > .ob-gasto-val{flex-basis:100%;flex-direction:column;align-items:flex-start;padding-left:38px;margin-top:-2px;gap:4px;} .ob-gasto-val span{flex-wrap:wrap;justify-content:flex-start;gap:14px;}
   .ob-nm{display:flex;align-items:center;gap:8px;} .ob-gasto > .ct-ic{margin-top:2px;} .ob-etapa .ob-nm .ct-ic{flex-shrink:0;}
+  .ob-tiles{margin-bottom:6px;} .ob-edit{text-align:right;margin:0 4px 8px;} .ob-edit .btn-text{padding:2px 4px;}
+  .ob-mo-top b.ob-nm{display:flex;align-items:center;gap:8px;}
 /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
   @media (max-width:640px){
     .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
@@ -14679,7 +14681,7 @@ function obraContratoLinha(k, aberto, cfg){
   var c = obraContratoResumo(k), id = escapeHtml(k.id);
   var h = '<div class="ob-mo-item' + (aberto ? ' aberto' : '') + (k.encerrado ? ' enc' : '') + '" data-mo-item="' + id + '"><div class="ob-mo-row">' +
     '<button type="button" class="ob-mo-head" data-mo-toggle="' + id + '" aria-expanded="' + (aberto ? 'true' : 'false') + '">' +
-      '<span class="ob-mo-top"><b>' + escapeHtml(k.nome) + '</b><span class="saldo-data">' + (k.encerrado ? 'Encerrado · ' : '') + 'pago <b>' + fmtMoeda(c.pago) + '</b> de ' + fmtMoeda(k.valor) + '</span></span>' +
+      '<span class="ob-mo-top"><b class="ob-nm">' + obIc(k.nome) + ' ' + escapeHtml(k.nome) + '</b><span class="saldo-data">' + (k.encerrado ? 'Encerrado · ' : '') + 'pago <b>' + fmtMoeda(c.pago) + '</b> de ' + fmtMoeda(k.valor) + '</span></span>' +
       obBarra(c.pago, 0, k.valor) + '</button>' +
     (k.encerrado ? '' : '<button type="button" class="btn btn-primary ob-mo-pagar" data-mo-pagar="' + id + '">Pagar' + (k.semanal > 0 ? ' ' + fmtMoeda(k.semanal) : (k.forma === 'final' && c.falta > 0.004 ? ' ' + fmtMoeda(c.falta) : '')) + '</button>') + '</div>';
   if (aberto) h += '<div class="ob-mo-det">' + obraContratoDetalhe(k, c, cfg) + '</div>';
@@ -16332,6 +16334,22 @@ var CT_SVG = {
   coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.5 2.5 1.5-1 1.5-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>',
   layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  shovel: '<path d="M15 3l6 6-3 3-6-6z"/><path d="M12 9l-7 7a2.5 2.5 0 003.5 3.5l7-7"/>',
+  pillar: '<path d="M4 20h16M6 20V9M12 20V9M18 20V9M3 9h18l-9-5z"/>',
+  brick: '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 10h18M3 14.5h18M9 5v5M15 10v4.5M9 14.5V19"/>',
+  roof: '<path d="M2 14L12 5l10 9H2z"/><path d="M6 14v6h12v-6"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/>',
+  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  door: '<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M15 12h.01"/>',
+  window: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/>',
+  grid: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/>',
+  brush: '<rect x="4" y="3" width="14" height="5" rx="1"/><path d="M18 5h2v5h-8v4M12 14v7"/>',
+  leaf: '<path d="M5 19c0-8 5-13 15-14 0 10-5 15-13 14zM5 19l7-7"/>',
+  hardhat: '<path d="M4 15v-1a8 8 0 0116 0v1"/><path d="M2 15h20v3H2z"/><path d="M12 6v5M9 8l1.5 3M15 8l-1.5 3"/>',
+  wrench: '<path d="M14.5 6.5a4 4 0 00-5 5L3 18l3 3 6.5-6.5a4 4 0 005-5l-2.5 2.5-2-2z"/>',
+  ruler: '<path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
+  truck: '<rect x="2" y="7" width="12" height="9"/><path d="M14 10h4l4 3v3h-8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M8 8a2.5 2.5 0 010-5c2.5 0 4 5 4 5s1.5-5 4-5a2.5 2.5 0 010 5"/>'
 };
 var CT_PALETA = ['#8B5CF6', '#DB2777', '#0D9488', '#EA580C', '#0284C7', '#16A34A', '#92400E', '#475569'];
@@ -16876,11 +16894,39 @@ function obBarra(pago, aPagar, total){
   var estouro = total > 0 && (pago + aPagar) > total + 0.005;
   return '<div class="ob-barra' + (estouro ? ' estouro' : '') + '"><span class="ob-pago" style="width:' + p + '%"></span><span class="ob-apagar" style="width:' + a + '%"></span></div>';
 }
-function obIc(nome){
+var OB_REGRAS = [
+  [/pedreiro|servente|ajudante|mestre de obra|mestre|empreit|equipe|mao de obra/, 'hardhat', '#B7791E'],
+  [/eletricist|eletric|fiacao|quadro de luz|ilumina|spda|\bluz\b/, 'bolt', '#C98500'],
+  [/encanador|bombeiro|hidraul|encana|esgoto|cisterna|caixa d|\bagua\b|saneamento/, 'drop', '#2A78D6'],
+  [/pintor|pintur|massa corrida|textura|selador|verniz/, 'brush', '#8B5CF6'],
+  [/azulejista|ladrilhista|piso|revestim|azulej|ceramic|porcelan|pastilha|contrapiso/, 'grid', '#0D9488'],
+  [/vidraceiro|vidro|janela|esquadri|\bbox\b|aluminio/, 'window', '#0284C7'],
+  [/porta|portao|fechadura/, 'door', '#64748B'],
+  [/telhadista|cobertura|telhado|telha|calha|rufo/, 'roof', '#C2410C'],
+  [/serralheiro|soldador|serralheria|ferragem|metalon|gradil/, 'wrench', '#475569'],
+  [/gesseiro|gesso|forro|drywall/, 'layers', '#8A93AD'],
+  [/marmor|bancada|granito|acabament|rodape|decorac/, 'spark', '#DB2777'],
+  [/jardineiro|paisag|jardim|grama|calcada|plantas/, 'leaf', '#16A34A'],
+  [/arquiteto|engenheir|projeto|topograf|sondagem|\bart\b|\brrt\b/, 'ruler', '#0D9488'],
+  [/habite|licenc|alvara|cartorio|registro|documenta|taxa|prefeitura|matricula|inss|\bcno\b/, 'doc', '#475569'],
+  [/impermeab|manta|vedacao/, 'shield', '#475569'],
+  [/terraplan|escav|aterro|nivelamento|movimento de terra|limpeza do terreno|demoli/, 'shovel', '#92400E'],
+  [/fundac|sapata|radier|estaca|baldrame|brocas?/, 'pillar', '#64748B'],
+  [/alvenaria|tijolo|bloco|muro|reboco|emboco|estrutura|laje|pilar|viga|concreto|armacao|ferro|forma/, 'brick', '#B7791E'],
+  [/carpinteiro|marceneiro|madeira|marcenaria|armario/, 'hammer', '#92400E'],
+  [/maquina|retroescavad|caminhao|frete|transporte|munck|aluguel de/, 'truck', '#64748B'],
+  [/material|compra|loja|deposito|areia|cimento|brita|cal\b/, 'cart', '#17895A'],
+  [/ferramenta|equipamento|andaime/, 'wrench', '#475569'],
+  [/limpeza|entulho|cacamba/, 'truck', '#8A93AD']
+];
+function obIcone(nome){
+  var n = ctNorm(nome || ''), i;
+  for (i = 0; i < OB_REGRAS.length; i++) if (OB_REGRAS[i][0].test(n)) return { ic: OB_REGRAS[i][1], cor: OB_REGRAS[i][2] };
   var v = ctVisual(nome || '');
-  if (v.ic === 'tag' || v.ic === 'dots') v = { ic: 'hammer', cor: '#B7791E' };
-  return fvIc(v.ic, v.cor);
+  if (v.ic === 'tag' || v.ic === 'dots') return { ic: 'hammer', cor: '#B7791E' };
+  return v;
 }
+function obIc(nome){ var v = obIcone(nome); return fvIc(v.ic, v.cor); }
 function renderObra(){
   var el = qs('obraWrap');
   if (!el) return;
@@ -16900,7 +16946,7 @@ function renderObra(){
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('hammer', '#B7791E') + 'Orçamento</span><b>' + fmtMoeda(r.orcamento) + '</b><small>' + (r.orcamento > 0 ? fmtPerc(r.detalhado / r.orcamento * 100) + ' detalhado em etapas' : 'sem orçamento') + '</small></div>' +
     '<div class="fv-tile"><span class="fv-tl">' + fvIc('bank', '#2A78D6') + 'Financiamento</span><b>' + (fin.valor > 0 ? fmtMoeda(fin.valor) : '—') + '</b><small>' + (fin.status === 'aprovado' ? 'aprovado' : 'estimado') + (fin.banco ? ' · ' + escapeHtml(fin.banco) : '') + '</small></div></div>' +
     '<div class="fp-nota ob-notas">Detalhado em etapas: ' + fmtMoeda(r.detalhado) + (r.semDetalhar > 0.004 ? ' · falta detalhar ' + fmtMoeda(r.semDetalhar) : '') + (folga !== null ? '<br>Financiamento: ' + (folga >= 0 ? 'folga de ' + fmtMoeda(folga) + ' sobre o orçamento' : 'faltam ' + fmtMoeda(-folga) + ' para o orçamento') : '') + '</div></div>';
-  h += '<div class="ini-card fv-acao ob-acao"><div class="fv-k">Ações da obra</div><div class="ob-acoes ob-acoes2"><button type="button" class="btn btn-primary" id="obraGastoBtn">+ Lançar gasto</button><button type="button" class="btn btn-ghost" id="obraAporteBtn">+ Aporte</button><button type="button" class="btn btn-ghost" id="obraLiberacaoBtn">+ Liberação</button><button type="button" class="btn btn-ghost" id="obraRetiradaBtn">Devolver sobra à PF/PJ</button><button type="button" class="btn-text" id="obraEditarBtn">Editar a obra</button></div></div>';
+  h = '<div class="ini-acoes ob-tiles"><button type="button" class="acao acao-ouro" id="obraGastoBtn" title="Lançar gasto"><svg><use href="#ic-receipt"/></svg><span>Gasto</span></button><button type="button" class="acao" id="obraAporteBtn"><svg><use href="#ic-plus"/></svg><span>Aporte</span></button><button type="button" class="acao" id="obraLiberacaoBtn"><svg><use href="#ic-bank"/></svg><span>Liberação</span></button><button type="button" class="acao" id="obraRetiradaBtn" title="Devolver sobra à PF/PJ"><svg><use href="#ic-undo"/></svg><span>Devolver</span></button></div><div class="ob-edit"><button type="button" class="btn-text" id="obraEditarBtn">Editar a obra</button></div>' + h;
 
   h += obraContratosHtml(r, cfg);
 

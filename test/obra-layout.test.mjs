@@ -9,7 +9,7 @@ let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: ne
 const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
 for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
 await api('PUT', 'config/backup', { ultimoEm: agora });
-await api('PUT', 'config/obra', { nome: 'Casa', orcamentoTotal: 450000, criadoEm: agora, financiamento: { status: 'aprovado', valor: 300000, banco: 'Caixa' }, etapas: [{ id: 'e1', nome: 'Terraplanagem', orcado: 22000, status: 'andamento', ordem: 1 }, { id: 'e2', nome: 'Fundação', orcado: 90000, status: 'a_fazer', ordem: 2 }] });
+await api('PUT', 'config/obra', { nome: 'Casa', orcamentoTotal: 450000, criadoEm: agora, financiamento: { status: 'aprovado', valor: 300000, banco: 'Caixa' }, etapas: [{ id: 'e1', nome: 'Terraplanagem', orcado: 22000, status: 'andamento', ordem: 1 }, { id: 'e2', nome: 'Fundação', orcado: 90000, status: 'a_fazer', ordem: 2 }, { id: 'e3', nome: 'Instalação elétrica', orcado: 8000, status: 'a_fazer', ordem: 3 }, { id: 'e4', nome: 'Pintura', orcado: 12000, status: 'a_fazer', ordem: 4 }, { id: 'e5', nome: 'Cobertura', orcado: 30000, status: 'a_fazer', ordem: 5 }], contratos: [{ id: 'k1', nome: 'Pedreiro', fornecedor: '', valor: 5500, forma: 'semanal', semanal: 2750, etapaId: 'e2', criadoEm: agora }, { id: 'k2', nome: 'Eletricista', fornecedor: '', valor: 3000, forma: 'final', etapaId: 'e3', criadoEm: agora }] });
 await api('PUT', 'obraMov/a1', { tipo: 'aporte', origem: 'pf', data: dia(-15), valor: 30000, criadoEm: agora });
 await api('PUT', 'obraMov/g1', { tipo: 'gasto', etapaId: 'e1', descricao: 'Máquina', fornecedor: 'Terra', valor: 12000, status: 'pago', data: dia(-5), dataPagamento: dia(-5), criadoEm: agora });
 await api('PUT', 'obraMov/g2', { tipo: 'gasto', etapaId: 'e1', descricao: 'Frete', valor: 800, status: 'apagar', data: dia(-1), vencimento: dia(6), criadoEm: agora });
@@ -24,7 +24,11 @@ check(await page.evaluate(() => !!document.querySelector('.ob-novo .ob-barra, .o
 check(await page.evaluate(() => !!document.getElementById('obFaltaDinheiro')), 'o aviso de quanto falta de dinheiro continua');
 check(await page.evaluate(() => document.querySelectorAll('.ob-novo .rs-tiles .ct-ic svg').length) === 2 && /Orçamento/.test(top) && /Financiamento/.test(top), 'dois cartões com ícone: orçamento e financiamento');
 check(await page.evaluate(() => ['obraGastoBtn', 'obraAporteBtn', 'obraLiberacaoBtn', 'obraRetiradaBtn', 'obraEditarBtn'].every(i => !!document.getElementById(i))), 'todos os botões de ação continuam');
-check(await page.evaluate(() => document.querySelectorAll('.ob-etapa .ob-nm .ct-ic').length) === 2, 'etapas com ícone');
+check(await page.evaluate(() => document.querySelectorAll('.ob-etapa .ob-nm .ct-ic').length) >= 5, 'etapas com ícone');
+const cores = await page.evaluate(() => Array.from(document.querySelectorAll('.ob-etapa .ob-nm')).map(e => e.innerText.trim() + '=' + e.querySelector('.ct-ic').style.backgroundColor + '/' + e.querySelector('svg').innerHTML.length));
+check(new Set(cores.map(c => c.split('=')[1])).size >= 4, 'cada tipo de etapa tem ícone/cor própria (terraplanagem, fundação, elétrica, pintura, cobertura): ' + cores.join(' | '));
+check(await page.evaluate(() => document.querySelectorAll('.ob-mo .ob-mo-top .ct-ic').length) >= 1, 'os contratos de mão de obra têm ícone do tipo (pedreiro, eletricista…)');
+check(await page.evaluate(() => document.querySelectorAll('.ob-tiles .acao').length) === 4 && await page.evaluate(() => !!document.querySelector('.ob-tiles .acao-ouro#obraGastoBtn svg')), 'botões de ação no modelo do Início (ícone em cima, texto embaixo; "Lançar gasto" em dourado)');
 check(await page.evaluate(() => document.querySelectorAll('#obraWrap .ob-gasto > .ct-ic').length) >= 3, 'gastos e movimentos com ícone');
 check(await page.evaluate(() => document.querySelectorAll('[data-ob7-sec] > summary .ct-ic').length) === 5, 'as 5 seções recolhidas têm ícone');
 await page.click('#obraGastoBtn'); await page.waitForTimeout(500);
