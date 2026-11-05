@@ -1570,7 +1570,7 @@
     </div>
 
     <div id="headAcordos" style="display:none;">
-      <div class="stats" id="statsAcordos"></div>
+      <div class="rs-wrap" id="statsAcordos"></div>
       <div class="filters">
         <div class="search">
           <input type="text" id="buscaAcordoInput" placeholder="Buscar por partes ou nº do processo…">
@@ -5190,13 +5190,8 @@
 
   function renderStatsAcordos(){
     var s = computeStatsAcordos();
-    var icoHonor = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>';
-    var icoPendente = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-    var icoRecebido = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
-    qs('statsAcordos').innerHTML =
-      '<div class="stat"><div class="stat-icon">'+icoHonor+'</div><div><div class="lbl">Meus honorários (total)</div><div class="val">'+fmtMoeda(s.total)+'</div></div></div>' +
-      '<div class="stat pendente"><div class="stat-icon">'+icoPendente+'</div><div><div class="lbl">Pendente</div><div class="val">'+fmtMoeda(s.pendente)+'</div>'+pendenteArquivadoTxt('acordo')+'</div></div>' +
-      '<div class="stat recebido"><div class="stat-icon">'+icoRecebido+'</div><div><div class="lbl">Recebido em '+mesLabel(mesSelecionado)+'</div><div class="val">'+fmtMoeda(s.recebido)+'</div></div></div>';
+    rsResumo('statsAcordos', { rot: 'Pendente a receber', valor: fmtMoeda(s.pendente), chip: rsChipRecebido(s.recebido), nota: pendenteArquivadoTxt('acordo'),
+      tiles: [{ k: 'doc', cor: '#B7791E', rot: 'Meus honorários', v: fmtMoeda(s.total) }, { k: 'alert', cor: s.vencido > 0.004 ? '#D93B3B' : '#8A93AD', rot: 'Vencido', v: fmtMoeda(s.vencido), cls: s.vencido > 0.004 ? 'neg' : '' }] });
   }
 
   function passaFiltroAcordo(a){
@@ -5251,6 +5246,23 @@
     return h;
   }
 
+  function acordoChipsHtml(a, status, hoje){
+    if (a.semHonorarios || status === 'recebido') return '';
+    var h = '', ps = Array.isArray(a.parcelas) ? a.parcelas : [];
+    if (ps.length){
+      var pagos = ps.filter(function(p){ return p.pago; }).length, prox = ps.filter(function(p){ return !p.pago; })[0];
+      if (prox && prox.data){
+        var atras = prox.data < hoje, dd = Math.round((new Date(prox.data + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
+        h += '<div class="kc-chips">' + rsChip('Parcela ' + prox.numero + '/' + ps.length + ' · ' + (atras ? 'atrasada desde ' : 'vence ') + prox.data.slice(8, 10) + '/' + prox.data.slice(5, 7), atras ? 'neg' : (dd <= 3 ? 'pend' : '')) + '</div>';
+      }
+      h += '<div class="kc-barra"><i style="width:' + Math.round(pagos / ps.length * 100) + '%"></i></div><div class="kc-sub">' + pagos + ' de ' + ps.length + (ps.length === 1 ? ' parcela recebida' : ' parcelas recebidas') + '</div>';
+    } else if (a.data){
+      var atr = a.data < hoje;
+      h += '<div class="kc-chips">' + rsChip((atr ? 'Atrasado desde ' : 'Vence ') + a.data.slice(8, 10) + '/' + a.data.slice(5, 7), atr ? 'neg' : '') + '</div>';
+    }
+    return h;
+  }
+
   function renderListAcordos(){
     var visiveis = ordenaListaAcordos(acordos.filter(passaFiltroAcordo));
     var listEl = qs('listAcordos');
@@ -5300,7 +5312,7 @@
       }
       return '<div class="card status-'+statusClasse+(open?' open':'')+'" data-acordo-card="'+escapeHtml(a.id)+'">' +
         '<div class="acordo-main" data-acordo-toggle="'+escapeHtml(a.id)+'">' +
-          '<div class="cliente-cell"><div class="nome">'+escapeHtml(a.partes||'Sem nome')+'</div><div class="sub">Processo '+escapeHtml(a.numeroProcesso||'—')+'</div></div>' +
+          '<div class="cliente-cell"><div class="nome">'+fvIc('scale', '#8B5CF6')+' <span>'+escapeHtml(a.partes||'Sem nome')+'</span></div><div class="sub">Processo '+escapeHtml(a.numeroProcesso||'—')+'</div>'+acordoChipsHtml(a, status, hoje)+'</div>' +
           '<div class="origem-cell"><span class="badge origem-'+(a.origem||'murilo')+'">'+(ORIGEM_LABEL_PROCESSO[a.origem]||'Processo Murilo')+'</span>'+repasseBadge(a, 'acordo')+'</div>' +
           '<div class="valor-cell"><div class="v">'+(a.semHonorarios ? '—' : fmtMoeda(a.valorMeuHonorario))+'</div><div class="status '+(statusClasse==='recebido'?'pago':statusClasse)+'">'+escapeHtml(statusTextoCard)+'</div></div>' +
           '<div class="chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>' +
@@ -9465,7 +9477,7 @@
   /* ============================================================
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
-  var TITULOS_TELA = { inicio:'Início', peticoes:'Petições', acordos:'Termos de Acordo', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos do banco', analises:'Análises', obra:'Construção', financeiro:'Financeiro' };
+  var TITULOS_TELA = { inicio:'Início', peticoes:'Petições', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', financeiro:'Financeiro' };
   var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
   var atencaoExpandida = false;
   var menuAberto = false;
