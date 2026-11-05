@@ -87,3 +87,10 @@ Novo primeiro botão no seletor da aba Análises (Último mês · 6 meses · 12 
 ## Tipografia unificada
 
 Uma só fonte (Inter, pesos 400/600/700) e 8 tamanhos de letra, definidos em `:root` como `--t1` a `--t8` (11, 12, 13, 14, 16, 20, 24 e 36 px). Todo `font-size` do app usa essas variáveis. Exceções de propósito: o "⋯" dos botões de mais opções, a letra da marca, os rótulos minúsculos dos gráficos (SVG) e os campos de data/texto de 16 px (evita o zoom automático do iPhone).
+
+## Categorias com ícones, lançamentos por categoria e "Já lançados"
+
+- **Análises → Para onde o dinheiro vai** (e o resumo do Último mês): todas as categorias na mesma lista (sem "Outras (n)"), cada uma com ícone e cor escolhidos pelo nome (`ctVisual` em `cliente/categorias.js`), rosca de participação e, ao tocar, a lista de lançamentos da categoria com lápis para editar.
+- **Dia a dia**: a partir desta versão, cada linha confirmada de um extrato é guardada em `linhas` dentro do documento `diaadia` do mês (data, nome, valor, categoria). Meses confirmados antes só têm o total e a quantidade, e a tela avisa quanto veio sem detalhe.
+- **Extratos → Já lançados**: por mês, com busca e filtros (Tudo, Despesas, Dia a dia, Receitas). O lápis abre a folha de edição: categoria e nome (o valor do extrato não muda). Trocar a categoria de uma linha do dia a dia move o valor entre as categorias do mês.
+- Teste: `test/categorias.test.mjs`.

@@ -23,6 +23,13 @@ if '/*OB7-INICIO*/' in s:
 else:
     assert s.count('/*NT-FIM*/\n') == 1
     s = s.replace('/*NT-FIM*/\n', '/*NT-FIM*/\n' + bloco_ob)
+ct = open(R + 'cliente/categorias.js', encoding='utf-8').read()
+bloco_ct = '/*CT-INICIO*/\n' + ct + '\n/*CT-FIM*/\n'
+if '/*CT-INICIO*/' in s:
+    s = re.sub(r'/\*CT-INICIO\*/.*?/\*CT-FIM\*/\n', lambda m: bloco_ct, s, flags=re.S)
+else:
+    assert s.count('/*OB7-FIM*/\n') == 1
+    s = s.replace('/*OB7-FIM*/\n', '/*OB7-FIM*/\n' + bloco_ct)
 def rep(old, new):
     global s
     if new in s: return

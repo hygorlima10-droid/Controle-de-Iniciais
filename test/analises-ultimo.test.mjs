@@ -24,11 +24,11 @@ check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodo
 check(/R\$\s*10\.000,00/.test(t) && /R\$\s*5\.500,00/.test(t), 'mostra o recebido (10.000) e o gasto (5.500) do último mês fechado');
 check(/Sobrou[\s\S]*4\.500,00/.test(t), 'sobrou R$ 4.500');
 check(/Comparado com a sua média/.test(t) && /▲/.test(t), 'compara com a média dos meses anteriores com setas');
-check(/Aluguel|Estrutura/.test(t) && /Pessoal/.test(t), 'lista gastos por categoria');
+check(/Estrutura/.test(t) && /Pessoal/.test(t), 'lista gastos por categoria');
 check(/Gastou mais em: Pessoal/.test(t), '"O que mais mudou" aponta Pessoal');
 check(/Os 4 cenários lado a lado/.test(t) && /Média 6 m/.test(t) && /Média 12 m/.test(t) && /Próx\. 3 m/.test(t), 'quadro com os 4 cenários');
-await page.evaluate(() => document.querySelector('.an-ult-cat summary').click()); await page.waitForTimeout(200);
-check(await page.evaluate(() => !!document.querySelector('.an-ult-cat[open] .an-ult-det .plan-linha')), 'tocar na categoria mostra as despesas dela');
+await page.evaluate(() => document.querySelector('#anWrap .ct-row summary').click()); await page.waitForTimeout(200);
+check(await page.evaluate(() => !!document.querySelector('#anWrap .ct-row[open] .ct-det .ct-l')), 'tocar na categoria mostra as despesas dela');
 await page.click('[data-an-ult="-1"]'); await page.waitForTimeout(500);
 t = await txt(); check(/R\$\s*6\.000,00/.test(t), 'a seta ‹ leva ao mês anterior (recebido 6.000)');
 await page.evaluate(() => { document.querySelectorAll('[data-an-ult="1"]')[0].click(); }); await page.waitForTimeout(300);
