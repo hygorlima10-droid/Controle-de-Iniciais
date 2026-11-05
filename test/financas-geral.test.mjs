@@ -45,6 +45,6 @@ await page.click('.fv-ac-b [data-div-transferir]'); await page.waitForTimeout(50
 check(await page.evaluate(() => !!document.querySelector('.overlay.show')), 'o botão principal abre a transferência');
 await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
 await page.click('.fv-tile[data-ir-fin-tab="pj"]'); await page.waitForTimeout(500);
-check(await page.evaluate(() => document.querySelector('[data-fin-tab].active, .seg-btn.active') !== null) && /Saldo informado/.test(await t('#bodyFinanceiro')), 'tocar no indicador PJ abre a aba PJ');
+check(await page.evaluate(() => document.querySelector('[data-fin-tab].active, .seg-btn.active') !== null) && /Saldo atual informado/i.test(await t('#bodyFinanceiro')), 'tocar no indicador PJ abre a aba PJ');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
