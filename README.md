@@ -94,3 +94,7 @@ Uma só fonte (Inter, pesos 400/600/700) e 8 tamanhos de letra, definidos em `:r
 - **Dia a dia**: a partir desta versão, cada linha confirmada de um extrato é guardada em `linhas` dentro do documento `diaadia` do mês (data, nome, valor, categoria). Meses confirmados antes só têm o total e a quantidade, e a tela avisa quanto veio sem detalhe.
 - **Extratos → Já lançados**: por mês, com busca e filtros (Tudo, Despesas, Dia a dia, Receitas). O lápis abre a folha de edição: categoria e nome (o valor do extrato não muda). Trocar a categoria de uma linha do dia a dia move o valor entre as categorias do mês.
 - Teste: `test/categorias.test.mjs`.
+
+## Finanças · Visão geral (novo desenho)
+
+Patrimônio com variação "vs. mês passado" (compara com o fim do mês anterior, quando há saldo informado), três indicadores (PJ, PF, Reserva) que abrem as abas respectivas, reserva com barra de progresso, divisão do mês em barra e linhas com ícones (o selo "Mês Forte/Normal/Apertado" abre o seletor de classificação; "Ajustar" continua no cabeçalho), cartão "Próxima ação" com a pendência principal e os botões secundários (aportar, não aportar, dispensar pró-labore) e, recolhido, "Entenda sua divisão mensal" com PJ, PF, reserva, tabela, cálculos e "marcar mês atípico". Teste: `test/financas-geral.test.mjs`.

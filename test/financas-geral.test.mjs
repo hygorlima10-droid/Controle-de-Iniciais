@@ -28,7 +28,7 @@ check(await page.evaluate(() => document.querySelectorAll('.fv-tile').length) ==
 check(/Reserva de emergência/.test(tx) && await page.evaluate(() => !!document.querySelector('.fv-res .fv-bar i')), 'reserva com barra de progresso');
 check(/Divisão de/.test(tx) && /Pró-labore para a PF/.test(tx) && /Aporte na reserva/.test(tx) && /Fica no caixa da PJ/.test(tx), 'divisão do mês em linhas com ícones');
 check(await page.evaluate(() => !!document.querySelector('.fv-stk i')), 'barra visual da divisão');
-check(/Próxima ação/.test(tx) && (/Transferir R\$|Aportar R\$|Em dia/.test(tx)), 'próxima ação com a pendência principal');
+check(/Próxima ação/i.test(tx) && /(Transferir|Aportar) R\$|Em dia/.test(tx), 'próxima ação com a pendência principal');
 check(await page.evaluate(() => !document.querySelector('.fv-entenda details').open) && /Entenda sua divisão mensal/.test(tx), '"Entenda sua divisão mensal" começa recolhido');
 await page.evaluate(() => document.querySelector('.fv-entenda summary').click()); await page.waitForTimeout(200);
 check(/Ver como calculei|Folga da PJ hoje/.test(await t('.fv-entenda')) && /Tenho hoje/.test(await t('.fv-entenda')) && await page.evaluate(() => !!document.querySelector('.fv-entenda [data-div-nivel]')), 'dentro dele estão os cálculos, PJ/PF e o seletor de classificação');
