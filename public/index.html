@@ -1416,6 +1416,12 @@
   .valor-cell .status{display:inline-block;padding:2px 9px;border-radius:99px;font-size:var(--t1);font-weight:700;background:var(--surface-2);color:var(--ink-soft);margin-top:4px;}
   .valor-cell .status.vencido{background:rgba(220,47,47,.12);color:var(--urgente);} .valor-cell .status.pago{background:rgba(31,138,76,.14);color:var(--success);} .valor-cell .status.pendente{background:rgba(237,161,0,.2);color:var(--accent);}
   .rs-hero{margin-bottom:12px;}
+
+  /* Construção */
+  .ob-cards.ob-novo{display:block;} .ob-cards.ob-novo .fv-big.neg{color:var(--urgente);} .ob-notas{margin:-2px 2px 12px;}
+  .ob-acao{margin-top:12px;} .ob-acoes2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;} .ob-acoes2 .btn{justify-content:center;width:100%;} .ob-acoes2 #obraGastoBtn{grid-column:1/-1;} .ob-acoes2 #obraRetiradaBtn,.ob-acoes2 #obraEditarBtn{grid-column:1/-1;} .ob-acoes2 #obraEditarBtn{justify-self:center;}
+  .ob-gasto{flex-wrap:wrap;} .ob-gasto-info{flex:1;} .ob-gasto > .ob-gasto-val{flex-basis:100%;flex-direction:column;align-items:flex-start;padding-left:38px;margin-top:-2px;gap:4px;} .ob-gasto-val span{flex-wrap:wrap;justify-content:flex-start;gap:14px;}
+  .ob-nm{display:flex;align-items:center;gap:8px;} .ob-gasto > .ct-ic{margin-top:2px;} .ob-etapa .ob-nm .ct-ic{flex-shrink:0;}
 /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
   @media (max-width:640px){
     .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
@@ -15949,8 +15955,10 @@ function ob7Caixa(){
 }
 
 /* ---------- desenho das seções ---------- */
+var OB7_ICONES = { fin: ['bank', '#2A78D6'], jur: ['pct', '#C2410C'], cx: ['coin', '#17895A'], chk: ['clip', '#0D9488'], ext: ['list', '#8A93AD'] };
 function ob7Sec(chave, titulo, resumo, corpo){
-  return '<details class="ini-card ob7-sec" data-ob7-sec="' + chave + '"' + (ob7Abertos[chave] ? ' open' : '') + '><summary><b>' + titulo + '</b><span class="saldo-data">' + resumo + '</span></summary><div class="ob7-corpo">' + corpo + '</div></details>';
+  var i = OB7_ICONES[chave] || ['list', '#8A93AD'];
+  return '<details class="ini-card ob7-sec" data-ob7-sec="' + chave + '"' + (ob7Abertos[chave] ? ' open' : '') + '><summary>' + fvIc(i[0], i[1]) + '<span class="ob7-tx"><b>' + titulo + '</b><span class="fp-nota">' + resumo + '</span></span></summary><div class="ob7-corpo">' + corpo + '</div></details>';
 }
 function ob7HtmlFin(cfg, r){
   var fin = cfg.financiamento, liberado = r.liberado || 0, meds = ob7Medicoes(), prox = meds.filter(function(m){ return m.status !== 'liberada'; })[0];
@@ -16051,7 +16059,7 @@ function ob7Extras(){
   var orig = renderObra;
   renderObra = function(){ var r = orig.apply(this, arguments); try{ ob7Extras(); }catch(e){ console.error('obra 7', e); } return r; };
   var st = document.createElement('style');
-  st.textContent = '.ini-card.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:14px 16px}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
+  st.textContent = '.ini-card.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px}.ob7-tx{display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:18px}.ob7-sec>summary::after{top:50%;transform:translateY(-50%)}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
     '.ob7-chart{display:flex;align-items:flex-end;gap:6px;height:120px;margin:10px 0 6px;border-bottom:1px solid var(--border)}.ob7-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}.ob7-col i{display:block;width:100%;border-radius:5px 5px 0 0}.ob7-col small{position:absolute;bottom:-17px;font-size:var(--t1);color:var(--ink-soft)}.ob7-chart{margin-bottom:22px}';
   document.head.appendChild(st);
   document.addEventListener('toggle', function(e){ var d = e.target; if (d && d.getAttribute && d.getAttribute('data-ob7-sec')) ob7Abertos[d.getAttribute('data-ob7-sec')] = d.open; }, true);
@@ -16868,6 +16876,11 @@ function obBarra(pago, aPagar, total){
   var estouro = total > 0 && (pago + aPagar) > total + 0.005;
   return '<div class="ob-barra' + (estouro ? ' estouro' : '') + '"><span class="ob-pago" style="width:' + p + '%"></span><span class="ob-apagar" style="width:' + a + '%"></span></div>';
 }
+function obIc(nome){
+  var v = ctVisual(nome || '');
+  if (v.ic === 'tag' || v.ic === 'dots') v = { ic: 'hammer', cor: '#B7791E' };
+  return fvIc(v.ic, v.cor);
+}
 function renderObra(){
   var el = qs('obraWrap');
   if (!el) return;
@@ -16880,13 +16893,14 @@ function renderObra(){
   var r = obraResumo(), h = '';
   var perc = r.orcamento > 0 ? r.pago / r.orcamento * 100 : 0, fin = cfg.financiamento;
   var folga = (fin.valor > 0 && cfg.orcamentoTotal > 0) ? r2(fin.valor - cfg.orcamentoTotal) : null;
-  h += '<div class="ob-cards">' +
-    '<div class="ini-card"><div class="lbl">Orçamento da obra</div><div class="val">' + fmtMoeda(r.orcamento) + '</div><div class="saldo-data">detalhado em etapas: ' + fmtMoeda(r.detalhado) + (r.orcamento > 0 ? ' (' + fmtPerc(r.detalhado / r.orcamento * 100) + ')' : '') + (r.semDetalhar > 0.004 ? ' · falta detalhar ' + fmtMoeda(r.semDetalhar) : '') + '</div></div>' +
-    '<div class="ini-card"><div class="lbl">Já gasto (pago)</div><div class="val">' + fmtMoeda(r.pago) + '</div><div class="saldo-data">' + fmtPerc(perc) + ' do orçamento' + (r.aPagar > 0.004 ? ' · a pagar ' + fmtMoeda(r.aPagar) : '') + '</div></div>' +
-    '<div class="ini-card"><div class="lbl">Dinheiro na conta da obra</div><div class="val ' + (r.saldo < -0.004 ? 'neg' : '') + '">' + fmtMoeda(r.saldo) + '</div><div class="saldo-data">aportes ' + fmtMoeda(r.aportado) + (r.liberado > 0.004 ? ' + liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' − devolvido à PF/PJ ' + fmtMoeda(r.retirado) : '') + ' − gastos pagos' + (r.sobra > 0.004 && r.etapas.length ? '<br>Sobra acima do que falta gastar nas etapas: <b id="obSobra">' + fmtMoeda(r.sobra) + '</b>' : '') + (r.faltaGastar > 0.004 ? '<br>Ainda a gastar nas etapas: ' + fmtMoeda(r.faltaGastar) + (r.saldo < r.faltaGastar - 0.004 ? ' · <b id="obFaltaDinheiro">faltam ' + fmtMoeda(r2(r.faltaGastar - r.saldo)) + ' de dinheiro</b>' : ' · o dinheiro cobre') : '') + '</div></div>' +
-    '<div class="ini-card"><div class="lbl">Financiamento</div><div class="val">' + (fin.valor > 0 ? fmtMoeda(fin.valor) : '—') + '</div><div class="saldo-data">' + (fin.status === 'aprovado' ? 'aprovado' : 'estimado, ainda não aprovado') + (fin.banco ? ' · ' + escapeHtml(fin.banco) : '') + (folga !== null ? ' · ' + (folga >= 0 ? 'folga de ' + fmtMoeda(folga) + ' sobre o orçamento' : 'faltam ' + fmtMoeda(-folga) + ' para o orçamento') : '') + '</div></div></div>';
-  h += '<div class="ini-card"><div class="plano-tit">Andamento do orçamento</div>' + obBarra(r.pago, r.aPagar, r.orcamento) + '<div class="saldo-data">Escuro = pago · claro = a pagar</div>' +
-    '<div class="ob-acoes"><button type="button" class="btn btn-primary" id="obraGastoBtn">+ Lançar gasto</button><button type="button" class="btn btn-ghost" id="obraAporteBtn">+ Aporte</button><button type="button" class="btn btn-ghost" id="obraLiberacaoBtn">+ Liberação do financiamento</button><button type="button" class="btn btn-ghost" id="obraRetiradaBtn">Devolver sobra à PF/PJ</button><button type="button" class="btn-text" id="obraEditarBtn">Editar a obra</button></div></div>';
+  var notaSaldo = 'aportes ' + fmtMoeda(r.aportado) + (r.liberado > 0.004 ? ' + liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' − devolvido à PF/PJ ' + fmtMoeda(r.retirado) : '') + ' − gastos pagos' + (r.sobra > 0.004 && r.etapas.length ? '<br>Sobra acima do que falta gastar nas etapas: <b id="obSobra">' + fmtMoeda(r.sobra) + '</b>' : '') + (r.faltaGastar > 0.004 ? '<br>Ainda a gastar nas etapas: ' + fmtMoeda(r.faltaGastar) + (r.saldo < r.faltaGastar - 0.004 ? ' · <b id="obFaltaDinheiro">faltam ' + fmtMoeda(r2(r.faltaGastar - r.saldo)) + ' de dinheiro</b>' : ' · o dinheiro cobre') : '');
+  var chipGasto = '<span class="fv-chip ' + (r.pago > 0.004 ? 'pend' : '') + '">Gasto ' + fmtMoeda(r.pago) + ' · ' + fmtPerc(perc) + ' do orçamento</span>' + (r.aPagar > 0.004 ? ' <span class="fv-chip neg">a pagar ' + fmtMoeda(r.aPagar) + '</span>' : '');
+  h += '<div class="ob-cards ob-novo"><div class="financeiro-bloco rs-hero"><span class="fv-k">Dinheiro na conta da obra</span><div class="fv-big' + (r.saldo < -0.004 ? ' neg' : '') + '">' + fmtMoeda(r.saldo) + '</div><div class="fv-pat-l"><span>' + chipGasto + '</span></div>' +
+    obBarra(r.pago, r.aPagar, r.orcamento) + '<div class="fp-nota">Escuro = pago · claro = a pagar</div><div class="fp-nota" style="margin-top:6px;">' + notaSaldo + '</div></div>' +
+    '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('hammer', '#B7791E') + 'Orçamento</span><b>' + fmtMoeda(r.orcamento) + '</b><small>' + (r.orcamento > 0 ? fmtPerc(r.detalhado / r.orcamento * 100) + ' detalhado em etapas' : 'sem orçamento') + '</small></div>' +
+    '<div class="fv-tile"><span class="fv-tl">' + fvIc('bank', '#2A78D6') + 'Financiamento</span><b>' + (fin.valor > 0 ? fmtMoeda(fin.valor) : '—') + '</b><small>' + (fin.status === 'aprovado' ? 'aprovado' : 'estimado') + (fin.banco ? ' · ' + escapeHtml(fin.banco) : '') + '</small></div></div>' +
+    '<div class="fp-nota ob-notas">Detalhado em etapas: ' + fmtMoeda(r.detalhado) + (r.semDetalhar > 0.004 ? ' · falta detalhar ' + fmtMoeda(r.semDetalhar) : '') + (folga !== null ? '<br>Financiamento: ' + (folga >= 0 ? 'folga de ' + fmtMoeda(folga) + ' sobre o orçamento' : 'faltam ' + fmtMoeda(-folga) + ' para o orçamento') : '') + '</div></div>';
+  h += '<div class="ini-card fv-acao ob-acao"><div class="fv-k">Ações da obra</div><div class="ob-acoes ob-acoes2"><button type="button" class="btn btn-primary" id="obraGastoBtn">+ Lançar gasto</button><button type="button" class="btn btn-ghost" id="obraAporteBtn">+ Aporte</button><button type="button" class="btn btn-ghost" id="obraLiberacaoBtn">+ Liberação</button><button type="button" class="btn btn-ghost" id="obraRetiradaBtn">Devolver sobra à PF/PJ</button><button type="button" class="btn-text" id="obraEditarBtn">Editar a obra</button></div></div>';
 
   h += obraContratosHtml(r, cfg);
 
@@ -16897,7 +16911,7 @@ function renderObra(){
   r.etapas.forEach(function(x){
     if (obraEtapaOculta(x.e, cfg)){ nOc++; ocOrc += x.orcado; ocPago += x.pago; ocAPagar += x.aPagar; return; }
     var pc = x.orcado > 0 ? (x.pago + x.aPagar) / x.orcado * 100 : 0, estouro = x.orcado > 0 && (x.pago + x.aPagar) > x.orcado + 0.005;
-    h += '<div class="ob-etapa"><div class="ob-etapa-top"><b>' + escapeHtml(x.e.nome) + '</b><span class="termo ob-st-' + escapeHtml(x.e.status) + '">' + escapeHtml(obraTipoEtapa[x.e.status] || '') + '</span></div>' + obBarra(x.pago, x.aPagar, x.orcado) +
+    h += '<div class="ob-etapa"><div class="ob-etapa-top"><b class="ob-nm">' + obIc(x.e.nome) + ' ' + escapeHtml(x.e.nome) + '</b><span class="termo ob-st-' + escapeHtml(x.e.status) + '">' + escapeHtml(obraTipoEtapa[x.e.status] || '') + '</span></div>' + obBarra(x.pago, x.aPagar, x.orcado) +
       '<div class="ob-etapa-nums"><span>Orçado <b>' + fmtMoeda(x.orcado) + '</b></span><span>Pago <b>' + fmtMoeda(x.pago) + '</b></span>' + (x.aPagar > 0.004 ? '<span>A pagar <b>' + fmtMoeda(x.aPagar) + '</b></span>' : '') + '<span class="' + (estouro ? 'ob-estouro' : '') + '">' + (estouro ? 'Estourou em' : 'Resta do orçado') + ' <b>' + fmtMoeda(Math.abs(x.saldo)) + '</b>' + (x.orcado > 0 ? ' (' + fmtPerc(pc) + ' do orçado usado)' : '') + '</span></div>' +
       '<div class="ob-etapa-acoes"><button type="button" class="btn-text" data-ob-gasto-etapa="' + escapeHtml(x.e.id) + '">+ Gasto</button><button type="button" class="btn-text" data-ob-etapa-edit="' + escapeHtml(x.e.id) + '">Editar</button><button type="button" class="btn-text" data-ob-etapa-del="' + escapeHtml(x.e.id) + '">Excluir</button></div></div>';
   });
@@ -16915,7 +16929,7 @@ function renderObra(){
   if (!gastos.length) h += '<div class="financeiro-vazio">Nenhum gasto lançado.</div>';
   (obraGastosExpandido ? gastos : gastos.slice(0, 3)).forEach(function(m){
     var pg = obraGastoPago(m);
-    h += '<div class="ob-gasto"><div class="ob-gasto-info"><b>' + escapeHtml(m.descricao || '') + '</b><span class="saldo-data">' + escapeHtml(nomeEtapa[m.etapaId] || 'Sem etapa') + (m.contrato ? ' · ' + escapeHtml(obraNomeContrato(m.contrato)) : '') + (m.fornecedor ? ' · ' + escapeHtml(m.fornecedor) : '') + ' · ' + (pg ? 'pago em ' + escapeHtml(fmtData(obraDataPag(m))) : 'a pagar, vence ' + escapeHtml(fmtData(m.vencimento || m.data))) + (m.nf ? ' · nota ' + escapeHtml(m.nf) : '') + (m.grupo ? ' · pago direto da conta' : '') + (m.origemExtrato ? ' · veio do extrato' : '') + '</span></div>' +
+    h += '<div class="ob-gasto">' + obIc(m.descricao || nomeEtapa[m.etapaId]) + '<div class="ob-gasto-info"><b>' + escapeHtml(m.descricao || '') + '</b><span class="saldo-data">' + escapeHtml(nomeEtapa[m.etapaId] || 'Sem etapa') + (m.contrato ? ' · ' + escapeHtml(obraNomeContrato(m.contrato)) : '') + (m.fornecedor ? ' · ' + escapeHtml(m.fornecedor) : '') + ' · ' + (pg ? 'pago em ' + escapeHtml(fmtData(obraDataPag(m))) : 'a pagar, vence ' + escapeHtml(fmtData(m.vencimento || m.data))) + (m.nf ? ' · nota ' + escapeHtml(m.nf) : '') + (m.grupo ? ' · pago direto da conta' : '') + (m.origemExtrato ? ' · veio do extrato' : '') + '</span></div>' +
       '<div class="ob-gasto-val"><strong>' + fmtMoeda(m.valor) + '</strong><span>' + (typeof ob7ClipHtml === 'function' ? ob7ClipHtml(m) : '') + '<button type="button" class="btn-text" data-ob-edit="' + escapeHtml(m.id) + '">Editar</button>' + (pg ? '' : '<button type="button" class="btn-text acao-pagar" data-ob-pagar="' + escapeHtml(m.id) + '">Pagar</button>') + '<button type="button" class="btn-text" data-ob-del="' + escapeHtml(m.id) + '">Excluir</button></span></div></div>';
   });
   if (gastos.length > 3) h += '<button type="button" class="btn-text" id="obraGastosTodos">' + (obraGastosExpandido ? 'Mostrar menos' : 'Ver todos os ' + gastos.length + ' gastos') + '</button>';
@@ -16927,7 +16941,7 @@ function renderObra(){
   h += '<div class="ini-card"><div class="financeiro-secao-head"><h4>Dinheiro da obra</h4></div><div class="saldo-data" style="margin-bottom:6px;">Aportes: PF ' + fmtMoeda(r.aportes.pf) + ' · PJ ' + fmtMoeda(r.aportes.pj) + ' · direto na conta da obra ' + fmtMoeda(r.aportes.externo) + (r.aportes.terceiro > 0.004 ? ' · terceiros ' + fmtMoeda(r.aportes.terceiro) : '') + (r.liberado > 0.004 ? ' · liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' · devolvido à PF/PJ ' + fmtMoeda(r.retirado) : '') + '</div>';
   if (!din.length) h += '<div class="financeiro-vazio">Nenhum aporte ou liberação ainda.</div>';
   din.forEach(function(m){
-    h += '<div class="ob-gasto"><div class="ob-gasto-info"><b>' + (m.tipo === 'liberacao' ? 'Liberação do financiamento' : (m.tipo === 'retirada' ? 'Devolução à conta ' + (m.destino === 'pj' ? 'PJ' : 'PF') : (m.origem === 'terceiro' ? 'Aporte de ' + escapeHtml(m.pessoa || 'terceiro') : 'Aporte'))) + '</b><span class="saldo-data">' + escapeHtml(fmtData(String(m.data || '').slice(0, 10))) + (m.tipo === 'aporte' && m.origem !== 'terceiro' ? ' · ' + (origemTxt[m.origem] || '') : '') + (m.obs ? ' · ' + escapeHtml(m.obs) : '') + '</span></div>' +
+    h += '<div class="ob-gasto">' + fvIc(m.tipo === 'retirada' ? 'arrows' : (m.tipo === 'liberacao' ? 'bank' : 'wallet'), m.tipo === 'retirada' ? '#D93B3B' : (m.tipo === 'liberacao' ? '#2A78D6' : '#17895A')) + '<div class="ob-gasto-info"><b>' + (m.tipo === 'liberacao' ? 'Liberação do financiamento' : (m.tipo === 'retirada' ? 'Devolução à conta ' + (m.destino === 'pj' ? 'PJ' : 'PF') : (m.origem === 'terceiro' ? 'Aporte de ' + escapeHtml(m.pessoa || 'terceiro') : 'Aporte'))) + '</b><span class="saldo-data">' + escapeHtml(fmtData(String(m.data || '').slice(0, 10))) + (m.tipo === 'aporte' && m.origem !== 'terceiro' ? ' · ' + (origemTxt[m.origem] || '') : '') + (m.obs ? ' · ' + escapeHtml(m.obs) : '') + '</span></div>' +
       '<div class="ob-gasto-val"><strong>' + (m.tipo === 'retirada' ? '− ' : '+ ') + fmtMoeda(m.valor) + '</strong><span>' + (m.virtual ? '<span class="saldo-data">veio de um recebimento: para desfazer, desfaça o recebimento</span>' : '<button type="button" class="btn-text" data-ob-del="' + escapeHtml(m.id) + '">Excluir</button>') + '</span></div></div>';
   });
   h += '</div>';

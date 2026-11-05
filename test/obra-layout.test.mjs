@@ -1,0 +1,33 @@
+// Testa o novo cabeçalho e as listas da aba Construção.
+// Suba antes:  npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8802
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8802', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const dia = n => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10), agora = new Date().toISOString();
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.1' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
+await api('PUT', 'config/backup', { ultimoEm: agora });
+await api('PUT', 'config/obra', { nome: 'Casa', orcamentoTotal: 450000, criadoEm: agora, financiamento: { status: 'aprovado', valor: 300000, banco: 'Caixa' }, etapas: [{ id: 'e1', nome: 'Terraplanagem', orcado: 22000, status: 'andamento', ordem: 1 }, { id: 'e2', nome: 'Fundação', orcado: 90000, status: 'a_fazer', ordem: 2 }] });
+await api('PUT', 'obraMov/a1', { tipo: 'aporte', origem: 'pf', data: dia(-15), valor: 30000, criadoEm: agora });
+await api('PUT', 'obraMov/g1', { tipo: 'gasto', etapaId: 'e1', descricao: 'Máquina', fornecedor: 'Terra', valor: 12000, status: 'pago', data: dia(-5), dataPagamento: dia(-5), criadoEm: agora });
+await api('PUT', 'obraMov/g2', { tipo: 'gasto', etapaId: 'e1', descricao: 'Frete', valor: 800, status: 'apagar', data: dia(-1), vencimento: dia(6), criadoEm: agora });
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
+await page.evaluate(() => document.querySelector('[data-tab="obra"]').click()); await page.waitForTimeout(900);
+const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const top = await t('.ob-novo');
+check(/DINHEIRO NA CONTA DA OBRA/i.test(top) && /R\$\s*18\.000,00/.test(top), 'número principal: dinheiro na conta da obra (30.000 − 12.000)');
+check(/Gasto R\$\s*12\.000,00/.test(top) && /a pagar R\$\s*800,00/.test(top), 'selos de gasto e a pagar');
+check(await page.evaluate(() => !!document.querySelector('.ob-novo .ob-barra, .ob-novo [class*=barra]')), 'barra de andamento do orçamento no topo');
+check(await page.evaluate(() => !!document.getElementById('obFaltaDinheiro')), 'o aviso de quanto falta de dinheiro continua');
+check(await page.evaluate(() => document.querySelectorAll('.ob-novo .rs-tiles .ct-ic svg').length) === 2 && /Orçamento/.test(top) && /Financiamento/.test(top), 'dois cartões com ícone: orçamento e financiamento');
+check(await page.evaluate(() => ['obraGastoBtn', 'obraAporteBtn', 'obraLiberacaoBtn', 'obraRetiradaBtn', 'obraEditarBtn'].every(i => !!document.getElementById(i))), 'todos os botões de ação continuam');
+check(await page.evaluate(() => document.querySelectorAll('.ob-etapa .ob-nm .ct-ic').length) === 2, 'etapas com ícone');
+check(await page.evaluate(() => document.querySelectorAll('#obraWrap .ob-gasto > .ct-ic').length) >= 3, 'gastos e movimentos com ícone');
+check(await page.evaluate(() => document.querySelectorAll('[data-ob7-sec] > summary .ct-ic').length) === 5, 'as 5 seções recolhidas têm ícone');
+await page.click('#obraGastoBtn'); await page.waitForTimeout(500);
+check(await page.evaluate(() => document.getElementById('overlayObraForm').classList.contains('show')), '"+ Lançar gasto" continua abrindo o formulário');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

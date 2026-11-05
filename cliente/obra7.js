@@ -67,8 +67,10 @@ function ob7Caixa(){
 }
 
 /* ---------- desenho das seções ---------- */
+var OB7_ICONES = { fin: ['bank', '#2A78D6'], jur: ['pct', '#C2410C'], cx: ['coin', '#17895A'], chk: ['clip', '#0D9488'], ext: ['list', '#8A93AD'] };
 function ob7Sec(chave, titulo, resumo, corpo){
-  return '<details class="ini-card ob7-sec" data-ob7-sec="' + chave + '"' + (ob7Abertos[chave] ? ' open' : '') + '><summary><b>' + titulo + '</b><span class="saldo-data">' + resumo + '</span></summary><div class="ob7-corpo">' + corpo + '</div></details>';
+  var i = OB7_ICONES[chave] || ['list', '#8A93AD'];
+  return '<details class="ini-card ob7-sec" data-ob7-sec="' + chave + '"' + (ob7Abertos[chave] ? ' open' : '') + '><summary>' + fvIc(i[0], i[1]) + '<span class="ob7-tx"><b>' + titulo + '</b><span class="fp-nota">' + resumo + '</span></span></summary><div class="ob7-corpo">' + corpo + '</div></details>';
 }
 function ob7HtmlFin(cfg, r){
   var fin = cfg.financiamento, liberado = r.liberado || 0, meds = ob7Medicoes(), prox = meds.filter(function(m){ return m.status !== 'liberada'; })[0];
@@ -169,7 +171,7 @@ function ob7Extras(){
   var orig = renderObra;
   renderObra = function(){ var r = orig.apply(this, arguments); try{ ob7Extras(); }catch(e){ console.error('obra 7', e); } return r; };
   var st = document.createElement('style');
-  st.textContent = '.ini-card.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:14px 16px}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
+  st.textContent = '.ini-card.ob7-sec{padding:0;margin-top:12px}.ob7-sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px}.ob7-tx{display:flex;flex-direction:column;gap:1px;min-width:0;padding-right:18px}.ob7-sec>summary::after{top:50%;transform:translateY(-50%)}.ob7-sec>summary::-webkit-details-marker{display:none}.ob7-sec>summary::after{content:"▾";position:absolute;right:16px;color:var(--ink-soft)}.ob7-sec{position:relative}.ob7-sec[open]>summary::after{content:"▴"}.ob7-corpo{padding:0 16px 14px}' +
     '.ob7-chart{display:flex;align-items:flex-end;gap:6px;height:120px;margin:10px 0 6px;border-bottom:1px solid var(--border)}.ob7-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative}.ob7-col i{display:block;width:100%;border-radius:5px 5px 0 0}.ob7-col small{position:absolute;bottom:-17px;font-size:var(--t1);color:var(--ink-soft)}.ob7-chart{margin-bottom:22px}';
   document.head.appendChild(st);
   document.addEventListener('toggle', function(e){ var d = e.target; if (d && d.getAttribute && d.getAttribute('data-ob7-sec')) ob7Abertos[d.getAttribute('data-ob7-sec')] = d.open; }, true);
