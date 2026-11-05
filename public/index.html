@@ -1424,6 +1424,7 @@
   .ob-nm{display:flex;align-items:center;gap:8px;} .ob-gasto > .ct-ic{margin-top:2px;} .ob-etapa .ob-nm .ct-ic{flex-shrink:0;}
   .ob-tiles{margin-bottom:6px;} .ob-edit{text-align:right;margin:0 4px 8px;} .ob-edit .btn-text{padding:2px 4px;}
   .ob-mo-top b.ob-nm{display:flex;align-items:center;gap:8px;}
+  .cli-av{display:flex;align-items:center;gap:8px;} .cli-av .ct-ic{flex-shrink:0;} .arq-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;} .cli-foot .fv-chip{font-size:var(--t1);}
 /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
   @media (max-width:640px){
     .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
@@ -1639,7 +1640,7 @@
       </div>
     </div>
     <div id="headClientes" style="display:none;">
-      <div class="stats" id="statsClientes"></div>
+      <div class="rs-wrap" id="statsClientes"></div>
       <div class="filters">
         <div class="search">
           <input type="text" id="buscaClienteInput" placeholder="Buscar por nome, telefone, e-mail ou processo…">
@@ -1665,7 +1666,7 @@
       </div>
     </div>
     <div id="headArquivados" style="display:none;">
-      <div class="stats" id="statsArquivados"></div>
+      <div class="rs-wrap" id="statsArquivados"></div>
       <div class="filters">
         <div class="search">
           <input type="text" id="buscaArqInput" placeholder="Buscar por partes, cliente, ação ou nº do processo…">
@@ -10480,10 +10481,9 @@
     var comPend = todos.filter(function(x){ return x.p.receber > 0.004; });
     var totPend = r2(comPend.reduce(function(t, x){ return t + x.p.receber; }, 0));
     var totAtr = r2(todos.reduce(function(t, x){ return t + x.p.atrasado; }, 0));
-    qs('statsArquivados').innerHTML =
-      '<div class="stat"><div><div class="lbl">Arquivados</div><div class="val">' + todos.length + '</div></div></div>' +
-      '<div class="stat pendente"><div><div class="lbl">Ainda a receber</div><div class="val">' + fmtMoeda(totPend) + '</div>' + (arquivadosRepasse() > 0.004 ? '<div class="saldo-data" id="arqRepasseNota">inclui ' + fmtMoeda(arquivadosRepasse()) + ' de repasse a parceiros</div>' : '') + '</div></div>' +
-      '<div class="stat atraso"><div><div class="lbl">Em atraso</div><div class="val">' + fmtMoeda(totAtr) + '</div></div></div>';
+    rsResumo('statsArquivados', { rot: 'Ainda a receber (arquivados)', valor: fmtMoeda(totPend), chip: totAtr > 0.004 ? rsChip('Em atraso ' + fmtMoeda(totAtr), 'neg') : rsChip('Nada em atraso', 'ok'),
+      nota: arquivadosRepasse() > 0.004 ? '<div class="saldo-data" id="arqRepasseNota">inclui ' + fmtMoeda(arquivadosRepasse()) + ' de repasse a parceiros</div>' : '',
+      tiles: [{ k: 'doc', cor: '#B7791E', rot: 'Arquivados', v: String(todos.length) }, { k: 'alert', cor: totAtr > 0.004 ? '#D93B3B' : '#8A93AD', rot: 'Em atraso', v: fmtMoeda(totAtr), cls: totAtr > 0.004 ? 'neg' : '' }] });
     var q = normNome(arqFiltro.busca);
     var vis = todos.filter(function(x){
       if (arqFiltro.tipo !== 'todos' && x.tipo !== arqFiltro.tipo) return false;
@@ -10503,11 +10503,11 @@
         var d = x.doc, p = x.p;
         var sub = [x.tipo === 'caso' ? (d.nomeAcao || '') : '', d.numeroProcesso ? 'Proc. ' + d.numeroProcesso : ''].filter(Boolean).join(' · ');
         var pend = p.receber > 0.004
-          ? '<div class="arq-pend' + (p.atrasado > 0.004 ? ' venc' : '') + '">Ainda a receber ' + fmtMoeda(p.receber) + (p.prox ? ' · ' + (p.prox < hoje ? 'venceu em ' : 'próximo vencimento ') + fmtData(p.prox) : '') + '</div>'
-          : '<div class="arq-ok">Quitado</div>';
+          ? '<div class="kc-chips">' + rsChip('Ainda a receber ' + fmtMoeda(p.receber), p.atrasado > 0.004 ? 'neg' : 'pend') + (p.prox ? rsChip((p.prox < hoje ? 'venceu em ' : 'próximo vencimento ') + fmtData(p.prox), p.prox < hoje ? 'neg' : '') : '') + '</div>'
+          : '<div class="kc-chips">' + rsChip('Quitado ✓', 'ok') + '</div>';
         var key = x.tipo + '|' + escapeHtml(d.id);
         return '<div class="card arq-card ' + (p.atrasado > 0.004 ? 'status-vencido' : (p.receber > 0.004 ? 'status-pendente' : 'status-recebido')) + '" data-arq="' + key + '">' +
-          '<div class="arq-top"><span class="badge">' + TIPO_DOC_LABEL[x.tipo] + '</span><span>' + escapeHtml(x.titulo) + '</span></div>' +
+          '<div class="arq-top">' + fvIc(x.tipo === 'acordo' ? 'scale' : (x.tipo === 'alvara' ? 'bank' : 'user'), x.tipo === 'acordo' ? '#8B5CF6' : (x.tipo === 'alvara' ? '#2A78D6' : '#B7791E')) + '<span class="badge">' + TIPO_DOC_LABEL[x.tipo] + '</span><span>' + escapeHtml(x.titulo) + '</span></div>' +
           (sub ? '<div class="cli-sub">' + escapeHtml(sub) + '</div>' : '') +
           '<div class="cli-sub">Arquivado em ' + fmtData(String(d.arquivadoEm || '').slice(0, 10)) + (p.valor > 0 ? ' · honorários ' + fmtMoeda(p.valor) : '') + '</div>' +
           pend +
@@ -11075,11 +11075,9 @@
         tot.repasseMes += recebidoNoMesUn(u, mesSelecionado) - recebidoMesMeu(u, mesSelecionado);
       });
     });
-    qs('statsClientes').innerHTML =
-      '<div class="stat"><div><div class="lbl">Clientes ativos</div><div class="val">' + ativos.length + '</div></div></div>' +
-      '<div class="stat pendente"><div><div class="lbl">A receber</div><div class="val">' + fmtMoeda(tot.receber) + '</div>' + (tot.repasse > 0.004 ? '<div class="saldo-data" id="cliRepasseNota">valor cheio das cobranças; ' + fmtMoeda(tot.repasse) + ' é repasse a parceiros</div>' : '') + '</div></div>' +
-      '<div class="stat atraso"><div><div class="lbl">Em atraso</div><div class="val">' + fmtMoeda(tot.atrasado) + '</div></div></div>' +
-      '<div class="stat recebido"><div><div class="lbl">Recebido em ' + escapeHtml(mesLabel(mesSelecionado)) + '</div><div class="val">' + fmtMoeda(tot.mes) + '</div>' + (tot.repasseMes > 0.004 ? '<div class="saldo-data" id="cliRepasseMesNota">inclui ' + fmtMoeda(tot.repasseMes) + ' de repasse a parceiros</div>' : '') + '</div></div>';
+    rsResumo('statsClientes', { rot: 'A receber dos clientes', valor: fmtMoeda(tot.receber), chip: rsChipRecebido(tot.mes),
+      nota: (tot.repasse > 0.004 ? '<div class="saldo-data" id="cliRepasseNota">valor cheio das cobranças; ' + fmtMoeda(tot.repasse) + ' é repasse a parceiros</div>' : '') + (tot.repasseMes > 0.004 ? '<div class="saldo-data" id="cliRepasseMesNota">o recebido do mês inclui ' + fmtMoeda(tot.repasseMes) + ' de repasse a parceiros</div>' : ''),
+      tiles: [{ k: 'user', cor: '#2A78D6', rot: 'Clientes ativos', v: String(ativos.length) }, { k: 'alert', cor: tot.atrasado > 0.004 ? '#D93B3B' : '#8A93AD', rot: 'Em atraso', v: fmtMoeda(tot.atrasado), cls: tot.atrasado > 0.004 ? 'neg' : '' }] });
 
     var semCli = docsSemCliente().length;
     qs('clientesAviso').innerHTML = semCli
@@ -11126,12 +11124,12 @@
         if (cont.acordo) cts.push(cont.acordo + (cont.acordo === 1 ? ' acordo' : ' acordos'));
         if (cont.alvara) cts.push(cont.alvara + (cont.alvara === 1 ? ' alvará' : ' alvarás'));
         var foot = [];
-        if (r.atrasado > 0.004) foot.push('<span class="alerta">Atraso de ' + r.diasAtraso + (r.diasAtraso === 1 ? ' dia' : ' dias') + '</span>');
-        if (x.ult) foot.push('<span>Última cobrança ' + textoDiasAtras(x.ult.data) + '</span>');
-        else if (r.receber > 0.004) foot.push('<span>Nunca cobrado pelo app</span>');
-        if (x.prom) foot.push('<span' + (x.prom.data < hoje ? ' class="alerta"' : '') + '>Promessa para ' + fmtData(x.prom.data) + '</span>');
+        if (r.atrasado > 0.004) foot.push(rsChip('Atraso de ' + r.diasAtraso + (r.diasAtraso === 1 ? ' dia' : ' dias'), 'neg'));
+        if (x.ult) foot.push(rsChip('Última cobrança ' + escapeHtml(textoDiasAtras(x.ult.data)), ''));
+        else if (r.receber > 0.004) foot.push(rsChip('Nunca cobrado pelo app', ''));
+        if (x.prom) foot.push(rsChip('Promessa para ' + fmtData(x.prom.data), x.prom.data < hoje ? 'neg' : 'ok'));
         return '<div class="card cli-card ' + (r.atrasado > 0.004 ? 'status-vencido' : (r.receber > 0.004 ? 'status-pendente' : 'status-recebido')) + '" data-cli-abrir="' + escapeHtml(c.id) + '">' +
-          '<div><div class="cli-nome">' + escapeHtml(c.nome) + '</div>' +
+          '<div><div class="cli-nome cli-av">' + fvIc('user', c.pagador === 'murilo' ? '#2A78D6' : '#B7791E') + ' <span>' + escapeHtml(c.nome) + '</span></div>' +
           '<div class="cli-sub"><span class="badge' + (c.pagador === 'murilo' ? ' pg-murilo' : '') + '">' + (c.pagador === 'murilo' ? 'Murilo me paga' : 'Cliente me paga') + '</span>' +
           (c.arquivado ? '<span class="badge arq">Arquivado</span>' : '') +
           '<span>' + (cts.length ? cts.join(' · ') : 'Sem lançamentos') + '</span></div>' +
