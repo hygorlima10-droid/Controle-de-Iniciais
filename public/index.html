@@ -8886,7 +8886,7 @@
       o += '<circle cx="70" cy="70" r="' + r + '" fill="none" stroke="' + x.cor + '" stroke-width="20" stroke-dasharray="' + (L - g).toFixed(1) + ' ' + (C - L + g).toFixed(1) + '" stroke-dashoffset="' + (-off).toFixed(1) + '" transform="rotate(-90 70 70)"/>';
       off += L;
     });
-    return '<svg class="ct-donut" viewBox="0 0 140 140" role="img" aria-label="Onde está o dinheiro">' + o + '<text x="70" y="66" text-anchor="middle" class="ct-dt1">Líquido</text><text x="70" y="85" text-anchor="middle" class="ct-dt2">' + escapeHtml(fmtMoeda(total).replace(',00', '')) + '</text></svg>';
+    return '<svg class="ct-donut" viewBox="0 0 140 140" role="img" aria-label="Onde está o dinheiro">' + o + '</svg>';
   }
   function patTopoHtml(pat){
     var m0 = todayISO().slice(0, 7), prev = null;
