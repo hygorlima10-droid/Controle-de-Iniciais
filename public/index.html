@@ -1396,7 +1396,8 @@
   .fv-entenda>details>summary{font-weight:600;font-size:var(--t4);cursor:pointer;}
 
   /* Finanças · PJ */
-  .fp-hero .fv-big{margin:6px 0 2px;} .fp-hero-l{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;} .fp-links{display:flex;gap:16px;margin-top:6px;}
+  .fp-hero .fv-big{margin:6px 0 2px;} .fp-acts{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap;} .fp-acts .btn-text{padding:8px 2px;}
+  .fp-nota{font-size:var(--t2);color:var(--ink-soft);line-height:1.45;} .fv-grp{font-size:var(--t1);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:14px 0 2px;} .fp-eq.tot.dash{border-top-style:dashed;} .fp-eq b.blu{color:var(--info);} .fp-vazia{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;}
   .fp-transf{width:100%;justify-content:center;gap:10px;margin:0 0 12px;} .fp-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;} .fp-two .an-tile .big{font-size:var(--t6);white-space:nowrap;}
   .fp-proj{border:1.5px dashed rgba(154,103,0,.45);background:rgba(237,161,0,.06);border-radius:20px;padding:14px 16px;margin-bottom:12px;}
   .fp-eq{display:flex;justify-content:space-between;gap:10px;font-size:var(--t4);padding:4px 0;} .fp-eq b{font-variant-numeric:tabular-nums;white-space:nowrap;} .fp-eq.fut{color:var(--ink-soft);} .fp-eq.tot{border-top:1.5px solid var(--ink);margin-top:6px;padding-top:8px;font-size:var(--t5);font-weight:700;} .fp-eq b.ok{color:var(--success);} .fp-eq b.neg{color:var(--urgente);}
@@ -6052,14 +6053,17 @@
 
 
   /* ---------- Finanças · PJ (novo desenho): saldo, o que já aconteceu, projeção, receitas e despesas ---------- */
+  function fpHero(coluna, saldo, cx){
+    return '<div class="financeiro-bloco fp-hero"><span class="fv-k">Saldo atual informado</span><div class="fv-big">' + fmtMoeda(saldo.saldoAtual) + '</div>' +
+      (saldo.atualizadoEm && Math.abs(cx - (Number(saldo.saldoAtual) || 0)) > 0.004 ? '<div class="saldo-data">Caixa de hoje, com os lançamentos feitos depois: <strong>' + fmtMoeda(cx) + '</strong></div>' : '') +
+      '<div class="saldo-data">' + (saldo.atualizadoEm ? 'Atualizado em ' + fmtData(saldo.atualizadoEm.slice(0, 10)) : 'Ainda não informado') + '</div>' +
+      '<div class="fp-acts"><button type="button" class="btn btn-ghost" data-atualizar-saldo="' + coluna + '">Atualizar saldo</button><button type="button" class="btn-text" data-ver-historico-saldo="' + coluna + '">Histórico</button><button type="button" class="btn-text" data-ver-lanc="' + coluna + '">Lançamentos</button></div></div>';
+  }
   function pjMontar(coluna, saldo, resultado, projecao, despesasResumo, htmlReceitas, htmlDespesas){
     var caixa = resultado.modo === 'caixa', transfIn = computeReceitaTransferenciaMes(coluna), recebidas = r2(resultado.receita - transfIn), despTransf = computeDespesaTransferenciaMes(coluna);
     var cx = saldoComLancamentos(coluna), dv = null, valorTransf = 0;
     if (mesSelecionado === todayISO().slice(0, 7)){ try{ dv = computeDivisao(); valorTransf = dv.faltaPro > 0.005 ? dv.faltaPro : 0; }catch(e){} }
-    var h = '<div class="financeiro-bloco fp-hero"><span class="fv-k">Saldo atual informado</span><div class="fv-big">' + fmtMoeda(saldo.saldoAtual) + '</div>' +
-      (saldo.atualizadoEm && Math.abs(cx - (Number(saldo.saldoAtual) || 0)) > 0.004 ? '<div class="saldo-data">Caixa de hoje, com os lançamentos feitos depois: <strong>' + fmtMoeda(cx) + '</strong></div>' : '') +
-      '<div class="fp-hero-l"><span class="saldo-data">' + (saldo.atualizadoEm ? 'Atualizado em ' + fmtData(saldo.atualizadoEm.slice(0, 10)) : 'Ainda não informado') + '</span><button type="button" class="btn btn-ghost" data-atualizar-saldo="' + coluna + '">Atualizar saldo</button></div>' +
-      '<div class="fp-links"><button type="button" class="btn-text" data-ver-historico-saldo="' + coluna + '">Histórico</button><button type="button" class="btn-text" data-ver-lanc="' + coluna + '">Lançamentos</button></div></div>';
+    var h = fpHero(coluna, saldo, cx);
     h += '<button type="button" class="btn btn-primary fp-transf" data-transferir-pf="1" data-valor="' + (valorTransf > 0 ? valorTransf.toFixed(2) : '') + '">' + fvIc('arrows', 'rgba(255,255,255,.28)') + (valorTransf > 0 ? 'Transferir ' + fmtMoeda(valorTransf) + ' para a PF' : 'Transferir para a PF') + '</button>';
     h += '<div class="financeiro-bloco"><div class="fv-k" style="margin-bottom:8px;">Movimentações do mês · já aconteceram</div><div class="fp-two"><div class="an-tile in"><div class="lbl">▲ Recebido</div><div class="big">' + fmtMoeda(recebidas) + '</div></div><div class="an-tile out"><div class="lbl">▼ Pago</div><div class="big">' + fmtMoeda(despesasResumo.pago) + '</div></div></div>' +
       (transfIn > 0.004 ? '<div class="saldo-data" id="finTransfNota">+ ' + fmtMoeda(transfIn) + ' de transferências entre a PF e a PJ = <strong>' + fmtMoeda(resultado.receita) + '</strong> que entrou na conta.</div>' : '') + '</div>';
@@ -6081,6 +6085,51 @@
       '<div class="financeiro-totais">Pago: <span class="v">' + fmtMoeda(despesasResumo.pago) + '</span> · Pendente: <span class="v">' + fmtMoeda(despesasResumo.pendente) + '</span></div>' +
       (despTransf > 0.004 ? '<div class="saldo-data" id="finTransfDesp">Desse total, ' + fmtMoeda(despTransf) + ' são transferências entre a PF e a PJ ou repasses a parceiros (não são gasto). Gasto de verdade: <strong>' + fmtMoeda(despesasResumo.pago + despesasResumo.pendente - despTransf) + '</strong>.</div>' : '') +
       (despesasResumo.qtdEstimadas ? '<div class="saldo-data">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') + htmlDespesas + '</div>';
+    return h;
+  }
+
+  /* ---------- Finanças · PF (novo desenho): quanto tenho, quanto devo, quanto vem da PJ ---------- */
+  function pfMontar(coluna, saldo, resultado, despesasResumo, nReceitas, htmlReceitas, gruposPend, linhasPagas, titulo){
+    var caixa = resultado.modo === 'caixa', transfIn = computeReceitaTransferenciaMes(coluna), recebidas = r2(resultado.receita - transfIn), cx = saldoComLancamentos(coluna), dv = null;
+    if (mesSelecionado === todayISO().slice(0, 7)){ try{ dv = computeDivisao(); }catch(e){} }
+    var h = fpHero(coluna, saldo, cx), eq = '', faltaPF = dv && dv.faltaPF > 0.005 ? dv.faltaPF : 0;
+    if (caixa){
+      var sem = resultado.vaiSobrarFinal;
+      eq = '<div class="fp-eq"><span>Saldo atual</span><b>' + fmtMoeda(resultado.caixaHoje) + '</b></div><div class="fp-eq fut"><span>− Despesas pendentes</span><b class="neg">− ' + fmtMoeda(despesasResumo.pendente) + '</b></div>' +
+        '<div class="fp-eq tot ' + (faltaPF ? 'dash' : '') + '"><span>' + (faltaPF ? 'Sem a transferência' : 'Fechamento previsto') + '</span><b class="' + (sem >= -0.005 ? 'ok' : 'neg') + '">' + (sem < -0.005 ? '− ' : '') + fmtMoeda(Math.abs(sem)) + '</b></div>';
+      if (faltaPF){
+        var fecha = dv.pfFecha;
+        eq += '<div class="fp-eq fut" style="margin-top:8px;"><span>' + fvIc('arrows', '#2A78D6') + ' <span style="margin-left:6px">+ Transf. prevista da PJ</span><br><span class="fp-nota" style="margin-left:36px">entrada futura: ainda não é saldo</span></span><b class="blu">+ ' + fmtMoeda(faltaPF) + '</b></div>' +
+          '<div class="fp-eq tot"><span>Fechamento previsto</span><b class="' + (fecha >= -0.005 ? 'ok' : 'neg') + '">' + (fecha < -0.005 ? '− ' : '') + fmtMoeda(Math.abs(fecha)) + '</b></div>';
+      }
+    } else {
+      eq = '<div class="fp-eq"><span>Receitas do mês</span><b>' + fmtMoeda(resultado.receita) + '</b></div><div class="fp-eq fut"><span>− Despesas (pagas + pendentes)</span><b class="neg">− ' + fmtMoeda(despesasResumo.pago + despesasResumo.pendente) + '</b></div>' +
+        '<div class="fp-eq tot"><span>Resultado do mês</span><b class="' + (resultado.vaiSobrarFinal >= -0.005 ? 'ok' : 'neg') + '">' + (resultado.vaiSobrarFinal < -0.005 ? '− ' : '') + fmtMoeda(Math.abs(resultado.vaiSobrarFinal)) + '</b></div>';
+    }
+    h += '<div class="financeiro-bloco"><h4 style="margin:0 0 6px;">Como o mês fecha</h4>' + eq +
+      '<div class="fp-nota" style="margin-top:8px;">' + escapeHtml(legendaResultado(resultado)) + (faltaPF ? ' A Visão geral mostra o fechamento já com a transferência da PJ; aqui ela aparece separada porque ainda não entrou na conta.' : '') + '</div></div>';
+    var total = despesasResumo.pago + despesasResumo.pendente, pct = total > 0 ? Math.min(100, despesasResumo.pago / total * 100) : 0;
+    var nomes = { fixa: 'Fixas', variavel: 'Variáveis', avulsa: 'Avulsas' }, corpoD = '';
+    if (!despesasResumo.itens.length) corpoD = '<div class="financeiro-vazio">Nenhuma despesa cadastrada para esta coluna.</div>';
+    else {
+      var algum = false;
+      ['fixa', 'variavel', 'avulsa'].forEach(function(g){ if (gruposPend[g].length){ algum = true; corpoD += '<div class="fv-grp">' + nomes[g] + '</div>' + gruposPend[g].join(''); } });
+      if (!algum) corpoD = '<div class="financeiro-vazio">Tudo pago neste mês. ✓</div>';
+      if (linhasPagas.length){
+        var abertas = !!mostrarPagas[coluna];
+        corpoD += '<button type="button" class="btn-pagas" data-toggle-pagas="' + coluna + '">' + (abertas ? '▾' : '▸') + ' Pagas (' + linhasPagas.length + ') · ' + fmtMoeda(despesasResumo.quitado) + '</button>' + (abertas ? linhasPagas.join('') : '');
+      }
+    }
+    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">+ Nova despesa</button></div>' +
+      (total > 0 ? '<div class="fp-nota">Pago ' + fmtMoeda(despesasResumo.pago) + ' de ' + fmtMoeda(total) + ' · ' + Math.round(pct) + '%</div><div class="fv-bar"><i style="width:' + pct.toFixed(1) + '%;background:var(--success)"></i></div>' : '') +
+      (despesasResumo.qtdEstimadas ? '<div class="fp-nota">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') + corpoD + '</div>';
+    if (!nReceitas){
+      h += '<div class="financeiro-bloco fp-vazia"><span class="fp-nota">Nenhuma receita neste mês</span><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>';
+    } else {
+      h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>' +
+        '<div class="financeiro-totais">' + (transfIn > 0.004 ? 'Receitas no mês' : 'Total no mês') + ': <span class="v">' + fmtMoeda(recebidas) + '</span></div>' +
+        (transfIn > 0.004 ? '<div class="fp-nota" id="finTransfNota">+ ' + fmtMoeda(transfIn) + ' de transferências entre a PF e a PJ = <strong>' + fmtMoeda(resultado.receita) + '</strong> que entrou na conta.</div>' : '') + htmlReceitas + '</div>';
+    }
     return h;
   }
   function renderColunaFinanceiro(coluna){
@@ -6130,7 +6179,7 @@
         '<div class="financeiro-item-right"><div class="v">' + valorTxt + '</div>' + acoesR + '</div></div>';
     }).join('') : '<div class="financeiro-vazio">Nenhuma receita lançada neste mês.</div>';
 
-    var linhasPend = [], linhasPagas = [];
+    var linhasPend = [], linhasPagas = [], gruposPend = { fixa: [], variavel: [], avulsa: [] };
     despesasResumo.itens.slice().sort(function(a,b){ return (a.vencimento || '9999-99-99').localeCompare(b.vencimento || '9999-99-99'); }).forEach(function(it){
       var d = it.despesa;
       var chaveMes = d.id + '|' + mesSelecionado;
@@ -6193,6 +6242,7 @@
         '</strong><span>' + escapeHtml(catRot) + ' · ' + (it.vencimento ? 'vence ' + it.vencimento.slice(8, 10) + '/' + it.vencimento.slice(5, 7) : 'sem vencimento') + ' · ' + chipSt + '</span>' + subParcial + '</div>' +
         '<div class="financeiro-item-right"><div class="v">'+linhaValor+'</div>'+acoes+'</div></div>';
       (it.pago ? linhasPagas : linhasPend).push(linha);
+      if (!it.pago) gruposPend[d.tipo === 'unica' ? 'avulsa' : ((d.valorPadrao === null || d.valorPadrao === undefined) ? 'variavel' : 'fixa')].push(linha);
     });
     var htmlDespesas;
     if (!despesasResumo.itens.length){
@@ -6237,7 +6287,9 @@
         (computeDespesaTransferenciaMes(coluna) > 0.004 ? '<div class="saldo-data" id="finTransfDesp">Desse total, '+fmtMoeda(computeDespesaTransferenciaMes(coluna))+' são transferências entre a PF e a PJ ou repasses a parceiros (não são gasto). Gasto de verdade: <strong>'+fmtMoeda(despesasResumo.pago + despesasResumo.pendente - computeDespesaTransferenciaMes(coluna))+'</strong>.</div>' : '') +
         (despesasResumo.qtdEstimadas ? '<div class="saldo-data">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') +
         htmlDespesas + '</div>';
-    container.innerHTML = coluna === 'pj' ? pjMontar(coluna, saldo, resultado, projecao, despesasResumo, htmlReceitas, htmlDespesas) : htmlPadrao;
+    if (coluna === 'pj') container.innerHTML = pjMontar(coluna, saldo, resultado, projecao, despesasResumo, htmlReceitas, htmlDespesas);
+    else if (typeof ctIcone === 'function') container.innerHTML = pfMontar(coluna, saldo, resultado, despesasResumo, receitasItens.length, htmlReceitas, gruposPend, linhasPagas, titulo);
+    else container.innerHTML = htmlPadrao;
 
     Array.prototype.forEach.call(container.querySelectorAll('[data-atualizar-saldo]'), function(el){
       el.addEventListener('click', function(){ abrirModalSaldo(el.getAttribute('data-atualizar-saldo')); });

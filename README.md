@@ -102,3 +102,7 @@ Patrimônio com variação "vs. mês passado" (compara com o fim do mês anterio
 ## Finanças · PJ (novo desenho)
 
 Saldo atual em destaque, botão "Transferir R$ X para a PF" (valor sugerido = pró-labore que falta), "Movimentações do mês" (recebido e pago, o que já aconteceu), projeção em caixa tracejada (caixa de hoje − pendentes = vai sobrar ao final; nos outros meses, receitas − despesas = resultado), receitas e despesas com ícone de categoria, vencimento e status. "Marcar paga" fica visível; "Abater" e "Marcar pendente" ficam no menu ···. Vale também para as linhas da aba PF. Teste: `test/financas-pj.test.mjs`.
+
+## Finanças · PF (novo desenho)
+
+Saldo atual no topo (botões "Atualizar saldo", "Histórico" e "Lançamentos" alinhados na mesma linha, também na PJ), bloco "Como o mês fecha" (saldo − despesas pendentes = sem a transferência; + transferência prevista da PJ, como entrada futura = fechamento previsto, o mesmo número da Visão geral), despesas pendentes agrupadas em Fixas, Variáveis (valor variável) e Avulsas (únicas) com barra do quanto já foi pago, e receitas em uma linha discreta quando não há nenhuma. Teste: `test/financas-pf.test.mjs`.
