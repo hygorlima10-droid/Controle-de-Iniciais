@@ -26,6 +26,15 @@ var CT_SVG = {
   bank: '<path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   arrows: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
+  doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+  alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+  clip: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  scale: '<path d="M12 3v18M5 21h14M5 7h14M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0z"/>',
+  hammer: '<path d="M14 6l4 4M3 21l9-9M10 8l5-5 6 6-5 5z"/>',
+  coin: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.5 2.5 1.5-1 1.5-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   gift: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M8 8a2.5 2.5 0 010-5c2.5 0 4 5 4 5s1.5-5 4-5a2.5 2.5 0 010 5"/>'
 };
 var CT_PALETA = ['#8B5CF6', '#DB2777', '#0D9488', '#EA580C', '#0284C7', '#16A34A', '#92400E', '#475569'];

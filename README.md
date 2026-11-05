@@ -110,3 +110,7 @@ Saldo atual no topo (botões "Atualizar saldo", "Histórico" e "Lançamentos" al
 ## Finanças · Patrimônio (novo desenho)
 
 Patrimônio líquido com "vs. mês passado", rosca com ícones (nas contas, reserva, outras metas e conta da obra; as partes somam o líquido), e as metas com ícone, barra de progresso e plano. "Aportar" fica visível; "Retirar", "Atualizar valor", Editar, Histórico e Excluir ficam no menu ···. Os títulos da tela de Finanças ficaram mais curtos ("Minha PF", "Patrimônio") para não serem cortados. Teste: `test/financas-patrimonio.test.mjs`.
+
+## Abas de documentos: cabeçalho e cartões padronizados
+
+`rsResumo` (cabeçalho: número principal, selo do recebido no mês e dois cartões com ícone) e cartões com ícone, selos coloridos e barra de parcelas. **Petições**: Kanban e Lista (o Kanban continua igual; só a casca mudou). Teste: `test/peticoes-layout.test.mjs`.

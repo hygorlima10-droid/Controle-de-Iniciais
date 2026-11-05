@@ -24,7 +24,7 @@ const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerT
 let tx = await t('#finGeral');
 check(/PATRIMÔNIO LÍQUIDO/i.test(tx) && /Ver composição/.test(tx), 'patrimônio no topo com "Ver composição"');
 check(await page.evaluate(() => /▲/.test(document.querySelector('.fv-pat').innerText) && /mês passado/.test(document.querySelector('.fv-pat').innerText)), 'mostra a variação "vs. mês passado"');
-check(await page.evaluate(() => document.querySelectorAll('.fv-tile').length) === 3, 'três indicadores');
+check(await page.evaluate(() => document.querySelectorAll('#finGeral .fv-tile').length) === 3, 'três indicadores');
 check(/Reserva de emergência/.test(tx) && await page.evaluate(() => !!document.querySelector('.fv-res .fv-bar i')), 'reserva com barra de progresso');
 check(/Divisão de/.test(tx) && /Pró-labore para a PF/.test(tx) && /Aporte na reserva/.test(tx) && /Fica no caixa da PJ/.test(tx), 'divisão do mês em linhas com ícones');
 check(await page.evaluate(() => !!document.querySelector('.fv-stk i')), 'barra visual da divisão');
