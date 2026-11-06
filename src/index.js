@@ -45,7 +45,7 @@ async function lerTent(env, chave) {
 const gravarTent = (env, chave, v) => gravar(env, '_sistema', chave, v);
 const limparTent = (env, chave) => env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind('_sistema', chave).run();
 
-const PAGINA = (msg) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entrar</title><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
+const PAGINA = (msg) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entrar</title><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2"><link rel="shortcut icon" href="/favicon.ico?v=2"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f4f5;font:16px -apple-system,BlinkMacSystemFont,sans-serif;color:#18181b}
 form{background:#fff;border-radius:20px;padding:28px 24px;width:min(360px,90vw);box-shadow:0 10px 30px rgba(0,0,0,.08)}h1{font-size:1.25rem;margin:0 0 4px}p{margin:0 0 18px;color:#71717a;font-size:.9rem}
 input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d4d4d8;border-radius:12px;font-size:1rem}button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:#27272a;color:#fff;font-size:1rem;font-weight:600}
@@ -412,7 +412,7 @@ export default {
     return comSeguranca(await tratar(request, env));
   },
 };
-const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/manifest.webmanifest', '/sw.js']);
+const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/favicon-32.png', '/favicon-48.png', '/favicon.ico', '/manifest.webmanifest', '/sw.js']);
 async function tratar(request, env) {
   const url = new URL(request.url);
   const dev = env.ALLOW_NO_AUTH === '1';
