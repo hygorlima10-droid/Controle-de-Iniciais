@@ -1,4 +1,4 @@
-# Controle Jurídico e Financeiro — versão servidor
+# Horus — versão servidor
 
 O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), com banco de dados próprio e login.
 

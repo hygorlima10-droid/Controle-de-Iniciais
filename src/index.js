@@ -1,4 +1,4 @@
-/* Servidor do Controle Jurídico e Financeiro (Cloudflare Worker + banco D1).
+/* Servidor do Horus (Cloudflare Worker + banco D1).
    - Todo acesso (página e API) exige login do Cloudflare Access (só o seu e-mail).
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
@@ -45,7 +45,7 @@ async function lerTent(env, chave) {
 const gravarTent = (env, chave, v) => gravar(env, '_sistema', chave, v);
 const limparTent = (env, chave) => env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind('_sistema', chave).run();
 
-const PAGINA = (msg) => `<!doctype html><html lang="pt-BR" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18181b"><title>Entrar</title>
+const PAGINA = (msg) => `<!doctype html><html lang="pt-BR" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18181b"><title>Horus</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2"><link rel="shortcut icon" href="/favicon.ico?v=2"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/tema.css?v=1">
@@ -70,8 +70,8 @@ button.entrar[disabled]{filter:grayscale(.3) brightness(.95);cursor:wait}
 .erro{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(220,47,47,.1);color:var(--urgente);font-size:.8125rem;font-weight:600;text-align:center}
 .rodape{margin-top:18px;color:var(--ink-soft);font-size:.75rem}
 </style></head><body>
-<main class="lg"><img class="marca" src="/icon-192.png?v=2" alt="Controle Jurídico e Financeiro" width="88" height="88">
-<form method="post" action="/login" id="f"><h1>Controle Jurídico e Financeiro</h1><p class="sub">Digite a senha para entrar</p>
+<main class="lg"><img class="marca" src="/icon-192.png?v=2" alt="Horus" width="88" height="88">
+<form method="post" action="/login" id="f"><h1>Horus</h1><p class="sub">Digite a senha para entrar</p>
 <div class="campo"><input type="password" name="senha" id="s" autocomplete="current-password" placeholder="Senha" aria-label="Senha" autofocus required>
 <button type="button" class="olho" id="o" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
 <button type="submit" class="entrar" id="b">Entrar</button>${msg ? `<div class="erro" role="alert">${msg}</div>` : ''}</form>
@@ -311,7 +311,7 @@ export async function enviarResumoDiario(env, opcoes = {}) {
   if (!opcoes.forcar && enviados.dia === hoje) return { enviadas: 0, motivo: 'já enviado hoje' };
   const subs = await inscricoes(env);
   if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
-  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Controle estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
+  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Horus estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
   const v = await vapid(env);
   const origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
   const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];

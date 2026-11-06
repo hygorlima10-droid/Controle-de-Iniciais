@@ -56,7 +56,7 @@ function ntAtivar(){
   if (!ntSuportado()){ ntEstado.msg = 'Este navegador não recebe notificações. No iPhone, abra o app pelo ícone na tela de início (não pelo Safari) e use o iOS 16.4 ou mais novo.'; ntDesenhar(); return Promise.resolve(); }
   ntEstado.msg = 'Aguardando a sua permissão…'; ntDesenhar();
   return Notification.requestPermission().then(function(p){
-    if (p !== 'granted') throw new Error('Permissão negada. Para liberar: Ajustes do iPhone → Notificações → Controle.');
+    if (p !== 'granted') throw new Error('Permissão negada. Para liberar: Ajustes do iPhone → Notificações → Horus.');
     return navigator.serviceWorker.register('/sw.js');
   }).then(function(){ return navigator.serviceWorker.ready; }).then(function(reg){
     return ntJson('/api/notif/chave').then(function(k){ return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: ntB64ParaBytes(k.publica) }); });
