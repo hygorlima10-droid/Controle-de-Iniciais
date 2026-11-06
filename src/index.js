@@ -45,13 +45,43 @@ async function lerTent(env, chave) {
 const gravarTent = (env, chave, v) => gravar(env, '_sistema', chave, v);
 const limparTent = (env, chave) => env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind('_sistema', chave).run();
 
-const PAGINA = (msg) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entrar</title><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2"><link rel="shortcut icon" href="/favicon.ico?v=2"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f4f5;font:16px -apple-system,BlinkMacSystemFont,sans-serif;color:#18181b}
-form{background:#fff;border-radius:20px;padding:28px 24px;width:min(360px,90vw);box-shadow:0 10px 30px rgba(0,0,0,.08)}h1{font-size:1.25rem;margin:0 0 4px}p{margin:0 0 18px;color:#71717a;font-size:.9rem}
-input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d4d4d8;border-radius:12px;font-size:1rem}button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:#27272a;color:#fff;font-size:1rem;font-weight:600}
-.erro{color:#b91c1c;font-size:.88rem;margin-top:10px;min-height:1.2em}</style></head><body>
-<form method="post" action="/login"><h1>Controle Jurídico e Financeiro</h1><p>Digite a senha para entrar.</p>
-<input type="password" name="senha" autocomplete="current-password" autofocus required><button type="submit">Entrar</button><div class="erro">${msg || ''}</div></form></body></html>`;
+const PAGINA = (msg) => `<!doctype html><html lang="pt-BR" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18181b"><title>Entrar</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2"><link rel="shortcut icon" href="/favicon.ico?v=2"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/tema.css?v=1">
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;
+background:radial-gradient(760px 420px at 50% -8%,rgba(237,161,0,.18),transparent 62%),var(--bg)}
+.lg{width:min(380px,100%);text-align:center}
+.lg .marca{margin:0 auto;position:relative;z-index:1}
+form{background:var(--surface);border-radius:var(--radius-lg);padding:60px 24px 24px;margin-top:-44px;box-shadow:var(--shadow);text-align:left}
+h1{font-size:1.5rem;line-height:1.2;margin:0 0 6px;text-align:center;font-weight:700;letter-spacing:-.01em}
+.sub{margin:0 0 22px;text-align:center;color:var(--ink-soft);font-size:.875rem}
+.campo{position:relative}
+input{width:100%;height:52px;padding:0 50px 0 16px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:1rem;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus{border-color:var(--c-gold);box-shadow:0 0 0 3px rgba(237,161,0,.22)}
+.olho{position:absolute;right:6px;top:6px;width:40px;height:40px;border:0;background:none;color:var(--ink-soft);border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.olho svg{width:22px;height:22px}
+.olho:hover{color:var(--ink)}
+button.entrar{width:100%;height:52px;margin-top:14px;border:0;border-radius:14px;background:var(--gold-btn);color:var(--gold-ink);font:inherit;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 10px 24px rgba(201,133,0,.32);transition:transform .1s,filter .15s}
+button.entrar:active{transform:scale(.99)}
+button.entrar[disabled]{filter:grayscale(.3) brightness(.95);cursor:wait}
+.erro{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(220,47,47,.1);color:var(--urgente);font-size:.8125rem;font-weight:600;text-align:center}
+.rodape{margin-top:18px;color:var(--ink-soft);font-size:.75rem}
+</style></head><body>
+<main class="lg"><img class="marca" src="/icon-192.png?v=2" alt="Controle Jurídico e Financeiro" width="88" height="88">
+<form method="post" action="/login" id="f"><h1>Controle Jurídico e Financeiro</h1><p class="sub">Digite a senha para entrar</p>
+<div class="campo"><input type="password" name="senha" id="s" autocomplete="current-password" placeholder="Senha" aria-label="Senha" autofocus required>
+<button type="button" class="olho" id="o" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+<button type="submit" class="entrar" id="b">Entrar</button>${msg ? `<div class="erro" role="alert">${msg}</div>` : ''}</form>
+<div class="rodape">Acesso restrito · seus dados ficam protegidos</div></main>
+<script>
+(function(){try{var t=localStorage.getItem('controlePeticoes.tema');if(t!=='light'&&t!=='dark'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)t='dark';document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light')}catch(e){}})();
+var s=document.getElementById('s'),o=document.getElementById('o');
+o.addEventListener('click',function(){var v=s.type==='password';s.type=v?'text':'password';o.setAttribute('aria-label',v?'Ocultar senha':'Mostrar senha');s.focus()});
+document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('b');b.disabled=true;b.textContent='Entrando…'});
+</script></body></html>`;
 const htmlResp = (corpo, status = 200, extra = {}) => new Response(corpo, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...extra } });
 
 async function fazerLogin(request, env) {
@@ -412,7 +442,7 @@ export default {
     return comSeguranca(await tratar(request, env));
   },
 };
-const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/favicon-32.png', '/favicon-48.png', '/favicon.ico', '/manifest.webmanifest', '/sw.js']);
+const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/favicon-32.png', '/favicon-48.png', '/favicon.ico', '/tema.css', '/manifest.webmanifest', '/sw.js']);
 async function tratar(request, env) {
   const url = new URL(request.url);
   const dev = env.ALLOW_NO_AUTH === '1';

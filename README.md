@@ -121,3 +121,9 @@ Em **Construção**, os botões de ação (Gasto, Aporte, Liberação, Devolver)
 **Clientes** e **Arquivados** usam o mesmo cabeçalho (número principal, selo e dois cartões com ícone), ícone nos cartões e selos coloridos (atraso, última cobrança, promessa, pendência). Teste: `test/clientes-arquivados-layout.test.mjs`.
 
 Ícone da aba do navegador e dos favoritos: `public/favicon.ico`, `favicon-32.png` e `favicon-48.png` são públicos (sem login) e a página de login também declara o ícone, para o navegador achá-lo mesmo antes de entrar.
+
+## Tema único e tela de login
+
+- `public/tema.css` é a fonte única das cores (claro e escuro), raios e fonte do visual grafite e dourado. O app (`index.html`) e a tela de login usam o mesmo arquivo; para mudar o visual de tudo, mude lá. O arquivo é público (sem login), como os ícones.
+- A tela de login (`PAGINA` em `src/index.js`) tem logo, botão dourado, campo de senha com "mostrar senha", mensagem de erro em destaque e segue o tema claro/escuro escolhido no app.
+- O `index.html` não tem mais o trecho inicial herdado do Claude (`</head><body>` na primeira linha), que fazia o navegador ignorar os `<link>` de ícone e manifesto (por isso o globo na aba e nos favoritos depois do login). Agora todos os `<link>` ficam no `<head>`.
