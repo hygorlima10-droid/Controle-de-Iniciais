@@ -127,3 +127,7 @@ Em **Construção**, os botões de ação (Gasto, Aporte, Liberação, Devolver)
 - `public/tema.css` é a fonte única das cores (claro e escuro), raios e fonte do visual grafite e dourado. O app (`index.html`) e a tela de login usam o mesmo arquivo; para mudar o visual de tudo, mude lá. O arquivo é público (sem login), como os ícones.
 - A tela de login (`PAGINA` em `src/index.js`) tem logo, botão dourado, campo de senha com "mostrar senha", mensagem de erro em destaque e segue o tema claro/escuro escolhido no app.
 - O `index.html` não tem mais o trecho inicial herdado do Claude (`</head><body>` na primeira linha), que fazia o navegador ignorar os `<link>` de ícone e manifesto (por isso o globo na aba e nos favoritos depois do login). Agora todos os `<link>` ficam no `<head>`.
+
+## Construção · Abater valor da mão de obra
+
+No contrato de mão de obra, "Abater valor do contrato" registra um pagamento de qualquer valor (por exemplo, o pedreiro pediu R$ 1.500 nesta semana) e, se o contrato tem término previsto, divide o que falta em pagamentos semanais até essa data (`obraAbrirAbaterMO`): novo semanal = restante ÷ semanas até o término (arredondado para cima em centavos). O semanal anterior e o abatimento ficam registrados em `ajuste` no contrato. Sem término previsto, só é possível manter o semanal. O botão "Pagar" nunca sugere mais do que falta pagar. Teste: `test/obra-abater.test.mjs`.

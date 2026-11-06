@@ -1411,6 +1411,7 @@
   .ob-tiles{margin-bottom:6px;} .ob-edit{text-align:right;margin:0 4px 8px;} .ob-edit .btn-text{padding:2px 4px;}
   .ob-mo-top b.ob-nm{display:flex;align-items:center;gap:8px;}
   .cli-av{display:flex;align-items:center;gap:8px;} .cli-av .ct-ic{flex-shrink:0;} .arq-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;} .cli-foot .fv-chip{font-size:var(--t1);}
+  .ob-mo-abater{width:100%;justify-content:center;margin-top:10px;}
 /* cartões de resumo no celular: números inteiros, em uma linha, sem mudar o tamanho da letra */
   @media (max-width:640px){
     .kpi-row{grid-template-columns:repeat(2,minmax(min-content,1fr));gap:8px;}
@@ -14561,7 +14562,8 @@ function obraContratoNorm(k, idPadrao){
   var valor = Number(k.valor);
   if (!(valor > 0)) return null;
   var final = k.forma === 'final';
-  return { id: k.id || idPadrao || 'mo', valor: valor, forma: final ? 'final' : 'semanal', semanal: (!final && Number(k.semanal) > 0) ? Number(k.semanal) : 0, etapaId: k.etapaId || '', fornecedor: k.fornecedor || '', nome: k.nome || 'Mão de obra', fim: /^\d{4}-\d{2}-\d{2}$/.test(String(k.fim || '')) ? String(k.fim) : '', encerrado: !!k.encerrado, criadoEm: k.criadoEm || null };
+  return { id: k.id || idPadrao || 'mo', valor: valor, forma: final ? 'final' : 'semanal', semanal: (!final && Number(k.semanal) > 0) ? Number(k.semanal) : 0, etapaId: k.etapaId || '', fornecedor: k.fornecedor || '', nome: k.nome || 'Mão de obra', fim: /^\d{4}-\d{2}-\d{2}$/.test(String(k.fim || '')) ? String(k.fim) : '', encerrado: !!k.encerrado, criadoEm: k.criadoEm || null,
+    ajuste: (k.ajuste && Number(k.ajuste.para) > 0) ? { em: String(k.ajuste.em || ''), de: Number(k.ajuste.de) || 0, para: Number(k.ajuste.para), abatido: Number(k.ajuste.abatido) || 0 } : null };
 }
 /* lê a lista de contratos; o contrato único das versões anteriores vira o contrato "mo" */
 function obraContratosLista(c){
@@ -14650,6 +14652,8 @@ function obraContratoDetalhe(k, c, cfg){
   cfg.contratos.forEach(function(x){ if (!x.encerrado && x.etapaId === k.etapaId) somaEtapa += x.valor; });
   if (!k.encerrado && !propria && orcEtapa > 0 && somaEtapa > orcEtapa + 0.005) h += '<div class="plan-alerta aviso">' + (somaEtapa > k.valor + 0.005 ? 'Os contratos desta etapa somam ' : 'O contrato é de ') + fmtMoedaReal(somaEtapa) + ', mais que o orçado da etapa ' + escapeHtml(nomeEtapa) + ' (' + fmtMoedaReal(orcEtapa) + ').</div>';
   var id = escapeHtml(k.id);
+  if (k.ajuste && !k.encerrado) h += '<div class="saldo-data" style="margin-top:6px;">Em ' + escapeHtml(fmtData(k.ajuste.em)) + ' você abateu ' + fmtMoedaReal(k.ajuste.abatido) + ' e o pagamento semanal passou de ' + (k.ajuste.de > 0 ? fmtMoedaReal(k.ajuste.de) : 'sem valor fixo') + ' para <b>' + fmtMoedaReal(k.ajuste.para) + '</b>.</div>';
+  if (!k.encerrado && c.falta > 0.004) h += '<div class="ob-acoes"><button type="button" class="btn btn-ghost ob-mo-abater" data-mo-abater="' + escapeHtml(k.id) + '">Abater valor do contrato</button></div>';
   h += '<div class="ob-acoes"><button type="button" class="btn-text" data-mo-editar="' + id + '">Editar contrato</button><button type="button" class="btn-text" data-mo-enc="' + id + '">' + (k.encerrado ? 'Reabrir' : 'Encerrar') + '</button><button type="button" class="btn-text" data-mo-del="' + id + '">Excluir contrato</button></div>';
   var todos = !!obraMOTodos[k.id], lista = todos ? c.pagos : c.pagos.slice(0, 3);
   if (c.pagos.length){
@@ -14739,7 +14743,7 @@ function obraAbrirPagMO(id){
   var c = obraContratoResumo(k), hojeIso = todayISO();
   var formas = [['obra', 'Saldo da conta da obra'], ['pf', 'Conta PF (cria um aporte junto)'], ['pj', 'Conta PJ (cria um aporte junto)']];
   var html = '<div class="parcela-sum">Contrato <b>' + escapeHtml(k.nome) + '</b>: combinado ' + fmtMoedaReal(k.valor) + ' · pago ' + fmtMoedaReal(c.pago) + ' · falta ' + fmtMoedaReal(c.falta) + '</div>' +
-    obCampo('Valor pago (R$)', obInput('valor', 'number', k.semanal > 0 ? k.semanal : (k.forma === 'final' && c.falta > 0.004 ? c.falta : ''), 'min="0" step="0.01" inputmode="decimal"'), k.semanal > 0 ? 'Vem com o valor semanal (' + fmtMoedaReal(k.semanal) + '). Mude se pagar outro valor nesta semana.' : (k.forma === 'final' ? 'Pagamento ao final do serviço: vem com o que falta (' + fmtMoedaReal(c.falta) + '). Se for um adiantamento, mude o valor.' : '')) +
+    obCampo('Valor pago (R$)', obInput('valor', 'number', k.semanal > 0 ? (c.falta > 0.004 && c.falta < k.semanal ? c.falta : k.semanal) : (k.forma === 'final' && c.falta > 0.004 ? c.falta : ''), 'min="0" step="0.01" inputmode="decimal"'), k.semanal > 0 ? 'Vem com o valor semanal (' + fmtMoedaReal(k.semanal) + '). Mude se pagar outro valor nesta semana.' : (k.forma === 'final' ? 'Pagamento ao final do serviço: vem com o que falta (' + fmtMoedaReal(c.falta) + '). Se for um adiantamento, mude o valor.' : '')) +
     obCampo('Data do pagamento', obInput('data', 'date', hojeIso)) +
     obCampo('Pago com', obSelect('forma', formas, 'obra')) +
     obCampo('Observação (opcional)', obInput('obs', 'text', '', 'placeholder="Ex.: adiantamento, semana extra"')) +
@@ -14760,6 +14764,62 @@ function obraAbrirPagMO(id){
     if (forma === 'obra' && valor > 0){ var a = obraSaldoAviso(valor); if (a) av.push(a); }
     if (valor > c.falta + 0.005) av.push('Este pagamento passa do valor combinado em ' + fmtMoedaReal(r2(valor - c.falta)) + '. Se o combinado mudou, ajuste em "Editar contrato".');
     qs('of_aviso').textContent = av.join(' ');
+  };
+  Array.prototype.forEach.call(qs('obraFormCorpo').querySelectorAll('input, select'), function(el){ el.addEventListener('input', atualizar); el.addEventListener('change', atualizar); });
+  atualizar();
+}
+/* Abater: o pedreiro pede um valor diferente nesta semana; o app registra o pagamento e redistribui o que falta em pagamentos semanais até o término previsto do contrato */
+function obraSemanasAte(fim, desde){
+  if (!fim) return null;
+  var dias = Math.round((new Date(fim + 'T12:00:00') - new Date(desde + 'T12:00:00')) / 86400000);
+  return dias > 0 ? Math.ceil(dias / 7) : 0;
+}
+function obraAbrirAbaterMO(id){
+  var cfg = obraCfg(), k = cfg.contratos.filter(function(x){ return x.id === id; })[0];
+  if (!k) return;
+  var c = obraContratoResumo(k), hojeIso = todayISO();
+  var formas = [['obra', 'Saldo da conta da obra'], ['pf', 'Conta PF (cria um aporte junto)'], ['pj', 'Conta PJ (cria um aporte junto)']];
+  var html = '<div class="parcela-sum">Contrato <b>' + escapeHtml(k.nome) + '</b>: combinado ' + fmtMoedaReal(k.valor) + ' · pago ' + fmtMoedaReal(c.pago) + ' · falta ' + fmtMoedaReal(c.falta) + (k.semanal > 0 ? ' · semanal ' + fmtMoedaReal(k.semanal) : '') + (k.fim ? ' · término previsto ' + escapeHtml(fmtData(k.fim)) : '') + '</div>' +
+    obCampo('Valor a abater agora (R$)', obInput('valor', 'number', '', 'min="0" step="0.01" inputmode="decimal" placeholder="Ex.: 1500"'), 'O que o profissional pediu para receber nesta semana.') +
+    obCampo('Data do pagamento', obInput('data', 'date', hojeIso)) +
+    obCampo('Pago com', obSelect('forma', formas, 'obra')) +
+    obCampo('Observação (opcional)', obInput('obs', 'text', '', 'placeholder="Ex.: adiantamento pedido pelo pedreiro"')) +
+    obCampo('O que fazer com o restante', obSelect('modo', [['redistribuir', 'Dividir o que falta em pagamentos semanais até o término'], ['manter', 'Manter o pagamento semanal como está']], k.fim ? 'redistribuir' : 'manter')) +
+    '<div class="parcela-sum" id="ab_previa" style="display:none;"></div><div class="saldo-data" id="of_aviso" style="color:var(--danger)"></div>';
+  var calc = function(){
+    var valor = r2(obNum('valor')), data = obFid('data').value || hojeIso, restante = r2(Math.max(0, c.falta - valor)), sem = obraSemanasAte(k.fim, data);
+    var novo = (restante > 0.004 && sem > 0) ? Math.ceil(restante / sem * 100 - 0.0001) / 100 : null;
+    return { valor: valor, data: data, restante: restante, sem: sem, novo: novo };
+  };
+  obraAbrirForm('Abater valor — ' + k.nome, html, function(){
+    var q = calc(), forma = obFid('forma').value, obs = obFid('obs').value.trim(), modo = obFid('modo').value;
+    if (!(q.valor > 0)) return 'Informe o valor a abater.';
+    if (!q.data) return 'Informe a data do pagamento.';
+    if (modo === 'redistribuir' && q.restante > 0.004 && !(q.sem > 0)) return k.fim ? 'O término previsto do contrato já passou. Atualize a data em "Editar contrato" ou escolha manter o pagamento semanal.' : 'Este contrato não tem término previsto. Informe a data em "Editar contrato" ou escolha manter o pagamento semanal.';
+    var etapa = k.etapaId || extObraEtapaPadrao();
+    if (!etapa) return 'Cadastre uma etapa antes de lançar pagamentos.';
+    var agora = new Date().toISOString(), grupo = forma === 'obra' ? null : uid(), desc = k.nome + ' — ' + (obs || 'abatimento');
+    var ps = [obraGravar(uid(), { tipo: 'gasto', etapaId: etapa, descricao: desc, fornecedor: k.fornecedor || k.nome, valor: q.valor, nf: '', status: 'pago', data: q.data, dataPagamento: q.data, vencimento: null, contrato: k.id, grupo: grupo, criadoEm: agora })];
+    if (grupo) ps.push(obraGravar(uid(), { tipo: 'aporte', origem: forma, data: q.data, valor: q.valor, grupo: grupo, obs: 'Pago direto: ' + desc, criadoEm: agora }));
+    return Promise.all(ps).then(function(){
+      if (modo !== 'redistribuir' || !(q.novo > 0)) return null;
+      var atual = obraCfg().contratos;
+      return obraSalvarContratos(atual.map(function(x){ return x.id === k.id ? Object.assign({}, x, { forma: 'semanal', semanal: q.novo, ajuste: { em: q.data, de: k.semanal || 0, para: q.novo, abatido: q.valor } }) : x; }));
+    });
+  }, 'Registrar abatimento');
+  var atualizar = function(){
+    var q = calc(), modo = obFid('modo').value, forma = obFid('forma').value, av = [], previa = qs('ab_previa');
+    if (forma === 'obra' && q.valor > 0){ var a = obraSaldoAviso(q.valor); if (a) av.push(a); }
+    if (q.valor > c.falta + 0.005) av.push('Este valor passa do que falta no contrato em ' + fmtMoedaReal(r2(q.valor - c.falta)) + '.');
+    qs('of_aviso').textContent = av.join(' ');
+    if (!(q.valor > 0)){ previa.style.display = 'none'; return; }
+    previa.style.display = '';
+    var t = 'Depois deste pagamento faltam <b>' + fmtMoedaReal(q.restante) + '</b>. ';
+    if (q.restante <= 0.004) t += 'O contrato fica quitado.';
+    else if (modo === 'manter') t += 'O pagamento semanal continua ' + (k.semanal > 0 ? 'em <b>' + fmtMoedaReal(k.semanal) + '</b>' : 'sem valor fixo') + (k.semanal > 0 ? ' (cerca de ' + Math.ceil(q.restante / k.semanal - 0.0001) + ' semanas).' : '.');
+    else if (q.sem > 0) t += 'Até ' + escapeHtml(fmtData(k.fim)) + ' são <b>' + q.sem + (q.sem === 1 ? ' semana' : ' semanas') + '</b>: <b>' + fmtMoedaReal(q.novo) + '</b> por semana' + (k.semanal > 0 ? ' (hoje é ' + fmtMoedaReal(k.semanal) + ')' : '') + '.';
+    else t += k.fim ? 'O término previsto já passou: não dá para dividir até lá.' : 'Sem término previsto no contrato, não dá para dividir por semanas.';
+    previa.innerHTML = t;
   };
   Array.prototype.forEach.call(qs('obraFormCorpo').querySelectorAll('input, select'), function(el){ el.addEventListener('input', atualizar); el.addEventListener('change', atualizar); });
   atualizar();
@@ -16997,6 +17057,7 @@ function renderObra(){
     else if (t.id === 'obraMOCriar') obraAbrirContrato();
     else if (t.hasAttribute('data-mo-editar')) obraAbrirContrato(t.getAttribute('data-mo-editar'));
     else if (t.hasAttribute('data-mo-pagar')) obraAbrirPagMO(t.getAttribute('data-mo-pagar'));
+    else if (t.hasAttribute('data-mo-abater')) obraAbrirAbaterMO(t.getAttribute('data-mo-abater'));
     else if (t.hasAttribute('data-mo-enc')) obraEncerrarContrato(t.getAttribute('data-mo-enc'));
     else if (t.hasAttribute('data-mo-del')) obraExcluirContrato(t.getAttribute('data-mo-del'));
     else if (t.hasAttribute('data-mo-toggle')){ var idm = t.getAttribute('data-mo-toggle'), jaAberto = qs('obraWrap').querySelector('[data-mo-item="' + idm + '"].aberto'); obraMOAberto = jaAberto ? '' : idm; renderObra(); }
