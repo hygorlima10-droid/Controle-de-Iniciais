@@ -4,6 +4,7 @@
 
 import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, pubsParaAvisar, marcarAvisadas } from './djen.js';
+import { datajudRotas } from './datajud.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -489,7 +490,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);
