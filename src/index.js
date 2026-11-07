@@ -3,6 +3,7 @@
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
 import { gerarChavesVapid, enviarPush } from './push.js';
+import { djenRotas, lerDjen, pubsParaAvisar, marcarAvisadas } from './djen.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -287,7 +288,7 @@ async function inscricoes(env) {
 }
 const hashCurto = async (s) => b64u(await sha256('sub:' + s)).slice(0, 24);
 const moeda = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-export function montarNotificacoes(resumo, config, enviados, hoje, mes) {
+export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = []) {
   const lista = [];
   const esconder = !!config.esconder;
   const itens = (resumo.itens || []).filter((i) => i.d === hoje);
@@ -295,6 +296,11 @@ export function montarNotificacoes(resumo, config, enviados, hoje, mes) {
     const linhas = itens.slice(0, MAX_NOTIF_ITENS).map((i) => `${i.n}${i.l ? ' · ' + i.l : ''}${i.v != null ? ' · ' + moeda(i.v) : ''}`);
     if (itens.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${itens.length - MAX_NOTIF_ITENS}`);
     lista.push({ tag: 'hoje-' + hoje, titulo: itens.length === 1 ? '1 item vence hoje' : `${itens.length} itens vencem hoje`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
+  }
+  if (pubs.length) {
+    const linhas = pubs.slice(0, MAX_NOTIF_ITENS).map((p) => `${p.tribunal ? p.tribunal + ' · ' : ''}${p.tipo || 'Publicação'}${p.numero ? ' · ' + p.numero : ''}`);
+    if (pubs.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${pubs.length - MAX_NOTIF_ITENS}`);
+    lista.push({ tag: 'pub-' + hoje, titulo: pubs.length === 1 ? '1 nova publicação no Diário Oficial' : `${pubs.length} novas publicações no Diário Oficial`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
   }
   if (config.alertas !== false) {
     const vistos = enviados.alertas || {};
@@ -311,7 +317,8 @@ export async function enviarResumoDiario(env, opcoes = {}) {
   if (!opcoes.forcar && enviados.dia === hoje) return { enviadas: 0, motivo: 'já enviado hoje' };
   const subs = await inscricoes(env);
   if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
-  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Horus estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes);
+  const pubs = opcoes.teste ? [] : await pubsParaAvisar(env).catch(() => []);
+  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Horus estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes, pubs);
   const v = await vapid(env);
   const origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
   const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
@@ -335,6 +342,7 @@ export async function enviarResumoDiario(env, opcoes = {}) {
   if (!opcoes.teste) {
     Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
     enviados.dia = hoje; await gravarReservado(env, 'enviados', enviados);
+    if (pubs.length) await marcarAvisadas(env, pubs.map((p) => p.id)).catch((e) => console.error(e));
   }
   return { enviadas, notificacoes: lista.length, falhas: falhas.slice(0, 3) };
 }
@@ -436,36 +444,10 @@ async function lerDoc(request) {
 const gravar = (env, colecao, id, dados) =>
   env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
 
-// ---- Teste do DJEN (Diário de Justiça Eletrônico Nacional): só lê e mostra um resumo; não grava nada ----
-const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
-async function djenConsulta(params) {
-  const t0 = Date.now(); const r = { url: DJEN + '?' + params.toString() };
-  try {
-    const resp = await fetch(r.url, { headers: { accept: 'application/json', 'user-agent': 'Horus/1.0' }, signal: AbortSignal.timeout(20000) });
-    r.status = resp.status; r.ms = Date.now() - t0;
-    const txt = await resp.text(); r.bytes = txt.length;
-    let j = null; try { j = JSON.parse(txt); } catch (e) { r.corpo = txt.slice(0, 200); }
-    if (j) {
-      r.total = j.count; const itens = Array.isArray(j.items) ? j.items : [];
-      r.itens = itens.slice(0, 5).map(i => ({ data: i.data_disponibilizacao, tribunal: i.siglaTribunal, orgao: i.nomeOrgao, tipo: i.tipoDocumento, processo: i.numeroprocessocommascara || i.numero_processo, trecho: String(i.texto || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) }));
-    }
-  } catch (e) { r.ms = Date.now() - t0; r.erro = String(e && e.message || e); }
-  return r;
-}
-async function djenTeste(request) {
-  const u = new URL(request.url);
-  const oab = (u.searchParams.get('oab') || '60456').replace(/\D/g, ''), uf = (u.searchParams.get('uf') || 'GO').toUpperCase().slice(0, 2);
-  const dia = n => new Date(Date.now() - 3 * 3600e3 - n * 864e5).toISOString().slice(0, 10);
-  const base = () => new URLSearchParams({ itensPorPagina: '5', pagina: '1' });
-  const a = base(); a.set('numeroOab', oab); a.set('ufOab', uf); a.set('dataDisponibilizacaoInicio', dia(3)); a.set('dataDisponibilizacaoFim', dia(0));
-  const b = base(); b.set('numeroOab', oab); b.set('ufOab', uf); b.set('dataDisponibilizacaoInicio', dia(30)); b.set('dataDisponibilizacaoFim', dia(0));
-  const c = base(); c.set('numeroProcesso', u.searchParams.get('processo') || '59832940720258090107');
-  const [oab3d, oab30d, processo] = [await djenConsulta(a), await djenConsulta(b), await djenConsulta(c)];
-  return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, oab_ultimos_3_dias: oab3d, oab_ultimos_30_dias: oab30d, por_processo: processo }, 200);
-}
-
 export default {
-  async scheduled(event, env, ctx) { ctx.waitUntil(event.cron === '0 13 * * *' ? enviarResumoDiario(env) : fazerBackup(env)); },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } await enviarResumoDiario(env); })() : fazerBackup(env));
+  },
   async fetch(request, env) {
     return comSeguranca(await tratar(request, env));
   },
@@ -492,7 +474,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenTeste(request) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

@@ -38,6 +38,7 @@ function ntResumo(){
     });
   });
   try{ if (typeof ob7Itens === 'function') ob7Itens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
+  try{ if (typeof pbItens === 'function') pbItens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
   var alertas = []; /* atrasos de clientes você confere no app: só chegam alertas de caixa, reserva, despesas e alvarás */
   try{ alertas = paAlertas().filter(function(a){ return String(a.chave).indexOf('cliente|') !== 0; }).map(function(a){ return { chave: a.chave, titulo: a.titulo, detalhe: a.detalhe }; }); }catch(e){}
   return { itens: itens, alertas: alertas };
