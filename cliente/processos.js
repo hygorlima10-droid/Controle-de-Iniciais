@@ -135,6 +135,10 @@ function prMontarTela(){
   });
   qs('prBusca').addEventListener('input', function(){ prS.busca = this.value; prS.mais = 1; prRenderLista(); });
 }
+function prLinhaReu(r){
+  var reu = prReu(r); if (!reu || normNome(prTitulo(r)).indexOf(normNome(reu).slice(0, 12)) >= 0) return '';
+  return '<div class="pb-proc">Réu: ' + escapeHtml(reu) + '</div>';
+}
 function prRender(){
   prMontarTela(); var w = qs('prWrap'); if (!w) return;
   var mp = prMapa(), pm = pendentesPorDoc(), linhas = mp.ordem.map(function(n){ return mp.m[n]; });
@@ -153,7 +157,7 @@ function prRenderLista(){
     if (prS.filtro === 'andamento' && arq) return false;
     if (prS.filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
     if (q){
-      var alvo = normNome([r.numero, prTitulo(r), prClienteIds(r).map(nomeCliente).join(' '), (r.doc && (r.doc.orgao + ' ' + r.doc.classe)) || ''].join(' '));
+      var alvo = normNome([r.numero, prTitulo(r), prClienteIds(r).map(nomeCliente).join(' '), (r.doc && (r.doc.orgao + ' ' + r.doc.classe + ' ' + (r.doc.autor || '') + ' ' + (r.doc.reu || ''))) || '', prReu(r)].join(' '));
       if (alvo.indexOf(q) < 0 && (q.replace(/\D/g, '').length < 4 || r.num.indexOf(q.replace(/\D/g, '')) < 0)) return false;
     }
     return true;
@@ -172,7 +176,7 @@ function prRenderLista(){
     if (arq) tags += '<span class="pb-tg">arquivado' + (r.doc.motivoArquivo ? ' · ' + escapeHtml(r.doc.motivoArquivo) : '') + '</span>';
     var emb = origens.map(function(o){ return o === 'so' ? 'Só processo' : PR_LBL[o]; }).join(' · ');
     return '<div class="pb-card pr-card' + (arq ? ' lida' : '') + '" style="--pb-bar:' + PR_COR[origens[0]] + '" data-pr-card="' + escapeHtml(r.num) + '"><div class="pb-l1"><span>' + escapeHtml(orgao || 'Processo') + '</span><span class="pb-tipo">' + escapeHtml(emb) + '</span></div>' +
-      '<div class="pb-cli">' + escapeHtml(prTitulo(r)) + '</div><div class="pb-proc">' + escapeHtml(r.numero) + '</div><div class="pb-tags">' + tags + '</div>' +
+      '<div class="pb-cli">' + escapeHtml(prTitulo(r)) + '</div><div class="pb-proc">' + escapeHtml(r.numero) + '</div>' + prLinhaReu(r) + '<div class="pb-tags">' + tags + '</div>' +
       '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="abrir" data-n="' + escapeHtml(r.num) + '">Abrir</button>' + (arq ? '<button type="button" class="btn btn-ghost pb-b" data-pr="reabrir" data-n="' + escapeHtml(r.num) + '">Reabrir</button>' : '<button type="button" class="btn btn-ghost pb-b" data-pr="arquivar" data-n="' + escapeHtml(r.num) + '">Concluir e arquivar</button>') + '</div></div>';
   }).join('') + (linhas.length > lim ? '<button type="button" class="btn btn-ghost" data-pr="mais" style="width:100%;justify-content:center;">Mostrar mais (' + (linhas.length - lim) + ')</button>' : '');
 }
@@ -196,6 +200,7 @@ function prMontarFicha(){
       abrirClienteEdit({ nome: nome, pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } });
     }
     else if (a === 'salvar') prSalvar();
+    else if (a === 'buscar-dados') prBuscarDados(true);
     else if (a === 'arquivar'){ var n = prEd.num; d.classList.remove('show'); prAbrirArquivar(n); }
     else if (a === 'reabrir'){ prReabrir(prEd.num); d.classList.remove('show'); }
     else if (a === 'excluir') prExcluir(b);
@@ -209,6 +214,34 @@ function prMontarFicha(){
   });
   d.addEventListener('input', function(e){ if (e.target && e.target.id === 'pr_cli') prSug(); if (e.target && e.target.id === 'pr_numero') prInfoNumero(); });
   d.addEventListener('focusin', function(e){ if (e.target && e.target.id === 'pr_cli') prSug(); });
+  d.addEventListener('focusout', function(e){ if (e.target && e.target.id === 'pr_numero' && prEd && prEd.novo) prBuscarDados(); });
+}
+function prFmtValor(v){ return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function prParseValor(t){ var x = String(t || '').replace(/[^\d,.]/g, ''); if (!x) return null; if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); var n = parseFloat(x); return isFinite(n) && n > 0 ? n : null; }
+/* última publicação conhecida com o réu (para processos que vêm de Inicial, Acordo ou Alvará) */
+function prReu(r){ if (r.doc && r.doc.reu) return r.doc.reu; var ps = prPubsDe(r.num); for (var i = 0; i < ps.length; i++) if (ps[i].passivo) return ps[i].passivo; return ''; }
+/* puxa do Diário Oficial réu, órgão, natureza e valor da causa e completa só o que estiver vazio */
+function prBuscarDados(forcar){
+  var el = qs('pr_numero'); if (!el || !window.__SERVIDOR) return;
+  var n = el.value.replace(/\D/g, ''), st = qs('pr_dados');
+  if (n.length < 15){ if (st) st.textContent = ''; return; }
+  if (!forcar && prEd.buscado === n) return; prEd.buscado = n;
+  if (st){ st.style.color = 'var(--ink-soft)'; st.textContent = 'Buscando os dados no Diário Oficial…'; }
+  pbApi('/api/djen/processo?numero=' + n).then(function(r){
+    if (!qs('pr_numero') || qs('pr_numero').value.replace(/\D/g, '') !== n) return;
+    st = qs('pr_dados');
+    if (!r.ok){ st.style.color = 'var(--ink-soft)'; st.textContent = 'Não consegui consultar o Diário Oficial agora (' + (r.motivo || 'erro') + '). Preencha à mão.'; return; }
+    if (!r.achou){ st.style.color = 'var(--ink-soft)'; st.textContent = 'O Diário Oficial ainda não tem publicação com este número. Preencha à mão; o resto vem quando chegar a primeira.'; return; }
+    var d = r.dados, vazio = function(id){ return !qs(id).value.trim(); }, pt = qs('pr_partes');
+    if (vazio('pr_orgao')) qs('pr_orgao').value = [d.tribunal, d.orgao].filter(Boolean).join(' · ');
+    if (vazio('pr_classe')) qs('pr_classe').value = d.natureza || (d.classe ? pbClasse(d.classe) : '');
+    if (vazio('pr_autor') && d.ativo) qs('pr_autor').value = d.ativo;
+    if (vazio('pr_reu') && d.passivo) qs('pr_reu').value = d.passivo;
+    if (vazio('pr_valor') && d.valorCausa) qs('pr_valor').value = prFmtValor(d.valorCausa);
+    if (d.ativo && d.passivo && (vazio('pr_partes') || pt.value === prEd.iniPartes)) pt.value = (d.ativo + ' x ' + d.passivo).slice(0, 120);
+    st.style.color = 'var(--success)';
+    st.textContent = '✓ Dados do Diário Oficial preenchidos (' + d.comunicacoes + (d.comunicacoes === 1 ? ' publicação' : ' publicações') + ', a última em ' + fmtData(d.ultimaPublicacao) + '). Confira.';
+  }).catch(function(e){ var s2 = qs('pr_dados'); if (s2){ s2.style.color = 'var(--ink-soft)'; s2.textContent = 'Não consegui consultar o Diário Oficial agora. Preencha à mão.'; } });
 }
 function prInfoNumero(){
   var el = qs('pr_numinfo'), a = cnjAnalisar(qs('pr_numero').value); if (!el) return;
@@ -245,10 +278,12 @@ function prDesenhar(){
   qs('prTit').textContent = novo ? 'Cadastrar processo' : 'Processo';
   var h = '';
   if (novo) h += '<div class="parcela-sum">Para processos que já existem e você só quer acompanhar (publicações, prazos). Honorários a receber ficam em Iniciais, Termos de Acordo ou Alvarás.</div>';
-  h += '<div class="field"><label class="field-label" for="pr_numero">Número do processo</label><input type="text" id="pr_numero" maxlength="40" value="' + escapeHtml(novo ? (pre.numero || '') : r.numero) + '"' + (novo ? ' placeholder="0000000-00.0000.0.00.0000"' : ' readonly') + '><div class="saldo-data" id="pr_numinfo"></div></div>' +
+  h += '<div class="field"><label class="field-label" for="pr_numero">Número do processo</label><input type="text" id="pr_numero" maxlength="40" value="' + escapeHtml(novo ? (pre.numero || '') : r.numero) + '"' + (novo ? ' placeholder="0000000-00.0000.0.00.0000"' : ' readonly') + '><div class="saldo-data" id="pr_numinfo"></div><div class="saldo-data" id="pr_dados"></div>' + (novo ? '' : '<button type="button" class="btn-text" data-prf="buscar-dados">Buscar dados no Diário Oficial</button>') + '</div>' +
     '<div class="field"><label class="field-label" for="pr_partes">Partes / descrição</label><input type="text" id="pr_partes" maxlength="120" value="' + escapeHtml(novo ? (pre.partes || '') : (doc ? (doc.partes || '') : prPartes(r))) + '" placeholder="Ex.: Fulano de Tal x Banco Exemplo"></div>' +
+    '<div class="pb-dois"><div class="field"><label class="field-label" for="pr_autor">Autor / parte ativa</label><input type="text" id="pr_autor" maxlength="120" value="' + escapeHtml(novo ? (pre.autor || '') : (doc ? (doc.autor || '') : '')) + '"></div><div class="field"><label class="field-label" for="pr_reu">Réu / parte contrária</label><input type="text" id="pr_reu" maxlength="120" value="' + escapeHtml(novo ? (pre.reu || '') : (doc ? (doc.reu || prReu(r)) : prReu(r))) + '"></div></div>' +
     '<div class="field"><label class="field-label" for="pr_orgao">Tribunal / órgão</label><input type="text" id="pr_orgao" maxlength="120" value="' + escapeHtml(novo ? (pre.orgao || '') : (doc ? (doc.orgao || '') : '')) + '" placeholder="Ex.: TJGO · Morrinhos 1ª Vara Cível"></div>' +
     '<div class="field"><label class="field-label" for="pr_classe">Classe / assunto</label><input type="text" id="pr_classe" maxlength="120" value="' + escapeHtml(novo ? (pre.classe || '') : (doc ? (doc.classe || '') : '')) + '" placeholder="Ex.: Cumprimento de sentença"></div>' +
+    '<div class="field"><label class="field-label" for="pr_valor">Valor da causa (opcional)</label><input type="text" id="pr_valor" inputmode="decimal" maxlength="20" value="' + escapeHtml(novo ? (pre.valorCausa ? prFmtValor(pre.valorCausa) : '') : (doc && doc.valorCausa ? prFmtValor(doc.valorCausa) : '')) + '" placeholder="Ex.: 40.000,00"></div>' +
     '<div class="field"><label class="field-label">Clientes vinculados</label><div class="cli-picker"><div class="cli-chips" id="pr_chips"></div><input type="text" id="pr_cli" class="cli-pick-input" placeholder="Buscar ou cadastrar cliente…" autocomplete="off"><div class="cli-sug" id="pr_sug" style="display:none;"></div></div></div>' + (novo && pre.nomes && pre.nomes.length ? '<div id="pr_partesPub"></div>' : '');
   if (!novo){
     h += '<div class="pb-sec"><div class="pb-sec-t">Honorários que vou receber</div>';
@@ -276,6 +311,7 @@ function prDesenhar(){
   h += '<div class="form-error" id="pr_erro"></div><button type="button" class="btn btn-primary" data-prf="salvar" style="width:100%;justify-content:center;">' + (novo ? 'Cadastrar processo' : 'Salvar') + '</button>';
   if (!novo) h += (arq ? '<button type="button" class="btn btn-ghost" data-prf="reabrir" style="width:100%;justify-content:center;">Reabrir processo</button>' : '<button type="button" class="btn btn-ghost" data-prf="arquivar" style="width:100%;justify-content:center;">Concluir e arquivar</button>') + (doc && !r.links.length ? '<button type="button" class="btn-text" data-prf="excluir" style="color:var(--urgente)">Excluir este processo</button>' : '');
   qs('prCorpo').innerHTML = h; prChips(); prInfoNumero();
+  if (novo){ prEd.iniPartes = qs('pr_partes').value; prEd.buscado = ''; if (qs('pr_numero').value.trim()) prBuscarDados(); }
 }
 function prSalvar(){
   var novo = prEd.novo, err = qs('pr_erro'), numero = qs('pr_numero').value.trim();
@@ -283,7 +319,7 @@ function prSalvar(){
   var a = cnjAnalisar(numero); if (a && a.completo) numero = a.formatado;
   var n = prNum(numero), mp = prMapa(), ex = mp.m[n];
   if (novo && ex && ex.doc){ err.textContent = 'Este processo já está cadastrado.'; return; }
-  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
+  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), autor: qs('pr_autor').value.trim(), reu: qs('pr_reu').value.trim(), valorCausa: prParseValor(qs('pr_valor').value), clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
   var hon = qs('pr_hon'), querHon = hon && hon.value === 'receber'; if (hon) campos.honorarios = querHon ? ((ex && ex.doc && PR_HON[ex.doc.honorarios]) ? ex.doc.honorarios : 'sem') : hon.value;
   var ho = qs('pr_honobs'); if (ho) campos.honObs = ho.value.trim();
   var doc = ex && ex.doc, p;
@@ -451,7 +487,9 @@ function prPreDaPub(p){
   function junta(l){ return l.slice(0, 3).join(', ') + (l.length > 3 ? ' e mais ' + (l.length - 3) : ''); }
   var partes = (A.length && P.length) ? junta(A) + ' x ' + junta(P) : junta(A.concat(P));
   nomes.forEach(function(n){ var m = cliParecidos(n).filter(function(x){ return x.nivel === 3; })[0]; if (m && ids.indexOf(m.c.id) < 0) ids.push(m.c.id); });
-  return { numero: p.numero || p.processo, partes: partes || pbNomeParte(p, null), orgao: [p.tribunal, p.orgao].filter(Boolean).join(' · '), classe: pbClasse(p.classe), ids: ids, nomes: nomes, origem: 'publicacao' };
+  var rep0 = pbMembros(p).filter(function(x){ return x.ativo || x.passivo; })[0] || p;
+  if (rep0.ativo && rep0.passivo) partes = (rep0.ativo + ' x ' + rep0.passivo).slice(0, 120);
+  return { autor: rep0.ativo || '', reu: rep0.passivo || '', numero: p.numero || p.processo, partes: partes || pbNomeParte(p, null), orgao: [p.tribunal, p.orgao].filter(Boolean).join(' · '), classe: pbClasse(p.classe), ids: ids, nomes: nomes, origem: 'publicacao' };
 }
 function prEscolherCadastro(pubId){
   var p = pbPub(pubId); if (!p) return;

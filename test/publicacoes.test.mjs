@@ -26,7 +26,7 @@ const srv = http.createServer((req, res) => {
   let lista = [];
   if (q.get('numeroOab')) lista = feeds[q.get('numeroOab')] || [];
   else if (q.get('numeroProcesso')) lista = Object.values(feeds).flat().filter(i => i.numero_processo === q.get('numeroProcesso'));
-  lista = lista.filter(i => i.data_disponibilizacao >= q.get('dataDisponibilizacaoInicio') && i.data_disponibilizacao <= q.get('dataDisponibilizacaoFim'));
+  lista = lista.filter(i => (!q.get('dataDisponibilizacaoInicio') || i.data_disponibilizacao >= q.get('dataDisponibilizacaoInicio')) && (!q.get('dataDisponibilizacaoFim') || i.data_disponibilizacao <= q.get('dataDisponibilizacaoFim')));
   const uniq = [...new Map(lista.map(i => [i.id, i])).values()], tam = Math.min(Number(q.get('itensPorPagina')) || 5, 100), pg = Number(q.get('pagina')) || 1;
   res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ status: 'success', count: uniq.length, items: uniq.slice((pg - 1) * tam, pg * tam) }));
 }).listen(8890);
@@ -283,6 +283,45 @@ await page.evaluate(n => { const c = Array.from(document.querySelectorAll('.pb-c
 await page.click('[data-pre="processo"]'); await page.waitForTimeout(600);
 check(/Complem/.test(await t('#pr_chips')), 'depois de aprender, o mesmo nome completo vem vinculado ao Complem sozinho');
 await page.click('#prX'); await page.waitForTimeout(300);
+// dados básicos do processo vindos do Diário Oficial: réu, órgão, natureza, valor da causa
+const NH = '6000000-40.2026.8.09.0107', NI = '6100000-50.2026.8.09.0107', numH = NH.replace(/\D/g, '');
+const cab = (n, at, pa) => 'Poder Judici&aacute;rio\nAutos n.:&nbsp;' + n + '\nNatureza:&nbsp;PROCESSO C&Iacute;VEL E DO TRABALHO -&gt; Procedimento Comum C&iacute;vel\nPolo Ativo:&nbsp;' + at + '\nPolo Passivo:&nbsp;' + pa + '\nSENTEN&Ccedil;A\nJulgo procedente. Valor da causa: R$ 25.000,00';
+feeds['60456'].push(item(900401, hoje, 'TJGO', 'Morrinhos - 2ª Vara Cível', 'Sentença', NH, cab(NH, 'Cooperativa Mista', 'Banco Exemplo S.A.'), [{ nome: 'COOPERATIVA MISTA', polo: 'A' }]));
+feeds['60456'].push(item(900402, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Despacho', NI, cab(NI, 'Maria Souza', 'Construtora Beta Ltda'), [{ nome: 'MARIA SOUZA', polo: 'A' }]));
+await f('POST', '/api/djen/buscar', {});
+const dh = (await f('GET', '/api/djen/processo?numero=' + numH)).j;
+check(dh.ok && dh.achou && dh.dados.ativo === 'Cooperativa Mista' && dh.dados.passivo === 'Banco Exemplo S.A.' && dh.dados.natureza === 'Procedimento Comum Cível' && dh.dados.orgao === 'Morrinhos - 2ª Vara Cível' && dh.dados.tribunal === 'TJGO' && dh.dados.valorCausa === 25000 && dh.dados.comunicacoes === 1, 'o servidor busca pelo número e devolve autor, réu, natureza, órgão e valor da causa: ' + JSON.stringify(dh.dados));
+check((await f('GET', '/api/djen/processo?numero=123')).s === 400 && (await f('GET', '/api/djen/processo?numero=99999999999999999999')).j.achou === false, 'número inválido dá erro e número sem publicação responde "não achou"');
+const pH = (await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900401');
+check(pH.ativo === 'Cooperativa Mista' && pH.passivo === 'Banco Exemplo S.A.' && pH.natureza === 'Procedimento Comum Cível', 'as publicações novas já guardam autor, réu e natureza');
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(800);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(400);
+await page.evaluate(n => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => c.innerText.includes(n)); c.querySelector('[data-pb="cadastrar"]').click(); }, NH); await page.waitForTimeout(500);
+await page.click('[data-pre="processo"]'); await page.waitForTimeout(1500);
+const fh = await page.evaluate(() => ({ reu: document.getElementById('pr_reu').value, autor: document.getElementById('pr_autor').value, partes: document.getElementById('pr_partes').value, orgao: document.getElementById('pr_orgao').value, classe: document.getElementById('pr_classe').value, valor: document.getElementById('pr_valor').value, msg: document.getElementById('pr_dados').innerText }));
+check(fh.reu === 'Banco Exemplo S.A.' && fh.autor === 'Cooperativa Mista' && fh.partes === 'Cooperativa Mista x Banco Exemplo S.A.' && /Morrinhos - 2ª Vara Cível/.test(fh.orgao) && fh.valor === '25.000,00' && /Dados do Diário Oficial preenchidos/.test(fh.msg), 'ao cadastrar pela publicação, o réu, o órgão, as partes e o valor da causa vêm sozinhos: ' + JSON.stringify(fh));
+await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+const dH = (await f('GET', '/api/db/processos')).j.docs.map(d => d.data).find(d => d.numero === NH);
+check(dH && dH.reu === 'Banco Exemplo S.A.' && dH.autor === 'Cooperativa Mista' && dH.valorCausa === 25000 && /Morrinhos - 2ª Vara/.test(dH.orgao), 'e tudo é gravado no processo');
+// cadastro manual: digitar o número já puxa os dados
+await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(700);
+await page.click('[data-pr="novo"]'); await page.waitForTimeout(400);
+await page.fill('#pr_numero', NI); await page.press('#pr_numero', 'Tab'); await page.waitForTimeout(1500);
+const fi2 = await page.evaluate(() => ({ reu: document.getElementById('pr_reu').value, partes: document.getElementById('pr_partes').value, orgao: document.getElementById('pr_orgao').value }));
+check(fi2.reu === 'Construtora Beta Ltda' && fi2.partes === 'Maria Souza x Construtora Beta Ltda' && /Morrinhos - 1ª Vara Cível/.test(fi2.orgao), 'digitando só o número no cadastro manual, os dados do Diário Oficial são preenchidos: ' + JSON.stringify(fi2));
+await page.fill('#pr_numero', '9999999-99.2026.8.09.0000'); await page.press('#pr_numero', 'Tab'); await page.waitForTimeout(1200);
+check(/ainda não tem publicação/.test(await t('#pr_dados')), 'número sem publicação: avisa que dá para preencher à mão');
+await page.click('#prX'); await page.waitForTimeout(300);
+// ficha de um processo já cadastrado, com campos vazios: botão para completar
+await f('POST', '/api/db/processos', { numero: NI, partes: '', orgao: '', classe: '', clienteIds: [], honorarios: 'sem', arquivado: false, origem: 'manual', criadoEm: agora });
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(800);
+await page.click('[data-pr="abrir"][data-n="' + NI.replace(/\D/g, '') + '"]'); await page.waitForTimeout(500);
+await page.click('[data-prf="buscar-dados"]'); await page.waitForTimeout(1500);
+check((await page.evaluate(() => document.getElementById('pr_reu').value)) === 'Construtora Beta Ltda' && /Morrinhos - 1ª Vara Cível/.test(await page.evaluate(() => document.getElementById('pr_orgao').value)), 'na ficha de um processo já cadastrado, "Buscar dados no Diário Oficial" completa o que estiver vazio');
+await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+check(/Réu: Construtora Beta Ltda|Maria Souza x Construtora Beta Ltda/.test(await t('#prLista')), 'e a lista de Processos mostra o réu para diferenciar os processos do mesmo cliente');
 // OABs na tela
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(900);
 await page.click('[data-pb="oabs"]'); await page.waitForTimeout(500);

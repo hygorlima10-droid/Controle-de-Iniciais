@@ -186,3 +186,8 @@ Quando o mesmo ato é publicado várias vezes só mudando o destinatário (por e
 
 ### Dentro do texto da publicação
 A janela do texto completo agora tem os mesmos caminhos do cartão: **Cadastrar processo** (quando o processo ainda não está cadastrado; abre a escolha entre processo em andamento e nova inicial **por cima** da leitura, que continua aberta e, ao cadastrar, passa a mostrar o processo, o prazo e as opções de lida / não lida), **Abrir o processo** (e **Reabrir processo**, se estiver arquivado) e **Manter como não lida**, que desfaz a marcação automática de "lida" e fecha, para a publicação continuar em "Não lidas".
+
+### Dados básicos do processo vindos do Diário Oficial
+- **Ao cadastrar um processo** (pela publicação ou digitando o número em Processos), o app consulta o Diário Oficial pelo número (`/api/djen/processo`) e preenche o que estiver vazio: **autor, réu, tribunal e órgão (vara ou câmara), classe/natureza, partes ("Autor x Réu") e valor da causa**, quando constam nas publicações. A linha de status diz o que aconteceu; tudo pode ser corrigido antes de salvar. Os campos Autor, Réu e Valor da causa ficam no processo; o **réu aparece no cartão** para diferenciar vários processos do mesmo cliente.
+- Os dados saem do **texto** das publicações (`extrairDados` em `src/djen.js`: "Polo Ativo/Passivo", "Requerente(s)/Requerido(s)", autor/réu, agravante/agravado etc., "Natureza/Ação" e "Valor da causa"); o que o tribunal não escreve fica em branco. Publicações novas guardam autor, réu e natureza.
+- **Processos já cadastrados** não mudam: a leitura diária continua só para publicações e prazos. Se quiser completar um deles, a ficha tem "Buscar dados no Diário Oficial" (só completa campos vazios).

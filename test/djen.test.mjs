@@ -1,7 +1,7 @@
 // Testes do que roda sozinho no Node (sem navegador): limpeza do texto, trecho, prazo sugerido e leitura paginada do DJEN.
 //   node test/djen.test.mjs
 import http from 'node:http';
-import { htmlParaTexto, trechoDe, sugerirPrazo, lerCfg, lerDjen } from '../src/djen.js';
+import { htmlParaTexto, trechoDe, sugerirPrazo, lerCfg, lerDjen, extrairDados } from '../src/djen.js';
 import { montarNotificacoes } from '../src/index.js';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 
@@ -22,6 +22,14 @@ check(sugerirPrazo('Intime-se para manifestar em 10 (dez) dias úteis sobre o la
 check(sugerirPrazo('Prazo de vinte e cinco dias para contestar a ação proposta pelo autor nos autos') .dias === 25, '"vinte e cinco"');
 check(sugerirPrazo('Prazo de 48 horas para justificar a ausência dos presentes no ato da audiência designada') === null, 'horas não viram prazo em dias');
 check(sugerirPrazo('ARQUIVOS DIGITAIS INDISPONÍVEIS (NÃO SÃO DO TIPO PÚBLICO)') === null, 'texto sem prazo');
+// dados básicos do processo no texto (partes, natureza, valor da causa)
+const tj = extrairDados(htmlParaTexto('Poder Judici&aacute;rio\nComarca de Morrinhos\nAutos n.:&nbsp;5593217-64.2021.8.09.0107\nNatureza:&nbsp;PROCESSO C&Iacute;VEL E DO TRABALHO -&gt; Processo de Conhecimento -&gt; Procedimento Comum C&iacute;vel\nPolo Ativo:&nbsp;Cooperativa Mista Dos Produtores De Leite De Morrinhos\nPolo Passivo:&nbsp;Osmar Junio Alves Gil\nDECIS&Atilde;O\nValor da causa: R$ 12.345,67'));
+check(tj.ativo === 'Cooperativa Mista Dos Produtores De Leite De Morrinhos' && tj.passivo === 'Osmar Junio Alves Gil' && tj.natureza === 'Procedimento Comum Cível' && tj.valorCausa === 12345.67, 'TJGO: lê polo ativo, polo passivo, natureza e valor da causa: ' + JSON.stringify(tj));
+const bv = extrairDados(htmlParaTexto('Rua 05, Qd. 06\nATO ORDINAT&Oacute;RIO\nA&ccedil;&atilde;o: PROCESSO C&Iacute;VEL E DO TRABALHO -&gt; Processo de Execu&ccedil;&atilde;o -&gt; Execu&ccedil;&atilde;o de T&iacute;tulo Extrajudicial\nProcesso n&ordm;: 5118774-16.2026.8.09.0017\nRequerente(s): Cooperativa Mista Dos Produtores\nRequerido(s): Beltrano de Tal; Ciclano Souza'));
+check(bv.ativo === 'Cooperativa Mista Dos Produtores' && /Beltrano de Tal/.test(bv.passivo) && bv.natureza === 'Execução de Título Extrajudicial', 'Requerente(s) e Requerido(s) também valem: ' + JSON.stringify(bv));
+const st = extrairDados(htmlParaTexto('<table><tr><td><b>AREsp 3307791/GO</b></td></tr><tr><td>RELATORA</td><td>:</td><td>MINISTRA MARIA ISABEL GALLOTTI</td></tr><tr><td>AGRAVANTE</td><td>:</td><td>TRANSPORTADORA NUNES FERNANDES LTDA</td></tr><tr><td>ADVOGADOS</td><td>:</td><td>MURILO FALONE ROCHA - GO049308</td></tr><tr><td>AGRAVADO</td><td>:</td><td>LÍDER VIATURAS E EQUIPAMENTOS INDUSTRIAIS LTDA</td></tr></table>'));
+check(st.ativo === 'TRANSPORTADORA NUNES FERNANDES LTDA' && st.passivo === 'LÍDER VIATURAS E EQUIPAMENTOS INDUSTRIAIS LTDA', 'STJ: agravante e agravado: ' + JSON.stringify(st));
+check(extrairDados('ARQUIVOS DIGITAIS INDISPONÍVEIS (NÃO SÃO DO TIPO PÚBLICO)').ativo === '' && extrairDados('Autos n.: 123\nAutor: ').passivo === '', 'texto sem partes não inventa nada');
 // notificação
 const n = montarNotificacoes({ itens: [], alertas: [] }, {}, { alertas: {} }, '2026-11-06', '2026-11', [{ tribunal: 'TJGO', tipo: 'Decisão', numero: '5368644-67.2026.8.09.0107' }, { tribunal: 'STJ', tipo: 'Ata', numero: '' }]);
 check(n.length === 1 && /2 novas publicações/.test(n[0].titulo) && /TJGO · Decisão/.test(n[0].corpo), 'o resumo das 10h avisa as publicações novas');

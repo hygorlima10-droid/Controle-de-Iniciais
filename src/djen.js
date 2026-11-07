@@ -37,6 +37,26 @@ export function trechoDe(texto) {
   return (t || linhas.join(' ')).slice(0, 300);
 }
 
+/* ---------- dados básicos do processo que vêm no texto: partes, natureza e valor da causa ---------- */
+const POLO_ATIVO = /^(?:polo\s+ativo|autor(?:es|a|as)?(?:\(a?s?\))?|requerente(?:s|\(s\))?|exequente(?:s|\(s\))?|impetrante|agravante|recorrente|apelante|embargante|reclamante|promovente|suscitante)\s*[:\-–]\s*(.+)$/i;
+const POLO_PASSIVO = /^(?:polo\s+passivo|r[eé]us?|r[eé]\(s\)|requerido(?:s|\(s\))?|executado(?:s|\(s\))?|impetrado|agravado|recorrido|apelado|embargado|reclamado|promovido|suscitado)\s*[:\-–]\s*(.+)$/i;
+const limpaNome = (n) => String(n || '').replace(/^\d+\s*[.)-]\s*/, '').replace(/\s*\((?:agravante|agravado|autor|r[eé]u|requerente|requerido|exequente|executado|apelante|apelado|recorrente|recorrido)[^)]*\)\s*$/i, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+export function extrairDados(texto) {
+  const linhas = String(texto || '').split('\n').map((l) => l.trim()).filter(Boolean), at = [], pa = [];
+  let natureza = '', assunto = '';
+  for (const l of linhas.slice(0, 80)) {
+    let m;
+    if ((m = POLO_ATIVO.exec(l))) { const n = limpaNome(m[1]); if (n && at.length < 3 && !at.includes(n)) at.push(n); }
+    else if ((m = POLO_PASSIVO.exec(l))) { const n = limpaNome(m[1]); if (n && pa.length < 3 && !pa.includes(n)) pa.push(n); }
+    else if (!natureza && (m = /^(?:natureza|a[çc][ãa]o|classe judicial)\s*:\s*(.+)$/i.exec(l))) natureza = m[1].split(/\s*->\s*/).pop().replace(/\s+/g, ' ').trim().slice(0, 100);
+    else if (!assunto && (m = /^assuntos?\s*:\s*(.+)$/i.exec(l))) assunto = m[1].replace(/\s+/g, ' ').trim().slice(0, 100);
+  }
+  const v = /valor\s+da\s+causa\s*[:\-]?\s*R?\$?\s*([\d.]+,\d{2})/i.exec(String(texto || ''));
+  const out = { ativo: at.join('; '), passivo: pa.join('; '), natureza, assunto };
+  if (v) out.valorCausa = Number(v[1].replace(/\./g, '').replace(',', '.')) || 0;
+  return out;
+}
+
 /* ---------- prazo sugerido a partir do texto (você sempre confirma) ---------- */
 const NUMEROS = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, 'três': 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15, dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, noventa: 90 };
 function numeroDe(s) {
@@ -74,6 +94,12 @@ async function consultar(params) {
     return { status: r.status, json: j, ms: Date.now() - t0 };
   } catch (e) { return { status: 0, erro: String((e && e.message) || e), ms: Date.now() - t0 }; }
 }
+/* tenta 100 por página e, se a fonte recusar, cai para 5 */
+async function consultarFlex(p) {
+  p.set('itensPorPagina', '100'); let r = await consultar(p);
+  if (r.status === 400 || r.status === 422) { p.set('itensPorPagina', '5'); r = await consultar(p); }
+  return r;
+}
 function paramsOab(o, ini, fim, pagina, tam) {
   const p = new URLSearchParams({ numeroOab: String(o.numero), ufOab: String(o.uf).toUpperCase(), dataDisponibilizacaoInicio: ini, dataDisponibilizacaoFim: fim, itensPorPagina: String(tam), pagina: String(pagina) });
   return p;
@@ -105,7 +131,7 @@ function paraDoc(i, o) {
   return {
     id: String(i.id), data: String(i.data_disponibilizacao || '').slice(0, 10), tribunal: String(i.siglaTribunal || '').slice(0, 12), orgao: String(i.nomeOrgao || '').slice(0, 100),
     tipo, classe: String(i.nomeClasse || '').slice(0, 80), processo, numero: String(i.numeroprocessocommascara || mascara(processo)).slice(0, 40), trecho: trechoDe(texto),
-    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto),
+    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
 }
@@ -238,6 +264,17 @@ export async function djenRotas(request, env, partes) {
     for (let k = 0; k < cmds.length; k += 50) await env.DB.batch(cmds.slice(k, k + 50));
     return json({ ok: true, alteradas: cmds.length });
   }
+  if (acao === 'processo' && m === 'GET') {
+    const n = (u.searchParams.get('numero') || '').replace(/\D/g, '');
+    if (n.length < 15 || n.length > 25) return erro(400, 'invalid', 'Número de processo inválido.');
+    const res = await consultarFlex(new URLSearchParams({ numeroProcesso: n, pagina: '1' }));
+    if (res.status !== 200 || !res.json) return json({ ok: false, motivo: res.erro || ('O Diário Oficial respondeu ' + res.status) });
+    const itens = (Array.isArray(res.json.items) ? res.json.items : []).slice().sort((a, b) => String(b.data_disponibilizacao).localeCompare(String(a.data_disponibilizacao)));
+    if (!itens.length) return json({ ok: true, achou: false });
+    const d = { ativo: '', passivo: '', natureza: '', assunto: '' }, ult = itens[0];
+    for (const i of itens) { const x = extrairDados(htmlParaTexto(i.texto)); for (const k of ['ativo', 'passivo', 'natureza', 'assunto']) if (!d[k] && x[k]) d[k] = x[k]; if (d.valorCausa == null && x.valorCausa) d.valorCausa = x.valorCausa; }
+    return json({ ok: true, achou: true, dados: { ...d, tribunal: String(ult.siglaTribunal || '').slice(0, 12), orgao: String(ult.nomeOrgao || '').slice(0, 100), classe: String(ult.nomeClasse || '').slice(0, 80), ultimaPublicacao: String(ult.data_disponibilizacao || '').slice(0, 10), comunicacoes: itens.length } });
+  }
   if (acao === 'texto' && m === 'GET') {
     const id = u.searchParams.get('id') || '';
     if (!/^\d{1,20}$/.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
@@ -247,7 +284,7 @@ export async function djenRotas(request, env, partes) {
     const p = new URLSearchParams({ dataDisponibilizacaoInicio: d.data, dataDisponibilizacaoFim: d.data, itensPorPagina: '100', pagina: '1' });
     if (d.processo) p.set('numeroProcesso', d.processo);
     else { const cfg = await lerCfg(env), o = cfg.oabs.find((x) => d.oabs.includes(x.id)) || cfg.oabs[0]; p.set('numeroOab', o.numero); p.set('ufOab', o.uf); }
-    const res = await consultar(p);
+    const res = await consultarFlex(p);
     const item = res.json && Array.isArray(res.json.items) ? res.json.items.find((i) => String(i.id) === id) : null;
     if (!item) return json({ ok: false, trecho: d.trecho, link: d.link, motivo: res.erro || (res.status !== 200 ? 'O Diário Oficial respondeu ' + res.status : 'O tribunal não mostra mais esta publicação.') });
     const texto = htmlParaTexto(item.texto);
