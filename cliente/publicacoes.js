@@ -137,6 +137,7 @@ function pbMontarTela(){
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
     else if (a === 'aud') pbCriarAudiencia(id);
+    else if (a === 'rel') rptPublicacoes();
   });
   var depois = null;
   function aplicar(e){
@@ -224,7 +225,7 @@ function pbRender(){
   h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button></div>';
   if (pbS.fAberto) h += pbPainelHtml();
-  h += '</div>';
+  h += '<div style="text-align:right"><button type="button" class="btn-text" data-pb="rel">🖨 Relatório das publicações</button></div></div>';
   if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
   h += pbAvisoLeitura();
   if (!pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';

@@ -51,6 +51,13 @@ if '/*PR-INICIO*/' in s:
 else:
     assert s.count('/*AG-FIM*/\n') == 1
     s = s.replace('/*AG-FIM*/\n', '/*AG-FIM*/\n' + bloco_pr)
+rl = open(R + 'cliente/relatorios.js', encoding='utf-8').read()
+bloco_rl = '/*RL-INICIO*/\n' + rl + '\n/*RL-FIM*/\n'
+if '/*RL-INICIO*/' in s:
+    s = re.sub(r'/\*RL-INICIO\*/.*?/\*RL-FIM\*/\n', lambda m: bloco_rl, s, flags=re.S)
+else:
+    assert s.count('/*PR-FIM*/\n') == 1
+    s = s.replace('/*PR-FIM*/\n', '/*PR-FIM*/\n' + bloco_rl)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)

@@ -133,7 +133,7 @@ function prMontarTela(){
   var w = qs('prWrap'); if (!w || w.getAttribute('data-ok')) return; w.setAttribute('data-ok', '1');
   w.innerHTML = '<div class="rs-wrap" id="prResumo"></div><div class="ini-acoes"><button type="button" class="acao acao-ouro" data-pr="novo"><svg><use href="#ic-plus"/></svg><span>Novo processo</span></button></div>' +
     '<div id="prAvisoVinc"></div><div class="field" style="margin:0"><input type="text" id="prBusca" placeholder="Buscar por cliente, partes ou número…" autocomplete="off"></div>' +
-    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button></div><div id="prPainel"></div><div id="prLista" class="pb-lista"></div>';
+    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button></div><div id="prPainel"></div><div style="text-align:right"><button type="button" class="btn-text" data-pr="rel">🖨 Relatório da lista</button></div><div id="prLista" class="pb-lista"></div>';
   w.addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('[data-pr]') : null; if (!b) return;
     var a = b.getAttribute('data-pr'), n = b.getAttribute('data-n');
@@ -144,6 +144,7 @@ function prMontarTela(){
     else if (a === 'reabrir') prReabrir(n);
     else if (a === 'mais'){ prS.mais++; prRenderLista(); }
     else if (a === 'painel'){ prS.fAberto = !prS.fAberto; prPainel(); }
+    else if (a === 'rel') rptProcessos();
     else if (a === 'limpar'){ prS.f = { cli: '', orgao: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
   });
   w.addEventListener('change', function(e){ var k = e.target && e.target.getAttribute ? e.target.getAttribute('data-prfil') : null; if (!k) return; prS.f[k] = e.target.value; prS.mais = 1; prRenderLista(); prFunilMarca(); });
@@ -184,12 +185,12 @@ function prPainel(){
     '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pr="limpar">Limpar filtros</button><button type="button" class="btn btn-primary pb-b" data-pr="painel">Fechar</button></div></div>';
 }
 /* a lista que o filtro e a busca deixam (usada na tela e nos relatórios) */
-function prFiltrar(){
-  var mp = prMapa(), q = normNome(prS.busca);
+function prFiltrar(filtro){
+  var mp = prMapa(), q = normNome(prS.busca); filtro = filtro || prS.filtro;
   return mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){
     var arq = prArquivado(r);
-    if (prS.filtro === 'andamento' && arq) return false;
-    if (prS.filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
+    if (filtro === 'andamento' && arq) return false;
+    if (filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
     if (prS.f.cli === '__sem'){ if (prClienteIds(r).length) return false; }
     else if (prS.f.cli && prClienteIds(r).indexOf(prS.f.cli) < 0) return false;
     if (prS.f.orgao && prOrgaoDe(r) !== prS.f.orgao) return false;
@@ -244,6 +245,7 @@ function prMontarFicha(){
       abrirClienteEdit({ nome: nome, pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } });
     }
     else if (a === 'tl-tudo'){ prS.tlTudo = true; prDesenhar(); }
+    else if (a === 'rel') rptProcesso(prEd.num);
     else if (a === 'vinc-abrir'){ prEd.vincAberto = true; prEd.vincAviso = null; prRefazVinc(); }
     else if (a === 'vinc-fechar'){ prEd.vincAberto = false; prEd.vincAviso = null; prRefazVinc(); }
     else if (a === 'vinc-esc') prVincEscolher(v, false);
@@ -382,10 +384,12 @@ function prEventos(r){
   }
   return ev;
 }
+/* "Próximos": o que ainda vai acontecer (hoje só conta para prazo, audiência, tarefa e providência; publicação e marcos de hoje já são passado) */
+function prEhFuturo(e, hoje){ return e.data > hoje || (e.data === hoje && /^(prazo|aud|tar|prox)$/.test(e.tipo) && !/\|ok/.test(e.estado)); }
 var PR_TL = { pub: ['Publicação', '#7C5CD6'], prazo: ['Prazo', '#D93B3B'], aud: ['Audiência', '#2A78D6'], tar: ['Tarefa', '#C98500'], hon: ['Honorário', '#17895A'], marco: ['Marco', '#8A93AD'], prox: ['Providência', '#C98500'] };
 function prTimelineHtml(r){
   var hoje = todayISO(), ev = prEventos(r);
-  var fut = ev.filter(function(e){ return e.data >= hoje; }).sort(function(a, b){ return a.data.localeCompare(b.data); }), pas = ev.filter(function(e){ return e.data < hoje; }).sort(function(a, b){ return b.data.localeCompare(a.data); });
+  var fut = ev.filter(function(e){ return prEhFuturo(e, hoje); }).sort(function(a, b){ return a.data.localeCompare(b.data); }), pas = ev.filter(function(e){ return !prEhFuturo(e, hoje); }).sort(function(a, b){ return b.data.localeCompare(a.data); });
   var lim = prS.tlTudo ? 9999 : 8;
   function linha(e){
     var t = PR_TL[e.tipo], est = e.estado.split('|'), a = e.acao.split('|'), btn = '';
@@ -443,7 +447,7 @@ function prDesenhar(){
     var pz = prPrazosAbertos(r);
     h += '<div class="pb-sec"><div class="pb-sec-t">Prazos e audiências (Agenda)</div>' + (pz.length ? pz.map(function(i){ var c = agChip(i); return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(i.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(agTipoLinha(i)) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-abrir" data-v="' + escapeHtml(i.key) + '">' + escapeHtml(c.t) + ' ›</button></div>'; }).join('') : '<div class="saldo-data">Nenhum prazo aberto.</div>') +
       '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">+ Novo prazo deste processo</button></div></div>';
-    h += prTimelineHtml(r);
+    h += prTimelineHtml(r) + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
   }
   var pxi = doc ? prProximaInfo(r) : null;
   h += '<div class="field"><label class="field-label" for="pr_prox">Próxima providência (opcional)</label><input type="text" id="pr_prox" maxlength="140" value="' + escapeHtml(doc ? (doc.proxima || '') : '') + '" placeholder="Ex.: Pedir penhora via SISBAJUD"></div>' +

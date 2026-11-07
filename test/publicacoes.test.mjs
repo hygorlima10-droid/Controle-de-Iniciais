@@ -190,7 +190,7 @@ const procs = (await f('GET', '/api/db/processos')).j.docs.map(d => d.data);
 check(procs.length === 1 && procs[0].origem === 'publicacao' && procs[0].honorarios === 'sem', 'o processo é gravado (origem: publicação, sem honorários)');
 check(/processo cadastrado/.test(await cardDe('900003')) && !/Cadastrar processo/.test(await cardDe('900003')), 'a publicação passa a mostrar "processo cadastrado"');
 await page.click('[data-pb="ir"][data-id="900003"]'); await page.waitForTimeout(500);
-check(await page.evaluate(() => document.getElementById('overlayPr').classList.contains('show')) && /Últimas publicações/i.test(await t('#prCorpo')), 'tocar na etiqueta abre a ficha do processo, com as publicações');
+check(await page.evaluate(() => document.getElementById('overlayPr').classList.contains('show')) && /Linha do tempo/i.test(await t('#prCorpo')) && /Publicação/.test(await t('#prCorpo')), 'tocar na etiqueta abre a ficha do processo, com as publicações');
 await page.click('[data-prf="arquivar"]'); await page.waitForTimeout(400); await page.click('#praOk'); await page.waitForTimeout(1200);
 check(/arquivado/.test(await cardDe('900003')) && /Reabrir processo/.test(await cardDe('900003')), 'processo arquivado: a publicação mostra "arquivado" e oferece "Reabrir processo"');
 await page.click('.pb-b[data-pb="reabrir-proc"][data-id="900003"]'); await page.waitForTimeout(1200);

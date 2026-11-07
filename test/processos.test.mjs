@@ -93,7 +93,7 @@ await page.click('[data-pr="abrir"][data-n="' + N3.replace(/\D/g, '') + '"]'); a
 const fi = await t('#prCorpo');
 check(/Honorários/i.test(fi) && /Acordo · Termo de acordo/.test(fi) && /a receber/.test(fi) && (await page.evaluate(() => !!document.querySelector('[data-prf="link"]'))), 'a ficha tem o link direto para o honorário do acordo: ' + fi.replace(/\n/g, ' ').slice(0, 260));
 check(await page.evaluate(() => ['+ Honorários (fixo, êxito…)', '+ Termo de acordo', '+ Alvará'].every(x => Array.from(document.querySelectorAll('[data-prf="novo-hon"]')).some(b => b.innerText.trim() === x))), 'e atalhos para lançar honorários (fixo/êxito, Termo de acordo, Alvará)');
-check(/Prazos e audiências/i.test(fi) && /Últimas publicações/i.test(fi) && /Clientes vinculados/i.test(fi), 'a ficha mostra clientes, prazos e publicações');
+check(/Prazos e audiências/i.test(fi) && /Linha do tempo/i.test(fi) && /Clientes vinculados/i.test(fi), 'a ficha mostra clientes, prazos e publicações');
 await page.click('[data-prf="link"]'); await page.waitForTimeout(800);
 check(await page.evaluate(() => document.body.getAttribute('data-tab')) === 'acordos', 'o link abre o termo de acordo');
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(600);

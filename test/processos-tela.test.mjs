@@ -56,6 +56,7 @@ check(/Protocolada em/.test(tl), 'o prazo cumprido mostra a data do protocolo');
 check(/Processo ajuizado/.test(tl) && /Cadastrado no Horus/.test(tl), 'e os marcos do processo');
 const ordem = await page.evaluate(() => Array.from(document.querySelectorAll('.pr-tl-g')).map(x => x.textContent));
 check(ordem[0] === 'Próximos' && ordem[1] === 'Anteriores', 'separa o que vem pela frente do que já passou');
+{ const blocos = tl.split(/ANTERIORES|Anteriores/); check(blocos.length >= 2 && !/Cadastrado no Horus/.test(blocos[0]) && /Cadastrado no Horus/.test(blocos[1]), 'o que aconteceu hoje (como o cadastro) fica em “Anteriores”, não em “Próximos”'); }
 // próxima providência com data cria tarefa na Agenda
 await page.fill('#pr_prox', 'Pedir penhora via SISBAJUD'); await page.fill('#pr_proxdata', dia(7)); await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1500);
 let p4 = (await docs('processos')).filter(p => p.numero === N4)[0], tarefa = (await docs('agenda')).filter(a => a.provProc)[0];

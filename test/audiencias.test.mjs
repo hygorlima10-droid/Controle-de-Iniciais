@@ -11,11 +11,11 @@ let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA 
 const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), agora = new Date().toISOString();
 const dia = n => new Date(Date.parse(hoje + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const br_ = iso => iso.slice(8) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
-const DATA_AUD = dia(20), N = '5368644-67.2026.8.09.0107';
+const DATA_AUD = dia(20), N = '5399001-24.2026.8.09.0107';
 // DJEN de mentira: uma intimação com audiência designada
 const itens = [{ id: 910001, data_disponibilizacao: hoje, siglaTribunal: 'TJGO', tipoComunicacao: 'Intimação', tipoDocumento: 'Decisão', nomeOrgao: 'Morrinhos - 1ª Vara Cível', nomeClasse: 'PROCEDIMENTO COMUM', numero_processo: N.replace(/\D/g, ''), numeroprocessocommascara: N, link: 'https://exemplo.test/p/1',
-  texto: 'Poder Judiciário\nAutos n.: ' + N + '\nPolo Ativo: Maquele Viana Pacheco\nPolo Passivo: Cooperativa Mista\nDECISÃO\nDesigno audiência de conciliação para o dia ' + br_(DATA_AUD) + ', às 14:30 horas, por videoconferência, no link https://meet.google.com/abc-defg-hij. Intimem-se.',
-  destinatarios: [{ nome: 'Maquele Viana Pacheco', polo: 'A' }], destinatarioadvogados: [] }];
+  texto: 'Poder Judiciário\nAutos n.: ' + N + '\nPolo Ativo: Zenaide Prado Teste\nPolo Passivo: Cooperativa Mista\nDECISÃO\nDesigno audiência de conciliação para o dia ' + br_(DATA_AUD) + ', às 14:30 horas, por videoconferência, no link https://meet.google.com/abc-defg-hij. Intimem-se.',
+  destinatarios: [{ nome: 'Zenaide Prado Teste', polo: 'A' }], destinatarioadvogados: [] }];
 const fake = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ status: 'success', count: itens.length, items: itens })); }).listen(8890);
 await new Promise(ok => fake.on('listening', ok));
 let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.31' } }); const ck = r.headers.get('set-cookie').split(';')[0];
@@ -23,8 +23,8 @@ const f = (m, p, b) => fetch(B + p, { method: m, headers: { cookie: ck, 'content
 const ag = async () => (await f('GET', '/api/db/agenda')).j.docs.map(d => ({ id: d.id, ...d.data }));
 for (const col of ['casos', 'clientes', 'config', 'agenda', 'processos']) for (const d of (await f('GET', '/api/db/' + col)).j.docs || []) await f('DELETE', '/api/db/' + col + '/' + d.id);
 await f('PUT', '/api/db/config/backup', { ultimoEm: agora });
-await f('PUT', '/api/db/clientes/cl1', { nome: 'Maquele Viana Pacheco', pagador: 'cliente', criadoEm: agora });
-await f('PUT', '/api/db/casos/c1', { tipo: 'inicial', cliente: 'Maquele Viana Pacheco', nomeAcao: 'Declaratória', origem: 'proprio', prioridade: 'normal', status: 'pendente', statusDesde: agora, modalidadeHonorario: 'fixo', formaPagamento: 'avista', valorHonorarios: 3000, avista: { data: dia(30), pago: false }, numeroProcesso: N, clienteIds: ['cl1'], criadoEm: agora, atualizadoEm: agora });
+await f('PUT', '/api/db/clientes/cl1', { nome: 'Zenaide Prado Teste', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/casos/c1', { tipo: 'inicial', cliente: 'Zenaide Prado Teste', nomeAcao: 'Declaratória', origem: 'proprio', prioridade: 'normal', status: 'pendente', statusDesde: agora, modalidadeHonorario: 'fixo', formaPagamento: 'avista', valorHonorarios: 3000, avista: { data: dia(30), pago: false }, numeroProcesso: N, clienteIds: ['cl1'], criadoEm: agora, atualizadoEm: agora });
 await f('POST', '/api/djen/buscar', {});
 
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
@@ -34,17 +34,17 @@ const v = async id => page.evaluate(i => document.getElementById(i).value, id);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="publicacoes"]').click()); await page.waitForTimeout(1500);
 
 // 1) a publicação mostra a audiência encontrada
-const cartao = await t('#pbListaBox');
+const cartao = await page.evaluate(() => Array.from(document.querySelectorAll('.pb-card')).filter(c => /Zenaide/.test(c.innerText)).map(c => c.innerText).join('\n'));
 check(/audiência/.test(cartao) && new RegExp(DATA_AUD.slice(8) + '/' + DATA_AUD.slice(5, 7)).test(cartao) && /14:30/.test(cartao), 'o cartão da publicação mostra a audiência encontrada (data e hora)');
-check(await page.evaluate(() => !!document.querySelector('[data-pb="aud"]')), 'e oferece “Criar audiência”');
-await page.click('[data-pb="aud"]'); await page.waitForTimeout(500);
+check(await page.evaluate(() => !!document.querySelector('.pb-card [data-pb="aud"]')), 'e oferece “Criar audiência”');
+await page.click('.pb-card:has-text("Zenaide") [data-pb="aud"]'); await page.waitForTimeout(500);
 check(await page.evaluate(() => document.getElementById('overlayAg').classList.contains('show')), 'abre o editor da Agenda');
 check(await v('age_data') === DATA_AUD && await v('age_hora') === '14:30' && await v('age_audtipo') === 'Conciliação' && await v('age_mod') === 'online' && /meet\.google\.com/.test(await v('age_link')), 'já vem preenchido: data, hora, tipo, modalidade online e link');
-check(/Maquele/.test(await v('age_cli')) && (await v('age_proc')).replace(/\D/g, '') === N.replace(/\D/g, ''), 'com o cliente e o processo');
+check(/Zenaide/.test(await v('age_cli')) && (await v('age_proc')).replace(/\D/g, '') === N.replace(/\D/g, ''), 'com o cliente e o processo');
 await page.fill('#age_local', 'Sala virtual do TJGO'); await page.click('[data-age="salvar"]'); await page.waitForTimeout(1200);
 const aud = (await ag()).filter(d => d.tipo === 'audiencia')[0];
 check(aud && aud.data === DATA_AUD && aud.hora === '14:30' && aud.audTipo === 'Conciliação' && aud.modalidade === 'online' && aud.local === 'Sala virtual do TJGO' && /meet\.google/.test(aud.link) && aud.audPubId === '910001', 'a audiência é gravada com tipo, modalidade, local, link e a publicação de origem');
-check(!(await page.evaluate(() => !!document.querySelector('[data-pb="aud"]'))) && /na Agenda/.test(await t('#pbListaBox')), 'depois de criada, a publicação mostra “na Agenda” e some o botão (não duplica)');
+check(!(await page.evaluate(() => Array.from(document.querySelectorAll('.pb-card')).some(c => /Zenaide/.test(c.innerText) && !!c.querySelector('[data-pb="aud"]')))) && /na Agenda/.test(await t('#pbListaBox')), 'depois de criada, a publicação mostra “na Agenda” e some o botão (não duplica)');
 check(!(await f('GET', '/api/db/agenda')).j.docs.some(d => d.data.pubId === '910001'), 'a audiência não vira “prazo confirmado” da publicação');
 
 // 2) na Agenda: local, tipo e entrar na sala
