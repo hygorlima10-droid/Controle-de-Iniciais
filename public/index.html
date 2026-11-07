@@ -7866,7 +7866,7 @@
         backupImportadoPendente = dados;
         var resumo = (dados.exportadoEm ? ('Arquivo de ' + fmtData(dados.exportadoEm.slice(0,10)) + ' — ') : '') +
           (dados.casos||[]).length + ' petições, ' + (dados.acordos||[]).length + ' acordos, ' + (dados.alvaras||[]).length + ' alvarás, ' + (dados.clientes||[]).length + ' clientes, ' +
-          (dados.despesas||[]).length + ' despesas, ' + (dados.receitasManuais||[]).length + ' receitas manuais.';
+          (dados.despesas||[]).length + ' despesas, ' + (dados.receitasManuais||[]).length + ' receitas manuais, ' + (dados.processos||[]).length + ' processos e ' + (dados.agenda||[]).length + ' itens da agenda.';
         qs('importarBackupResumo').textContent = resumo;
         qs('importarBackupConfirm').style.display = '';
       }catch(err){
@@ -9780,6 +9780,8 @@
       metas: metas,
       extratos: extratos,
       obraMov: obraMov,
+      processos: prDocs,
+      agenda: agDocs,
       config: config
     };
   }
@@ -9874,7 +9876,7 @@
   }
 
   /* Confere o arquivo antes de qualquer alteração. Devolve o texto do problema, ou '' se estiver tudo certo. */
-  var BACKUP_LISTAS = [['casos', 'petições'], ['acordos', 'termos de acordo'], ['alvaras', 'alvarás'], ['clientes', 'clientes'], ['despesas', 'despesas'], ['receitasManuais', 'receitas'], ['metas', 'metas'], ['extratos', 'extratos do banco'], ['obraMov', 'lançamentos da obra']];
+  var BACKUP_LISTAS = [['casos', 'petições'], ['acordos', 'termos de acordo'], ['alvaras', 'alvarás'], ['clientes', 'clientes'], ['despesas', 'despesas'], ['receitasManuais', 'receitas'], ['metas', 'metas'], ['extratos', 'extratos do banco'], ['obraMov', 'lançamentos da obra'], ['processos', 'processos'], ['agenda', 'itens da agenda']];
   function validarBackup(d){
     if (!d || typeof d !== 'object' || Array.isArray(d)) return 'Este arquivo não parece um backup deste sistema.';
     if (d.versao !== undefined && !(Number(d.versao) >= 1 && Number(d.versao) <= BACKUP_VERSAO)) return 'Este backup foi gerado por uma versão diferente do sistema (versão ' + d.versao + '). Não é seguro restaurá-lo aqui.';
@@ -9914,7 +9916,8 @@
       var plano = [
         [casosRef, casos, dados.casos], [acordosRef, acordos, dados.acordos], [alvarasRef, alvaras, dados.alvaras],
         [clientesRef, clientes, dados.clientes], [despesasRef, despesas, dados.despesas], [receitasRef, receitasManuais, dados.receitasManuais],
-        [metasRef, metas, dados.metas], [extratosRef, extratos, dados.extratos], [obraMovRef, obraMov, dados.obraMov]
+        [metasRef, metas, dados.metas], [extratosRef, extratos, dados.extratos], [obraMovRef, obraMov, dados.obraMov],
+        [pbRefColecao('processos'), prDocs, dados.processos], [pbRefColecao('agenda'), agDocs, dados.agenda]
       ].filter(function(p){ return Array.isArray(p[2]); });
       var feitos = 0, totalItens = plano.reduce(function(t, p){ return t + p[2].length; }, 0);
       function andamento(){ progresso('Restaurando… ' + feitos + ' de ' + totalItens + ' registros'); }
@@ -9924,7 +9927,7 @@
       if (dados.saldos !== undefined) cadeia = cadeia.then(function(){ return restaurarSaldos(dados.saldos); });
       progresso('Removendo o que não está no backup…');
       plano.forEach(function(p){ cadeia = cadeia.then(function(){ return apagarSobras(p[0], p[1], p[2]); }); });
-      return cadeia.then(function(){ return restaurarConfig(dados.config); });
+      return cadeia.then(function(){ return restaurarConfig(dados.config); }).then(function(){ try{ prCarregar(); agCarregar(); }catch(e){} });
     }
     function comIds(lista){ return lista.map(function(c){ var cp = Object.assign({}, c); if (!cp.id) cp.id = uid(); return cp; }); }
     if (Array.isArray(dados.casos)) casos = comIds(dados.casos);
@@ -16911,9 +16914,18 @@ function pbRender(){
   if (pbS.fAberto) h += pbPainelHtml();
   h += '</div>';
   if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
+  h += pbAvisoLeitura();
   if (!pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';
   h += '<div id="pbListaBox" class="pb-lista">' + pbListaHtml() + '</div>';
   w.innerHTML = h;
+}
+/* a leitura automática das 10h falhar em silêncio custa um prazo: avisa quando passou de 1 dia ou quando uma OAB deu erro */
+function pbAvisoLeitura(){
+  var ativas = pbS.oabs.filter(function(o){ return o.ativo; }); if (!ativas.length) return '';
+  var comErro = ativas.filter(function(o){ return o.erro; }), parada = !pbS.ultima || (Date.now() - Date.parse(pbS.ultima)) > 30 * 3600e3, msg = '';
+  if (comErro.length) msg = 'A última leitura falhou para ' + comErro.map(function(o){ return o.nome; }).join(', ') + ' (' + comErro[0].erro + '). Pode haver publicação que você ainda não viu.';
+  else if (parada) msg = pbS.ultima ? 'A leitura automática não roda desde ' + pbQuandoAtualizou() + '. Pode haver publicação que você ainda não viu.' : 'A leitura automática do Diário Oficial ainda não rodou.';
+  return msg ? '<div class="aviso-sis" id="pbAvisoLeitura"><span class="as-txt">' + escapeHtml(msg) + ' Toque em “Buscar agora”.</span></div>' : '';
 }
 function pbPainelHtml(){
   var f = pbS.f, trib = {}, i;
@@ -17108,8 +17120,15 @@ function pbSalvarOabs(){
   }).catch(function(e){ qs('pboErro').textContent = e.message; b.disabled = false; b.textContent = 'Salvar e buscar agora'; });
 }
 
+/* a tela é desenhada várias vezes olhando o mapa de processos: monta uma vez por desenho */
+(function(){
+  var o1 = pbRender, o2 = pbRenderLista;
+  pbRender = function(){ var a = arguments; return prComMemo(function(){ return o1.apply(null, a); }); };
+  pbRenderLista = function(){ var a = arguments; return prComMemo(function(){ return o2.apply(null, a); }); };
+})();
+
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
+window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){
@@ -17223,8 +17242,10 @@ function agChip(i){
   if (d === 1) return { t: 'Amanhã', c: 'breve' };
   return { t: 'Em ' + d + ' dias', c: d <= 3 ? 'breve' : 'ok' };
 }
+/* audiência que já passou e ninguém marcou como realizada: continua visível nas listas, mas não fica contando como pendência para sempre */
+function agPassada(i){ return !i.concluido && i.tipo === 'audiencia' && i.data < agHoje(); }
 function agAtualizarBadge(){
-  var n = agAbertos().filter(function(i){ return i.data <= agHoje(); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
+  var n = agAbertos().filter(function(i){ return i.data <= agHoje() && !agPassada(i); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
 function agPrazosResumo(hoje, lim){
   return agAbertos().filter(function(i){ return i.data >= hoje && i.data <= lim; }).map(function(i){ return { d: i.data, h: i.hora || '', n: i.cliente || 'Sem nome', l: i.titulo, t: i.tipo, a: i.avisos }; });
@@ -17288,7 +17309,8 @@ function agMontarTela(){
     else if (a === 'mover') agMover(k, v);
   });
 }
-function agRender(){
+function agRender(){ return prComMemo(agRenderIn); }
+function agRenderIn(){
   agMontarTela();
   var w = qs('agWrap'); if (!w) return;
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
@@ -17324,11 +17346,12 @@ function agVistaSemana(todos){
     var dots = agPontos(por[d] || []) + (trab[d] ? '<s class="ag-p pe"></s>' : '') + (agNomeFeriado(d) ? '<s class="ag-p fe"></s>' : '');
     return '<button type="button" class="ag-d' + (d === agS.sel ? ' on' : '') + (d === hoje ? ' hoje' : '') + '" data-ag="dia" data-v="' + d + '"><span>' + AG_DOW[pbDow(d)] + '</span><b>' + d.slice(8, 10) + '</b><i>' + dots + '</i></button>';
   }).join('') + '</div>';
-  var atrasados = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; });
+  var atrasados = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; }), passadas = todos.filter(agPassada);
   var vazio = true;
   if (atrasados.length){ vazio = false; h += '<div class="ag-dia atr">Atrasado</div>' + atrasados.map(agCartao).join(''); }
+  if (passadas.length){ vazio = false; h += '<div class="ag-dia atr">Audiências que passaram: foi realizada?</div>' + passadas.map(agCartao).join(''); }
   dias.forEach(function(d){
-    var l = (por[d] || []).filter(function(x){ return !(x.data < hoje && !x.concluido && x.tipo !== 'audiencia'); }), tr = trab[d] || [];
+    var l = (por[d] || []).filter(function(x){ return !(x.data < hoje && !x.concluido); }), tr = trab[d] || [];
     if (!l.length && !tr.length && !agNomeFeriado(d)) return;
     vazio = false; h += agCabDia(d) + l.map(agCartao).join('') + tr.map(function(x){ return agCartaoTrabalho(x); }).join('');
   });
@@ -17354,11 +17377,13 @@ function agVistaMes(todos){
 function agVistaLista(todos){
   var hoje = agHoje(), h = '', atr = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; }), futuros = todos.filter(function(x){ return !x.concluido && !(x.data < hoje); }), feitos = todos.filter(function(x){ return x.concluido; }).sort(function(a, b){ return agOrdem(b, a); });
   if (atr.length) h += '<div class="ag-dia atr">Atrasado</div>' + atr.map(agCartao).join('');
+  var pas = todos.filter(agPassada);
+  if (pas.length) h += '<div class="ag-dia atr">Audiências que passaram: foi realizada?</div>' + pas.map(agCartao).join('');
   var ult = '';
   futuros.slice(0, 80).forEach(function(i){ if (i.data !== ult){ ult = i.data; h += agCabDia(i.data); } h += agCartao(i); });
   if (futuros.length > 80) h += '<div class="saldo-data">Mostrando os 80 primeiros. Use o mês ou a semana para ver os demais.</div>';
   if (agS.feitos && feitos.length) h += '<div class="ag-dia">Concluídos</div>' + feitos.slice(0, 30).map(agCartao).join('');
-  if (!atr.length && !futuros.length && !(agS.feitos && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
+  if (!atr.length && !pas.length && !futuros.length && !(agS.feitos && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
   return h;
 }
 function agTipoLinha(i){
@@ -17394,13 +17419,13 @@ function agColunas(todos){
       if (i.concluido){ if (i.data >= recente) cols[3].l.push(i); }
       else if (i.fonte !== 'agenda') cols[2].l.push(i);
       else if (i.situacao === 'elaboracao') cols[1].l.push(i);
-      else if (!(i.tipo === 'audiencia' && i.data < hoje)) cols[0].l.push(i);
+      else cols[0].l.push(i);
     });
   } else {
     cols = [{ k: 'atrasado', t: 'Atrasado', ic: 'alert', l: [] }, { k: 'hoje', t: 'Hoje', ic: 'clip', l: [] }, { k: 'semana', t: 'Esta semana', ic: 'list', l: [] }, { k: 'proxima', t: 'Próxima semana', ic: 'list', l: [] }, { k: 'adiante', t: 'Mais adiante', ic: 'list', l: [] }, { k: 'feito', t: 'Concluídos', ic: 'check', l: [] }];
     todos.forEach(function(i){
       if (i.concluido){ if (i.data >= recente) cols[5].l.push(i); return; }
-      if (i.data < hoje){ if (i.tipo !== 'audiencia') cols[0].l.push(i); }
+      if (i.data < hoje) cols[0].l.push(i);   /* inclui audiência que passou e ainda não foi marcada como realizada */
       else if (i.data === hoje) cols[1].l.push(i);
       else if (i.data <= fimSem) cols[2].l.push(i);
       else if (i.data <= fimProx) cols[3].l.push(i);
@@ -17589,6 +17614,11 @@ var prModoHon = false, prProximoHon = false;   /* a janela de Inicial aberta par
 var PR_MOTIVOS = ['Trânsito em julgado / extinto', 'Acordo cumprido', 'Desistência / renúncia ao mandato', 'Outro'];
 var PR_COR = { so: '#7C5CD6', caso: '#B7791E', acordo: '#2A78D6', alvara: '#2A78D6' };
 function prNum(s){ return normalizarProcesso(s); }
+/* referência mínima a uma coleção (mesmo jeito das outras: doc(id).set/delete e add), usada pela restauração de backup */
+function pbRefColecao(col){
+  var base = '/api/db/' + col;
+  return { doc: function(id){ return { set: function(d){ return pbApi(base + '/' + encodeURIComponent(id), 'PUT', d); }, delete: function(){ return pbApi(base + '/' + encodeURIComponent(id), 'DELETE'); } }; }, add: function(d){ return pbApi(base, 'POST', d); } };
+}
 function prCarregar(){
   if (!window.__SERVIDOR){ prOk = true; return Promise.resolve(); }
   return pbApi('/api/db/processos').then(function(r){
@@ -17605,7 +17635,11 @@ function prDepois(){
 }
 
 /* ---------- lista única: processos cadastrados + os que vêm das Iniciais, Acordos e Alvarás (pelo número) ---------- */
-function prMapa(){
+var prMapaMemo = null;
+function prMapa(){ return prMapaMemo || prMapaBuild(); }
+/* durante uma tela sendo desenhada (código síncrono, sem mudar dados) o mapa é montado uma vez só em vez de uma vez por cartão */
+function prComMemo(fn){ if (prMapaMemo) return fn(); prMapaMemo = prMapaBuild(); try{ return fn(); } finally { prMapaMemo = null; } }
+function prMapaBuild(){
   var m = {}, ordem = [];
   function g(n, numero){ if (!m[n]){ m[n] = { num: n, numero: numero, doc: null, links: [] }; ordem.push(n); } return m[n]; }
   prDocs.forEach(function(d){ var n = prNum(d.numero); if (n) g(n, d.numero).doc = d; });
@@ -17662,6 +17696,7 @@ function prReceberTotal(r, pm){ var t = 0; r.links.forEach(function(l){ var p = 
 function prUltAtividade(r){
   var pubs = prPubsDe(r.num), d = pubs.length ? pubs[0].data : '';
   var c = r.doc && r.doc.criadoEm ? String(r.doc.criadoEm).slice(0, 10) : '';
+  r.links.forEach(function(l){ [l.doc.criadoEm, l.doc.atualizadoEm].forEach(function(x){ x = String(x || '').slice(0, 10); if (x > c) c = x; }); });   /* processo que vem de Inicial, Acordo ou Alvará: conta o cadastro e as mudanças deles */
   return d > c ? d : c;
 }
 function prParado(r, pm){
@@ -18278,6 +18313,9 @@ function prVincEscolher(id, seguir){
 
 /* ---------- partida ---------- */
 (function(){
+  var r1 = prRender, r2 = prRenderLista;
+  prRender = function(){ var a = arguments; return prComMemo(function(){ return r1.apply(null, a); }); };
+  prRenderLista = function(){ var a = arguments; return prComMemo(function(){ return r2.apply(null, a); }); };
   var st = document.createElement('style');
   st.textContent = '.pr-card .pb-tipo{flex:none}';
   document.head.appendChild(st);

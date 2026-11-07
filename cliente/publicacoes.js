@@ -210,9 +210,18 @@ function pbRender(){
   if (pbS.fAberto) h += pbPainelHtml();
   h += '</div>';
   if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
+  h += pbAvisoLeitura();
   if (!pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';
   h += '<div id="pbListaBox" class="pb-lista">' + pbListaHtml() + '</div>';
   w.innerHTML = h;
+}
+/* a leitura automática das 10h falhar em silêncio custa um prazo: avisa quando passou de 1 dia ou quando uma OAB deu erro */
+function pbAvisoLeitura(){
+  var ativas = pbS.oabs.filter(function(o){ return o.ativo; }); if (!ativas.length) return '';
+  var comErro = ativas.filter(function(o){ return o.erro; }), parada = !pbS.ultima || (Date.now() - Date.parse(pbS.ultima)) > 30 * 3600e3, msg = '';
+  if (comErro.length) msg = 'A última leitura falhou para ' + comErro.map(function(o){ return o.nome; }).join(', ') + ' (' + comErro[0].erro + '). Pode haver publicação que você ainda não viu.';
+  else if (parada) msg = pbS.ultima ? 'A leitura automática não roda desde ' + pbQuandoAtualizou() + '. Pode haver publicação que você ainda não viu.' : 'A leitura automática do Diário Oficial ainda não rodou.';
+  return msg ? '<div class="aviso-sis" id="pbAvisoLeitura"><span class="as-txt">' + escapeHtml(msg) + ' Toque em “Buscar agora”.</span></div>' : '';
 }
 function pbPainelHtml(){
   var f = pbS.f, trib = {}, i;
@@ -407,8 +416,15 @@ function pbSalvarOabs(){
   }).catch(function(e){ qs('pboErro').textContent = e.message; b.disabled = false; b.textContent = 'Salvar e buscar agora'; });
 }
 
+/* a tela é desenhada várias vezes olhando o mapa de processos: monta uma vez por desenho */
+(function(){
+  var o1 = pbRender, o2 = pbRenderLista;
+  pbRender = function(){ var a = arguments; return prComMemo(function(){ return o1.apply(null, a); }); };
+  pbRenderLista = function(){ var a = arguments; return prComMemo(function(){ return o2.apply(null, a); }); };
+})();
+
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
+window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){

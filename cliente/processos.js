@@ -12,6 +12,11 @@ var prModoHon = false, prProximoHon = false;   /* a janela de Inicial aberta par
 var PR_MOTIVOS = ['Trânsito em julgado / extinto', 'Acordo cumprido', 'Desistência / renúncia ao mandato', 'Outro'];
 var PR_COR = { so: '#7C5CD6', caso: '#B7791E', acordo: '#2A78D6', alvara: '#2A78D6' };
 function prNum(s){ return normalizarProcesso(s); }
+/* referência mínima a uma coleção (mesmo jeito das outras: doc(id).set/delete e add), usada pela restauração de backup */
+function pbRefColecao(col){
+  var base = '/api/db/' + col;
+  return { doc: function(id){ return { set: function(d){ return pbApi(base + '/' + encodeURIComponent(id), 'PUT', d); }, delete: function(){ return pbApi(base + '/' + encodeURIComponent(id), 'DELETE'); } }; }, add: function(d){ return pbApi(base, 'POST', d); } };
+}
 function prCarregar(){
   if (!window.__SERVIDOR){ prOk = true; return Promise.resolve(); }
   return pbApi('/api/db/processos').then(function(r){
@@ -28,7 +33,11 @@ function prDepois(){
 }
 
 /* ---------- lista única: processos cadastrados + os que vêm das Iniciais, Acordos e Alvarás (pelo número) ---------- */
-function prMapa(){
+var prMapaMemo = null;
+function prMapa(){ return prMapaMemo || prMapaBuild(); }
+/* durante uma tela sendo desenhada (código síncrono, sem mudar dados) o mapa é montado uma vez só em vez de uma vez por cartão */
+function prComMemo(fn){ if (prMapaMemo) return fn(); prMapaMemo = prMapaBuild(); try{ return fn(); } finally { prMapaMemo = null; } }
+function prMapaBuild(){
   var m = {}, ordem = [];
   function g(n, numero){ if (!m[n]){ m[n] = { num: n, numero: numero, doc: null, links: [] }; ordem.push(n); } return m[n]; }
   prDocs.forEach(function(d){ var n = prNum(d.numero); if (n) g(n, d.numero).doc = d; });
@@ -85,6 +94,7 @@ function prReceberTotal(r, pm){ var t = 0; r.links.forEach(function(l){ var p = 
 function prUltAtividade(r){
   var pubs = prPubsDe(r.num), d = pubs.length ? pubs[0].data : '';
   var c = r.doc && r.doc.criadoEm ? String(r.doc.criadoEm).slice(0, 10) : '';
+  r.links.forEach(function(l){ [l.doc.criadoEm, l.doc.atualizadoEm].forEach(function(x){ x = String(x || '').slice(0, 10); if (x > c) c = x; }); });   /* processo que vem de Inicial, Acordo ou Alvará: conta o cadastro e as mudanças deles */
   return d > c ? d : c;
 }
 function prParado(r, pm){
@@ -701,6 +711,9 @@ function prVincEscolher(id, seguir){
 
 /* ---------- partida ---------- */
 (function(){
+  var r1 = prRender, r2 = prRenderLista;
+  prRender = function(){ var a = arguments; return prComMemo(function(){ return r1.apply(null, a); }); };
+  prRenderLista = function(){ var a = arguments; return prComMemo(function(){ return r2.apply(null, a); }); };
   var st = document.createElement('style');
   st.textContent = '.pr-card .pb-tipo{flex:none}';
   document.head.appendChild(st);

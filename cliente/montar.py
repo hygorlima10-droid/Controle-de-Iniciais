@@ -150,6 +150,14 @@ rep("grupo: c.tipo === 'extrajudicial' ? 'extrajudicial' : 'inicial', clienteIds
 rep("var REL_TIPO_TXT = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial', acordo:'Termo de acordo', alvara:'Alvará' };", "var REL_TIPO_TXT = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial', processo:'Honorários de processo', acordo:'Termo de acordo', alvara:'Alvará' };")
 rep("function tipo(it){ return it.grupo === 'inicial' ? 'Petição inicial' : it.grupo === 'extrajudicial'", "function tipo(it){ return it.grupo === 'processo' ? 'Honorários de processo' : it.grupo === 'inicial' ? 'Petição inicial' : it.grupo === 'extrajudicial'")
 rep("    if (casoAntAt && casoAntAt.atipica) dados.atipica = true;\n", "    if (casoAntAt && casoAntAt.atipica) dados.atipica = true;\n    if ((casoAntAt && casoAntAt.doProcesso) || prModoHon) dados.doProcesso = true;   /* honorários cadastrados pela ficha do processo */\n")
+# ---- backup e restauração também levam os Processos e a Agenda ----
+rep("['obraMov', 'lançamentos da obra']];", "['obraMov', 'lançamentos da obra'], ['processos', 'processos'], ['agenda', 'itens da agenda']];")
+rep("      obraMov: obraMov,\n      config: config\n    };", "      obraMov: obraMov,\n      processos: prDocs,\n      agenda: agDocs,\n      config: config\n    };")
+rep("[metasRef, metas, dados.metas], [extratosRef, extratos, dados.extratos], [obraMovRef, obraMov, dados.obraMov]\n      ].filter(", "[metasRef, metas, dados.metas], [extratosRef, extratos, dados.extratos], [obraMovRef, obraMov, dados.obraMov],\n        [pbRefColecao('processos'), prDocs, dados.processos], [pbRefColecao('agenda'), agDocs, dados.agenda]\n      ].filter(")
+rep("      return cadeia.then(function(){ return restaurarConfig(dados.config); });", "      return cadeia.then(function(){ return restaurarConfig(dados.config); }).then(function(){ try{ prCarregar(); agCarregar(); }catch(e){} });")
+rep("(dados.receitasManuais||[]).length + ' receitas manuais.';", "(dados.receitasManuais||[]).length + ' receitas manuais, ' + (dados.processos||[]).length + ' processos e ' + (dados.agenda||[]).length + ' itens da agenda.';")
+
+rep("[db.collection('processos'), prDocs, dados.processos], [db.collection('agenda'), agDocs, dados.agenda]", "[pbRefColecao('processos'), prDocs, dados.processos], [pbRefColecao('agenda'), agDocs, dados.agenda]")   # db não existe fora do início do app
 # ---- Inicial sem processo: caixa no cadastro (só aí) e gravação do campo semProcesso ----
 rep("""        <div class="processo-sugestao" id="processoSugestao" style="display:none;"></div>
       </div>

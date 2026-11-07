@@ -79,8 +79,10 @@ function agChip(i){
   if (d === 1) return { t: 'Amanhã', c: 'breve' };
   return { t: 'Em ' + d + ' dias', c: d <= 3 ? 'breve' : 'ok' };
 }
+/* audiência que já passou e ninguém marcou como realizada: continua visível nas listas, mas não fica contando como pendência para sempre */
+function agPassada(i){ return !i.concluido && i.tipo === 'audiencia' && i.data < agHoje(); }
 function agAtualizarBadge(){
-  var n = agAbertos().filter(function(i){ return i.data <= agHoje(); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
+  var n = agAbertos().filter(function(i){ return i.data <= agHoje() && !agPassada(i); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
 function agPrazosResumo(hoje, lim){
   return agAbertos().filter(function(i){ return i.data >= hoje && i.data <= lim; }).map(function(i){ return { d: i.data, h: i.hora || '', n: i.cliente || 'Sem nome', l: i.titulo, t: i.tipo, a: i.avisos }; });
@@ -144,7 +146,8 @@ function agMontarTela(){
     else if (a === 'mover') agMover(k, v);
   });
 }
-function agRender(){
+function agRender(){ return prComMemo(agRenderIn); }
+function agRenderIn(){
   agMontarTela();
   var w = qs('agWrap'); if (!w) return;
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
@@ -180,11 +183,12 @@ function agVistaSemana(todos){
     var dots = agPontos(por[d] || []) + (trab[d] ? '<s class="ag-p pe"></s>' : '') + (agNomeFeriado(d) ? '<s class="ag-p fe"></s>' : '');
     return '<button type="button" class="ag-d' + (d === agS.sel ? ' on' : '') + (d === hoje ? ' hoje' : '') + '" data-ag="dia" data-v="' + d + '"><span>' + AG_DOW[pbDow(d)] + '</span><b>' + d.slice(8, 10) + '</b><i>' + dots + '</i></button>';
   }).join('') + '</div>';
-  var atrasados = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; });
+  var atrasados = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; }), passadas = todos.filter(agPassada);
   var vazio = true;
   if (atrasados.length){ vazio = false; h += '<div class="ag-dia atr">Atrasado</div>' + atrasados.map(agCartao).join(''); }
+  if (passadas.length){ vazio = false; h += '<div class="ag-dia atr">Audiências que passaram: foi realizada?</div>' + passadas.map(agCartao).join(''); }
   dias.forEach(function(d){
-    var l = (por[d] || []).filter(function(x){ return !(x.data < hoje && !x.concluido && x.tipo !== 'audiencia'); }), tr = trab[d] || [];
+    var l = (por[d] || []).filter(function(x){ return !(x.data < hoje && !x.concluido); }), tr = trab[d] || [];
     if (!l.length && !tr.length && !agNomeFeriado(d)) return;
     vazio = false; h += agCabDia(d) + l.map(agCartao).join('') + tr.map(function(x){ return agCartaoTrabalho(x); }).join('');
   });
@@ -210,11 +214,13 @@ function agVistaMes(todos){
 function agVistaLista(todos){
   var hoje = agHoje(), h = '', atr = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; }), futuros = todos.filter(function(x){ return !x.concluido && !(x.data < hoje); }), feitos = todos.filter(function(x){ return x.concluido; }).sort(function(a, b){ return agOrdem(b, a); });
   if (atr.length) h += '<div class="ag-dia atr">Atrasado</div>' + atr.map(agCartao).join('');
+  var pas = todos.filter(agPassada);
+  if (pas.length) h += '<div class="ag-dia atr">Audiências que passaram: foi realizada?</div>' + pas.map(agCartao).join('');
   var ult = '';
   futuros.slice(0, 80).forEach(function(i){ if (i.data !== ult){ ult = i.data; h += agCabDia(i.data); } h += agCartao(i); });
   if (futuros.length > 80) h += '<div class="saldo-data">Mostrando os 80 primeiros. Use o mês ou a semana para ver os demais.</div>';
   if (agS.feitos && feitos.length) h += '<div class="ag-dia">Concluídos</div>' + feitos.slice(0, 30).map(agCartao).join('');
-  if (!atr.length && !futuros.length && !(agS.feitos && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
+  if (!atr.length && !pas.length && !futuros.length && !(agS.feitos && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
   return h;
 }
 function agTipoLinha(i){
@@ -250,13 +256,13 @@ function agColunas(todos){
       if (i.concluido){ if (i.data >= recente) cols[3].l.push(i); }
       else if (i.fonte !== 'agenda') cols[2].l.push(i);
       else if (i.situacao === 'elaboracao') cols[1].l.push(i);
-      else if (!(i.tipo === 'audiencia' && i.data < hoje)) cols[0].l.push(i);
+      else cols[0].l.push(i);
     });
   } else {
     cols = [{ k: 'atrasado', t: 'Atrasado', ic: 'alert', l: [] }, { k: 'hoje', t: 'Hoje', ic: 'clip', l: [] }, { k: 'semana', t: 'Esta semana', ic: 'list', l: [] }, { k: 'proxima', t: 'Próxima semana', ic: 'list', l: [] }, { k: 'adiante', t: 'Mais adiante', ic: 'list', l: [] }, { k: 'feito', t: 'Concluídos', ic: 'check', l: [] }];
     todos.forEach(function(i){
       if (i.concluido){ if (i.data >= recente) cols[5].l.push(i); return; }
-      if (i.data < hoje){ if (i.tipo !== 'audiencia') cols[0].l.push(i); }
+      if (i.data < hoje) cols[0].l.push(i);   /* inclui audiência que passou e ainda não foi marcada como realizada */
       else if (i.data === hoje) cols[1].l.push(i);
       else if (i.data <= fimSem) cols[2].l.push(i);
       else if (i.data <= fimProx) cols[3].l.push(i);
