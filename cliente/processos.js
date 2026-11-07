@@ -380,13 +380,14 @@ function prEventos(r){
     if (d.ajuizamento) add(d.ajuizamento, 'marco', 'Processo ajuizado', '', '');
     add(String(d.criadoEm || '').slice(0, 10), 'marco', 'Cadastrado no Horus', '', '');
     var px = prProximaInfo(r); if (px && px.data) add(px.data, 'prox', 'Próxima providência: ' + px.txt, '', px.feito ? 'Concluída|ok' : '');
+    (d.registros || []).forEach(function(g){ add(g.data, 'reg', g.texto, '', ''); });
     if (d.arquivado) add(String(d.dataArquivo || d.arquivadoEm || '').slice(0, 10), 'marco', 'Arquivado' + (d.motivoArquivo ? ' · ' + d.motivoArquivo : ''), '', '');
   }
   return ev;
 }
 /* "Próximos": o que ainda vai acontecer (hoje só conta para prazo, audiência, tarefa e providência; publicação e marcos de hoje já são passado) */
 function prEhFuturo(e, hoje){ return e.data > hoje || (e.data === hoje && /^(prazo|aud|tar|prox)$/.test(e.tipo) && !/\|ok/.test(e.estado)); }
-var PR_TL = { pub: ['Publicação', '#7C5CD6'], prazo: ['Prazo', '#D93B3B'], aud: ['Audiência', '#2A78D6'], tar: ['Tarefa', '#C98500'], hon: ['Honorário', '#17895A'], marco: ['Marco', '#8A93AD'], prox: ['Providência', '#C98500'] };
+var PR_TL = { pub: ['Publicação', '#7C5CD6'], prazo: ['Prazo', '#D93B3B'], aud: ['Audiência', '#2A78D6'], tar: ['Tarefa', '#C98500'], hon: ['Honorário', '#17895A'], marco: ['Marco', '#8A93AD'], prox: ['Providência', '#C98500'], reg: ['Registro', '#8A93AD'] };
 function prTimelineHtml(r){
   var hoje = todayISO(), ev = prEventos(r);
   var fut = ev.filter(function(e){ return prEhFuturo(e, hoje); }).sort(function(a, b){ return a.data.localeCompare(b.data); }), pas = ev.filter(function(e){ return !prEhFuturo(e, hoje); }).sort(function(a, b){ return b.data.localeCompare(a.data); });
@@ -405,6 +406,19 @@ function prTimelineHtml(r){
   if (!prS.tlTudo && (fut.length > lim || pas.length > lim)) h += '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="tl-tudo">Mostrar tudo (' + ev.length + ')</button></div>';
   h += '<div class="saldo-data">Publicações: dos últimos 90 dias. Prazos e audiências de processo arquivado não aparecem.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="pubs-todas" data-v="' + escapeHtml(r.num) + '">Ver todas as publicações deste processo</button></div></div>';
   return h;
+}
+/* "Registrar no processo": anotação sem prazo (ex.: guardar a decisão para a futura preliminar de apelação) */
+function prRegistrar(p, texto){
+  var n = prNum(p.processo || p.numero), r = n ? prMapa().m[n] : null;
+  if (!r){ toast('Cadastre o processo antes de registrar.'); return; }
+  var reg = { em: new Date().toISOString(), data: todayISO(), texto: texto, pubId: p.id };
+  var doc = r.doc, ps;
+  if (doc){ var nd = Object.assign({}, doc, { registros: (doc.registros || []).concat([reg]) }); delete nd.id; ps = pbApi('/api/db/processos/' + encodeURIComponent(doc.id), 'PUT', nd).then(function(){ doc.registros = nd.registros; }); }
+  else {
+    var d = { numero: r.numero, partes: prTitulo(r), orgao: '', classe: '', clienteIds: prClienteIds(r), obs: '', honorarios: 'sem', origem: 'manual', derivado: true, arquivado: false, criadoEm: new Date().toISOString(), registros: [reg] };
+    ps = pbApi('/api/db/processos', 'POST', d).then(function(j){ d.id = j.id; prDocs.push(d); });
+  }
+  ps.then(function(){ toast('Registrado no processo.'); prDepois(); }).catch(function(e){ toast('Não consegui registrar: ' + e.message); });
 }
 function prAbrir(num){
   var r = prMapa().m[num]; if (!r){ toast('Processo não encontrado.'); return; }

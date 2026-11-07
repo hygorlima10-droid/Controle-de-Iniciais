@@ -102,7 +102,7 @@ check(!/Fulano/i.test(await t('#pbWrap')), 'publicação do Murilo sem processo 
 const cardDe = async id => page.evaluate(id => { const b = document.querySelector('.pb-b[data-id="' + id + '"]'); return b ? b.closest('.pb-card').innerText : ''; }, id);
 const ta = await cardDe('900001'), tb = await cardDe('900002'), tc = await cardDe('900003');
 check(/inicial cadastrada/i.test(ta) && /via OAB Hygor/.test(ta) && /via OAB Murilo/.test(ta) && /Maquele Viana Pacheco/.test(ta), 'processo cadastrado mostra o cliente e as duas OABs de origem');
-check(/processo novo/i.test(tb) && /sugerido: 15 dias/.test(tb) && /Confirmar prazo/.test(tb) && /Cadastrar processo/.test(tb), 'processo não cadastrado: "+ processo novo", prazo sugerido e botão para cadastrar');
+check(/processo novo/i.test(tb) && /(sugerido: 15 dias|✦ .{3,60}15 dias)/.test(tb) && /Confirmar/.test(tb) && /Cadastrar processo/.test(tb), 'processo não cadastrado: "+ processo novo", prazo sugerido e botão para cadastrar');
 check(/Ata/i.test(tc) && !/prazo/i.test(tc) && /STJ/.test(tc) && /TRANSPORTADORA NUNES/.test(tc), 'ata do STJ: sem botão de prazo, com as partes');
 // filtros
 await page.click('[data-pb="filtro"][data-v="meus"]'); await page.waitForTimeout(300);
@@ -153,7 +153,7 @@ await page.click('.pb-b[data-pb="prazo"][data-id="900002"]'); await page.waitFor
 check(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show')), 'abre o detalhe da publicação');
 const corpo = await t('#pbCorpo');
 check(/Certifico que, nesta data/.test(corpo) && !/&\w+;/.test(corpo) && /verdade e dou fé/.test(corpo), 'o texto completo aparece, sem códigos estranhos');
-check(/Prazo sugerido pelo texto/i.test(corpo) && /no prazo de quinze dias/.test(corpo) && (await page.evaluate(() => document.getElementById('pbf_dias').value)) === '15', 'mostra a frase do prazo e já vem com 15 dias');
+check(/(Prazo sugerido pelo texto|Prazo da peça escolhida)/i.test(corpo) && /no prazo de quinze dias/.test(corpo) && (await page.evaluate(() => document.getElementById('pbf_dias').value)) === '15', 'mostra a frase do prazo e já vem com 15 dias');
 const calcTxt = await t('#pbCalc');
 const esperado = await page.evaluate(h => { const H = window.__horusTeste; return H.fmtData(H.pbCalcular(h, 15, 'uteis').venc); }, hoje);
 check(calcTxt.includes(esperado) && /Considerada publicada/.test(calcTxt) && /Começa a contar/.test(calcTxt) && /feriados do TJGO/.test(calcTxt), 'mostra o cálculo passo a passo (vence em ' + esperado + ')');

@@ -4,6 +4,7 @@
    - guarda só o trecho; o texto completo é buscado quando você abre a publicação
    - sugere o prazo ("prazo de 15 dias") a partir do texto; quem confirma é você
    ============================================================ */
+import { sugerirPecas } from './pecas.js';
 export const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
 let BASE = DJEN;   // os testes apontam DJEN_URL para um servidor de mentira
 const usar = (env) => { BASE = (env && env.DJEN_URL) || DJEN; };
@@ -151,17 +152,21 @@ export async function buscarOab(o, ini, fim, orc) {
   }
   return { itens, total, parcial };
 }
+/* peça sugerida (src/pecas.js): natureza do ato, regras do CPC, Juizado e prazo do texto */
+const pcDe = (d, texto, sug) => { if (/ata de distribui/i.test(d.tipo || '')) return null; try { return sugerirPecas({ tipo: d.tipo, comunic: d.comunic, classe: d.classe, orgao: d.orgao, tribunal: d.tribunal, texto, dest: d.dest, diasTexto: sug }); } catch (e) { return null; } };
 function paraDoc(i, o) {
   const texto = htmlParaTexto(i.texto), processo = String(i.numero_processo || '').replace(/\D/g, '');
   const dest = (Array.isArray(i.destinatarios) ? i.destinatarios : []).slice(0, 4).map((d) => ({ n: String(d.nome || '').replace(/^\d+\.\s*/, '').slice(0, 90), p: d.polo === 'A' ? 'A' : (d.polo === 'P' ? 'P' : '') }));
   const advs = (Array.isArray(i.destinatarioadvogados) ? i.destinatarioadvogados : []).map((x) => x && x.advogado).filter((a) => a && a.nome).slice(0, 8).map((a) => ({ n: String(a.nome).slice(0, 70), o: String(a.numero_oab || '').replace(/\D/g, '') + '/' + String(a.uf_oab || '').toUpperCase().slice(0, 2) }));
   const tipo = String(i.tipoDocumento || i.tipoComunicacao || '').slice(0, 60);
-  return {
-    id: String(i.id), data: String(i.data_disponibilizacao || '').slice(0, 10), tribunal: String(i.siglaTribunal || '').slice(0, 12), orgao: String(i.nomeOrgao || '').slice(0, 100),
+  const doc = {
+    id: String(i.id), comunic: String(i.tipoComunicacao || '').slice(0, 30), data: String(i.data_disponibilizacao || '').slice(0, 10), tribunal: String(i.siglaTribunal || '').slice(0, 12), orgao: String(i.nomeOrgao || '').slice(0, 100),
     tipo, classe: String(i.nomeClasse || '').slice(0, 80), processo, numero: String(i.numeroprocessocommascara || mascara(processo)).slice(0, 40), trecho: trechoDe(texto),
     link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto), aud: /ata de distribui/i.test(tipo) ? null : sugerirAudiencia(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
+  doc.pc = pcDe(doc, texto, doc.sug);
+  return doc;
 }
 
 /* ---------- configuração (OABs) e banco ---------- */
@@ -316,7 +321,8 @@ export async function djenRotas(request, env, partes) {
     const item = res.json && Array.isArray(res.json.items) ? res.json.items.find((i) => String(i.id) === id) : null;
     if (!item) return json({ ok: false, trecho: d.trecho, link: d.link, motivo: res.erro || (res.status !== 200 ? 'O Diário Oficial respondeu ' + res.status : 'O tribunal não mostra mais esta publicação.') });
     const texto = htmlParaTexto(item.texto);
-    return json({ ok: true, texto, link: d.link || item.link || '', sug: sugerirPrazo(texto), aud: sugerirAudiencia(texto) });
+    const sugT = sugerirPrazo(texto);
+    return json({ ok: true, texto, link: d.link || item.link || '', sug: sugT, aud: sugerirAudiencia(texto), pc: pcDe(d, texto, sugT) });
   }
   return erro(404, 'not_found', 'Não encontrado.');
 }

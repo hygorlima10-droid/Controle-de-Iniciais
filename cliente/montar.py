@@ -58,6 +58,13 @@ if '/*RL-INICIO*/' in s:
 else:
     assert s.count('/*PR-FIM*/\n') == 1
     s = s.replace('/*PR-FIM*/\n', '/*PR-FIM*/\n' + bloco_rl)
+pcs = open(R + 'src/pecas.js', encoding='utf-8').read().replace('export var ', 'var ').replace('export function ', 'function ')
+bloco_pc = '/*PC-INICIO*/\n' + pcs + '\n/*PC-FIM*/\n'
+if '/*PC-INICIO*/' in s:
+    s = re.sub(r'/\*PC-INICIO\*/.*?/\*PC-FIM\*/\n', lambda m: bloco_pc, s, flags=re.S)
+else:
+    assert s.count('/*RL-FIM*/\n') == 1
+    s = s.replace('/*RL-FIM*/\n', '/*RL-FIM*/\n' + bloco_pc)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
