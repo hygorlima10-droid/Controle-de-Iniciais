@@ -58,7 +58,7 @@ check(bad.s === 400, 'não aceita OAB sem número');
 r = (await f('PUT', '/api/djen/oabs', { oabs: [...e.oabs, { nome: 'Murilo Falone Rocha', numero: '49308', uf: 'GO', escopo: 'conjunto', avisar: true }] })).j;
 check(r.oabs.length === 2 && r.oabs[1].numero === '49308' && r.oabs[0].principal && !r.oabs[1].principal, 'cadastra a OAB do Murilo como OAB extra');
 r = (await f('POST', '/api/djen/buscar', {})).j;
-check(r.novas === 1 && r.porOab.length === 2, 'a leitura passa a incluir a OAB do Murilo (1 publicinicial, a que já existia não duplica): ' + JSON.stringify(r.porOab.map(o => o.novas)));
+check(r.novas === 1 && r.porOab.length === 2, 'a leitura passa a incluir a OAB do Murilo (1 publicação nova, a que já existia não duplica): ' + JSON.stringify(r.porOab.map(o => o.novas)));
 pubs = (await f('GET', '/api/djen/lista')).j.pubs; pa = pubs.find(p => p.id === '900001');
 check(pa.oabs.length === 2, 'a publicação em comum guarda as duas OABs de origem (um cartão só)');
 // texto completo sob demanda
@@ -70,10 +70,10 @@ check(tx.ok === false && tx.trecho && /503/.test(tx.motivo), 'com o Diário fora
 queda = true; r = (await f('POST', '/api/djen/buscar', {})).j; queda = false;
 check(r.porOab.every(o => o.erro) && (await f('GET', '/api/djen/estado')).j.oabs.every(o => /503/.test(o.erro)), 'falha na leitura é registrada em cada OAB, sem perder dados');
 check((await f('GET', '/api/djen/estado')).j.total === 4, 'nada foi apagado na falha');
-// publicinicial depois da primeira leitura: vira aviso
+// publicação nova depois da primeira leitura: vira aviso
 feeds['60456'].push(E);
 r = (await f('POST', '/api/djen/buscar', {})).j;
-check(r.novas === 1 && (await f('GET', '/api/djen/estado')).j.aAvisar === 1, 'publicinicial entra na lista de avisos das 10h');
+check(r.novas === 1 && (await f('GET', '/api/djen/estado')).j.aAvisar === 1, 'publicação nova entra na lista de avisos das 10h');
 check((await f('POST', '/api/djen/marcar', { ids: ['900005'], lida: true })).j.alteradas === 1 && (await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900005').lida === true, 'marcar como lida grava no servidor');
 await f('POST', '/api/djen/marcar', { ids: ['900005'], lida: false });
 
