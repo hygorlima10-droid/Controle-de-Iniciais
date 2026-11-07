@@ -287,6 +287,10 @@ function pbMontarDetalhe(){
     if (a === 'confirmar') pbSalvarPrazo(false);
     else if (a === 'naoe'){ pbMarcar(pbMembros(pbPub(pbDetId)).map(function(x){ return x.id; }), { semPrazo: true, lida: true }); d.classList.remove('show'); toast('Marcada como sem prazo.'); }
     else if (a === 'manual'){ var m = qs('pbManualBox'); m.style.display = m.style.display === 'none' ? '' : 'none'; }
+    else if (a === 'cadastrar'){ var idc = pbDetId; d.classList.remove('show'); pbCadastrar(idc); }
+    else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); d.classList.remove('show'); if (vi) prAbrir(vi.id); }
+    else if (a === 'reabrirproc'){ var pr2 = pbPub(pbDetId), vr = pr2 && pbVinculo(pr2.processo); if (vr) prReabrir(vr.id).then(function(){ pbDesenharDetalhe(); }); }
+    else if (a === 'naolida'){ var pn = pbPub(pbDetId); if (pn) pbMarcar(pbMembros(pn).map(function(x){ return x.id; }), { lida: false }); d.classList.remove('show'); toast('Continua em “Não lidas”.'); }
     else if (a === 'copiar'){ var t = (pbTextos[pbDetId] || {}).texto || (pbPub(pbDetId) || {}).trecho || ''; try{ navigator.clipboard.writeText(t); toast('Texto copiado.'); }catch(x){ toast('Não consegui copiar.'); } }
   });
   d.addEventListener('input', function(e){ if (e.target && /^pbf_/.test(e.target.id)) pbAtualizarCalculo(); });
@@ -310,7 +314,8 @@ function pbDesenharDetalhe(){
   if (!t) h += '<div class="saldo-data">Buscando o texto completo no Diário Oficial…</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
   else if (t.ok) h += '<div class="pb-texto">' + escapeHtml(t.texto) + '</div>';
   else h += '<div class="saldo-data">Não consegui buscar o texto completo (' + escapeHtml(t.motivo || 'erro') + '). Abaixo, o trecho guardado.</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
-  h += '<div class="pb-acts">' + (p.link ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener noreferrer">Abrir original no tribunal ↗</a>' : '') + '<button type="button" class="btn btn-ghost pb-b" data-pbd="copiar">Copiar texto</button></div></div>';
+  h += '<div class="pb-acts">' + (p.link ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener noreferrer">Abrir original no tribunal ↗</a>' : '') + '<button type="button" class="btn btn-ghost pb-b" data-pbd="copiar">Copiar texto</button></div>' +
+    '<div class="pb-acts">' + (!v ? '<button type="button" class="btn btn-primary pb-b" data-pbd="cadastrar">Cadastrar processo</button>' : '<button type="button" class="btn btn-ghost pb-b" data-pbd="irproc">Abrir o processo</button>' + (v.arquivado ? '<button type="button" class="btn btn-primary pb-b" data-pbd="reabrirproc">Reabrir processo</button>' : '')) + '<button type="button" class="btn btn-ghost pb-b" data-pbd="naolida">Manter como não lida</button></div></div>';
   h += '<div class="pb-sec pb-ia" id="pbPrazoBox">';
   if (pz){
     h += '<div class="pb-sec-t">Prazo confirmado</div><div class="pb-prazo-ok"><b>' + escapeHtml(fmtData(pz.data)) + '</b> <span>(' + escapeHtml(pbDiaSem(pz.data)) + ')</span><div class="saldo-data">' + escapeHtml(pz.descricao || '') + (pz.concluido ? ' · cumprido' : '') + '</div></div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" id="pbVerPrazo">Abrir prazo</button></div>';

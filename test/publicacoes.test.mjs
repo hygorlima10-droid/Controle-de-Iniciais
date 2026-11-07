@@ -198,6 +198,23 @@ check(!/Reabrir processo/.test(await cardDe('900003')) && (await f('GET', '/api/
 await page.click('.pb-b[data-pb="cadastrar"][data-id="900005"]'); await page.waitForTimeout(400); await page.click('[data-pre="inicial"]'); await page.waitForTimeout(700);
 check(await page.evaluate(() => document.getElementById('overlay').classList.contains('show')) && (await page.evaluate(() => document.getElementById('processoInput').value)) === '5706736-75.2025.8.09.0107', 'a outra opção abre o cadastro de Nova inicial com o número preenchido');
 await page.click('#closeModal'); await page.waitForTimeout(300);
+// dentro do texto da publicação: cadastrar o processo e manter como não lida
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(700);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(400);
+await page.click('.pb-b[data-pb="abrir"][data-id="900005"]'); await page.waitForTimeout(1500);
+check(await page.evaluate(() => !!document.querySelector('#pbCorpo [data-pbd="cadastrar"]') && !!document.querySelector('#pbCorpo [data-pbd="naolida"]')), 'o texto da publicação tem o botão "Cadastrar processo" (processo ainda não cadastrado) e "Manter como não lida"');
+check((await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900005').lida === true, 'abrir marca como lida');
+await page.click('#pbCorpo [data-pbd="naolida"]'); await page.waitForTimeout(1000);
+check((await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900005').lida === false && !(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show'))), '"Manter como não lida" desfaz e fecha, e a publicação continua em "Não lidas"');
+await page.click('.pb-b[data-pb="abrir"][data-id="900005"]'); await page.waitForTimeout(1200);
+await page.click('#pbCorpo [data-pbd="cadastrar"]'); await page.waitForTimeout(500);
+check(!(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show'))) && await page.evaluate(() => document.getElementById('overlayPrEsc').classList.contains('show')) && /Processo já em andamento/.test(await t('#preCorpo')), '"Cadastrar processo" no texto fecha a leitura e abre a escolha (processo em andamento ou nova inicial)');
+await page.click('[data-pre="processo"]'); await page.waitForTimeout(500);
+check((await page.evaluate(() => document.getElementById('pr_numero').value)) === '5706736-75.2025.8.09.0107', 'e o cadastro já vem com o número da publicação');
+await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+await page.click('.pb-b[data-pb="abrir"][data-id="900005"]'); await page.waitForTimeout(1200);
+check(await page.evaluate(() => !!document.querySelector('#pbCorpo [data-pbd="irproc"]') && !document.querySelector('#pbCorpo [data-pbd="cadastrar"]')), 'com o processo cadastrado, o texto passa a ter "Abrir o processo" no lugar');
+await page.click('#pbFechar'); await page.waitForTimeout(300);
 // publicações idênticas (um autor em cada uma) viram um cartão só
 const NG = '5700000-10.2026.8.09.0107', numG = NG.replace(/\D/g, '');
 ['AUTOR UM', 'AUTOR DOIS', 'AUTOR TRES'].forEach((n, i) => feeds['60456'].push(item(900101 + i, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Decisão', NG, 'DECISÃO\nIntimem-se os autores para manifestação em 5 (cinco) dias.', [{ nome: n, polo: 'A' }])));
