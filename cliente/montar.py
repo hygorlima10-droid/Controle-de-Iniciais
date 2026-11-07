@@ -58,6 +58,13 @@ if '/*RL-INICIO*/' in s:
 else:
     assert s.count('/*PR-FIM*/\n') == 1
     s = s.replace('/*PR-FIM*/\n', '/*PR-FIM*/\n' + bloco_rl)
+an = open(R + 'cliente/analises.js', encoding='utf-8').read()
+bloco_an = '/*AN-INICIO*/\n' + an + '\n/*AN-FIM*/\n'
+if '/*AN-INICIO*/' in s:
+    s = re.sub(r'/\*AN-INICIO\*/.*?/\*AN-FIM\*/\n', lambda m: bloco_an, s, flags=re.S)
+else:
+    assert s.count('/*RL-FIM*/\n') == 1
+    s = s.replace('/*RL-FIM*/\n', '/*RL-FIM*/\n' + bloco_an)
 pcs = open(R + 'src/pecas.js', encoding='utf-8').read().replace('export var ', 'var ').replace('export function ', 'function ')
 bloco_pc = '/*PC-INICIO*/\n' + pcs + '\n/*PC-FIM*/\n'
 if '/*PC-INICIO*/' in s:

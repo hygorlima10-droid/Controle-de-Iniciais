@@ -6,7 +6,7 @@
    - concluir e arquivar (e reabrir); aparece também em Arquivados e no perfil do cliente
    ============================================================ */
 var prCorte = null;   /* dia da implantação do vínculo com Iniciais antigas (config/vinculoIniciais) */
-var prDocs = [], prOk = false, prS = { filtro: 'andamento', busca: '', mais: 1, f: { cli: '', orgao: '' }, fAberto: false, tlTudo: false }, prEd = null, prArqNum = null;
+var prDocs = [], prOk = false, prS = { filtro: 'andamento', busca: '', mais: 1, f: { cli: '', orgao: '' }, fAberto: false, tlTudo: false, sub: 'lista' }, prEd = null, prArqNum = null;
 var PR_HON = { sem: 'Sem honorários', quitados: 'Honorários já quitados' };
 var prModoHon = false, prProximoHon = false;   /* a janela de Inicial aberta para cadastrar os honorários de um processo */
 var PR_MOTIVOS = ['Trânsito em julgado / extinto', 'Acordo cumprido', 'Desistência / renúncia ao mandato', 'Outro'];
@@ -132,8 +132,9 @@ function prRelacionados(num, tipoAtual, jaTem){
 function prMontarTela(){
   var w = qs('prWrap'); if (!w || w.getAttribute('data-ok')) return; w.setAttribute('data-ok', '1');
   w.innerHTML = '<div class="rs-wrap" id="prResumo"></div><div class="ini-acoes"><button type="button" class="acao acao-ouro" data-pr="novo"><svg><use href="#ic-plus"/></svg><span>Novo processo</span></button></div>' +
+    '<div class="pb-seg-lin"><div class="segmented" id="prSub"></div></div><div id="prAnalises" style="display:none"></div><div id="prListaBloco">' +
     '<div id="prAvisoVinc"></div><div class="field" style="margin:0"><input type="text" id="prBusca" placeholder="Buscar por cliente, partes ou número…" autocomplete="off"></div>' +
-    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button></div><div id="prPainel"></div><div style="text-align:right"><button type="button" class="btn-text" data-pr="rel">🖨 Relatório da lista</button></div><div id="prLista" class="pb-lista"></div>';
+    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button></div><div id="prPainel"></div><div style="text-align:right"><button type="button" class="btn-text" data-pr="rel">🖨 Relatório da lista</button></div><div id="prLista" class="pb-lista"></div></div>';
   w.addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('[data-pr]') : null; if (!b) return;
     var a = b.getAttribute('data-pr'), n = b.getAttribute('data-n');
@@ -145,8 +146,14 @@ function prMontarTela(){
     else if (a === 'mais'){ prS.mais++; prRenderLista(); }
     else if (a === 'painel'){ prS.fAberto = !prS.fAberto; prPainel(); }
     else if (a === 'rel') rptProcessos();
+    else if (a === 'sub'){ prS.sub = b.getAttribute('data-v'); prRender(); }
     else if (a === 'limpar'){ prS.f = { cli: '', orgao: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
   });
+  w.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('[data-pan]') : null; if (!b) return; var a = b.getAttribute('data-pan');
+    if (a === 'periodo'){ panS.periodo = b.getAttribute('data-v'); panRender(); } else if (a === 'rel') panRelatorio();
+  });
+  w.addEventListener('change', function(e){ var k = e.target && e.target.getAttribute ? e.target.getAttribute('data-pan') : null; if (k === 'area'){ panS.area = e.target.value; panRender(); } });
   w.addEventListener('change', function(e){ var k = e.target && e.target.getAttribute ? e.target.getAttribute('data-prfil') : null; if (!k) return; prS.f[k] = e.target.value; prS.mais = 1; prRenderLista(); prFunilMarca(); });
   qs('prBusca').addEventListener('input', function(){ prS.busca = this.value; prS.mais = 1; prRenderLista(); });
 }
@@ -156,6 +163,10 @@ function prLinhaReu(r){
 }
 function prRender(){
   prMontarTela(); var w = qs('prWrap'); if (!w) return;
+  qs('prSub').innerHTML = [['lista', 'Lista'], ['analises', 'Análises']].map(function(f){ return '<button type="button" class="seg-btn' + (prS.sub === f[0] ? ' active' : '') + '" data-pr="sub" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('');
+  var an = prS.sub === 'analises';
+  qs('prAnalises').style.display = an ? '' : 'none'; qs('prListaBloco').style.display = an ? 'none' : ''; qs('prResumo').style.display = an ? 'none' : ''; var bn = w.querySelector('.ini-acoes'); if (bn) bn.style.display = an ? 'none' : '';
+  if (an){ panRender(); return; }
   var mp = prMapa(), pm = pendentesPorDoc(), linhas = mp.ordem.map(function(n){ return mp.m[n]; });
   var ativos = linhas.filter(function(r){ return !prArquivado(r); });
   var comPrazo = ativos.filter(function(r){ return prPrazosAbertos(r).length > 0; }).length, parados = ativos.filter(function(r){ return prParado(r, pm); }).length;
@@ -439,6 +450,8 @@ function prDesenhar(){
     '<div class="pb-dois"><div class="field"><label class="field-label" for="pr_autor">Autor / parte ativa</label><input type="text" id="pr_autor" maxlength="120" value="' + escapeHtml(novo ? (pre.autor || '') : (doc ? (doc.autor || '') : '')) + '"></div><div class="field"><label class="field-label" for="pr_reu">Réu / parte contrária</label><input type="text" id="pr_reu" maxlength="120" value="' + escapeHtml(novo ? (pre.reu || '') : (doc ? (doc.reu || prReu(r)) : prReu(r))) + '"></div></div>' +
     '<div class="field"><label class="field-label" for="pr_orgao">Tribunal / órgão</label><input type="text" id="pr_orgao" maxlength="120" value="' + escapeHtml(novo ? (pre.orgao || '') : (doc ? (doc.orgao || '') : '')) + '" placeholder="Ex.: TJGO · Morrinhos 1ª Vara Cível"></div>' +
     '<div class="field"><label class="field-label" for="pr_classe">Classe / assunto</label><input type="text" id="pr_classe" maxlength="120" value="' + escapeHtml(novo ? (pre.classe || '') : (doc ? (doc.classe || '') : '')) + '" placeholder="Ex.: Cumprimento de sentença"></div>' +
+    '<div class="field"><label class="field-label" for="pr_area">Área</label><select id="pr_area" class="filter-select" style="width:100%"><option value="">Automática' + (r ? ' (' + panAreaSug(r) + ')' : '') + '</option>' + PR_AREAS.map(function(a){ return '<option' + ((novo ? '' : (doc && doc.area)) === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></div>' +
+    (arq ? '<div class="field"><label class="field-label" for="pr_res">Resultado do processo</label><select id="pr_res" class="filter-select" style="width:100%"><option value="">Não informado</option>' + Object.keys(PR_RES).map(function(k){ return '<option value="' + k + '"' + (doc && doc.resultado === k ? ' selected' : '') + '>' + PR_RES[k] + '</option>'; }).join('') + '</select></div>' : '') +
     '<div class="field"><label class="field-label" for="pr_assunto">Assunto</label><input type="text" id="pr_assunto" maxlength="160" value="' + escapeHtml(novo ? (pre.assunto || '') : (doc ? (doc.assunto || '') : '')) + '" placeholder="Ex.: Indenização por dano moral"></div>' +
     '<div class="field"><label class="field-label" for="pr_ajuiz">Data de ajuizamento (opcional)</label><input type="date" id="pr_ajuiz" value="' + escapeHtml(novo ? '' : (doc ? (doc.ajuizamento || '') : '')) + '"></div>' +
     '<div class="field"><label class="field-label" for="pr_valor">Valor da causa (opcional)</label><input type="text" id="pr_valor" inputmode="decimal" maxlength="20" value="' + escapeHtml(novo ? (pre.valorCausa ? prFmtValor(pre.valorCausa) : '') : (doc && doc.valorCausa ? prFmtValor(doc.valorCausa) : '')) + '" placeholder="Ex.: 40.000,00"></div>' +
@@ -480,7 +493,8 @@ function prSalvar(){
   var a = cnjAnalisar(numero); if (a && a.completo) numero = a.formatado;
   var n = prNum(numero), mp = prMapa(), ex = mp.m[n];
   if (novo && ex && ex.doc){ err.textContent = 'Este processo já está cadastrado.'; return; }
-  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), autor: qs('pr_autor').value.trim(), reu: qs('pr_reu').value.trim(), valorCausa: prParseValor(qs('pr_valor').value), assunto: qs('pr_assunto').value.trim(), ajuizamento: qs('pr_ajuiz').value || '', clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
+  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), autor: qs('pr_autor').value.trim(), reu: qs('pr_reu').value.trim(), area: qs('pr_area').value, valorCausa: prParseValor(qs('pr_valor').value), assunto: qs('pr_assunto').value.trim(), ajuizamento: qs('pr_ajuiz').value || '', clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
+  if (qs('pr_res')){ campos.resultado = qs('pr_res').value; campos.resultadoEm = campos.resultado ? ((ex && ex.doc && ex.doc.resultadoEm) || new Date().toISOString()) : ''; }
   campos.proxima = qs('pr_prox').value.trim(); campos.proximaData = campos.proxima ? (qs('pr_proxdata').value || '') : '';
   var hon = qs('pr_hon'), querHon = hon && hon.value === 'receber'; if (hon) campos.honorarios = querHon ? ((ex && ex.doc && PR_HON[ex.doc.honorarios]) ? ex.doc.honorarios : 'sem') : hon.value;
   var ho = qs('pr_honobs'); if (ho) campos.honObs = ho.value.trim();
@@ -575,6 +589,7 @@ function prAbrirArquivar(num){
     (pz ? '<div class="form-error">Há prazo aberto. Enquanto o processo estiver arquivado, ele some da Agenda e dos avisos.</div>' : '') +
     (rec > 0.004 ? '<div class="saldo-data">Os honorários a receber continuam na Central de atenção mesmo com o processo arquivado.</div>' : '') +
     '<div class="field"><label class="field-label">Motivo</label>' + PR_MOTIVOS.map(function(m, i){ return '<label class="ad-it" style="border:0;padding:6px 0;"><input type="radio" name="pra_mot" value="' + escapeHtml(m) + '"' + (i === 0 ? ' checked' : '') + '><span class="ad-t">' + escapeHtml(m) + '</span></label>'; }).join('') + '</div>' +
+    '<div class="field"><label class="field-label" for="pra_res">Resultado (para as análises)</label><select id="pra_res" class="filter-select" style="width:100%"><option value="">Informar depois</option>' + Object.keys(PR_RES).map(function(k){ return '<option value="' + k + '">' + PR_RES[k] + '</option>'; }).join('') + '</select></div>' +
     '<div class="field"><label class="field-label" for="pra_data">Data</label><input type="date" id="pra_data" value="' + todayISO() + '"></div>' +
     '<div class="saldo-data">Se chegar publicação nova deste processo, o app avisa e você pode reabrir.</div><div class="form-error" id="pra_erro"></div><button type="button" class="btn btn-primary" id="praOk" style="width:100%;justify-content:center;">Arquivar processo</button>';
   qs('praCorpo').innerHTML = h; adAbrirData(qs('pra_data')); qs('overlayPrArq').classList.add('show');
@@ -582,7 +597,7 @@ function prAbrirArquivar(num){
 function prConfirmarArq(){
   var r = prMapa().m[prArqNum]; if (!r) return;
   var mot = (document.querySelector('input[name="pra_mot"]:checked') || {}).value || '', data = qs('pra_data').value || todayISO(), agora = new Date().toISOString();
-  var campos = { arquivado: true, arquivadoEm: agora, dataArquivo: data, motivoArquivo: mot }, p;
+  var campos = { arquivado: true, arquivadoEm: agora, dataArquivo: data, motivoArquivo: mot, resultado: qs('pra_res').value || '', resultadoEm: qs('pra_res').value ? agora : '' }, p;
   if (r.doc){ var nd = Object.assign({}, r.doc, campos); delete nd.id; p = pbApi('/api/db/processos/' + encodeURIComponent(r.doc.id), 'PUT', nd).then(function(){ Object.assign(r.doc, campos); }); }
   else {
     var d = Object.assign({ numero: r.numero, partes: '', orgao: '', classe: '', clienteIds: [], obs: '', honorarios: 'sem', origem: 'manual', derivado: true, criadoEm: agora }, campos);
@@ -596,7 +611,7 @@ function prConfirmarArq(){
 }
 function prReabrir(num){
   var r = prMapa().m[num]; if (!r || !r.doc) return Promise.resolve();
-  var campos = { arquivado: false, arquivadoEm: null, dataArquivo: '', motivoArquivo: '' }, nd = Object.assign({}, r.doc, campos); delete nd.id;
+  var campos = { arquivado: false, arquivadoEm: null, dataArquivo: '', motivoArquivo: '', resultado: '', resultadoEm: '' }, nd = Object.assign({}, r.doc, campos); delete nd.id;
   return pbApi('/api/db/processos/' + encodeURIComponent(r.doc.id), 'PUT', nd).then(function(){
     Object.assign(r.doc, campos);
     return Promise.all(r.links.filter(function(l){ return l.doc.arquivado; }).map(function(l){ return persistPatchDoc(l.tipo, l.doc, { arquivado: false, arquivadoEm: null }); }));
