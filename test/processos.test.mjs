@@ -192,9 +192,11 @@ await page.evaluate(() => document.querySelector('#drawer [data-tab="clientes"]'
 await page.click('[data-cli-perfil], .cli-card, [data-perfil]').catch(() => {});
 const ab = await page.evaluate(() => { const el = Array.from(document.querySelectorAll('#bodyClientes *')).find(e => /^Cooperativa Mista$/.test((e.textContent || '').trim()) && e.children.length === 0); if (el) el.click(); return !!el; });
 await page.waitForTimeout(700);
-check(ab && /Processos \(\d+\)/.test(await t('#perfilBody')), 'o perfil do cliente mostra o bloco "Processos"');
-await page.evaluate(() => { const d = document.querySelector('#perfilBody details[data-sec="processos"]'); if (d) d.open = true; });
-check(/Cooperativa Agropecuária x Fulano/.test(await t('#perfilBody')), 'com os processos do cliente');
+check(ab && /Processos e atos \(\d+\)/.test(await t('#perfilBody')) && !/Atos e processos/.test(await t('#perfilBody')), 'o perfil do cliente tem uma seção só: "Processos e atos"');
+check(await page.evaluate(() => !document.querySelector('#perfilBody details[data-sec="processos"]') && document.querySelectorAll('#perfilBody details[data-sec="atos"]').length === 1), 'não existe mais uma seção separada de "Processos"');
+await page.evaluate(() => { const d = document.querySelector('#perfilBody details[data-sec="atos"]'); if (d) d.open = true; });
+const sec = await t('#perfilBody details[data-sec="atos"]');
+check(/Cooperativa Agropecuária x Fulano/.test(sec) && /Processo/.test(sec) && /Termo de acordo|Acordo/.test(sec), 'a seção junta os processos do cliente e os atos (acordos, iniciais, alvarás) com os honorários');
 await page.click('#closePerfil'); await page.waitForTimeout(300);
 // busca global
 await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await page.waitForTimeout(500);

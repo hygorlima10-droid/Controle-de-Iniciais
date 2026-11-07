@@ -522,17 +522,25 @@ function prEscolherCadastro(pubId){
 /* ---------- perfil do cliente e Arquivados ---------- */
 (function(){
   var origPerfil = renderPerfil;
+  /* no perfil do cliente, tudo fica numa seção só: "Processos e atos" (os processos cadastrados + as Iniciais, Acordos e Alvarás) */
   renderPerfil = function(){
     var r = origPerfil.apply(this, arguments);
     try{
       var body = qs('perfilBody'), id = perfilClienteId; if (!body || !id) return r;
-      var mp = prMapa(), pm = pendentesPorDoc(), l = mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(x){ return prClienteIds(x).indexOf(id) >= 0; });
-      if (!l.length) return r;
-      var corpo = l.map(function(x){
-        var chips = prHonChips(x, pm).map(function(c){ return '<span class="pb-tg ' + (c[1] === 'ok' ? 'ok' : '') + '">' + escapeHtml(c[0]) + '</span>'; }).join(' '), pz = prPrazosAbertos(x).length;
-        return '<div class="cli-item" data-pr-abrir="' + escapeHtml(x.num) + '" style="cursor:pointer"><div class="t"><span>' + escapeHtml(prTitulo(x)) + (prArquivado(x) ? ' <span class="badge arq">Arquivado</span>' : '') + '</span></div><div class="s">' + escapeHtml(x.numero) + (pz ? ' · ' + pz + (pz === 1 ? ' prazo aberto' : ' prazos abertos') : '') + '</div><div class="pb-tags" style="margin-top:4px">' + chips + '</div></div>';
+      var mp = prMapa(), pm = pendentesPorDoc(), l = mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(x){ return x.doc && prClienteIds(x).indexOf(id) >= 0; });
+      var det = body.querySelector('details[data-sec="atos"]'); if (!det || !l.length) return r;
+      var cont = det.querySelector('.cli-sec-body'), sp = det.querySelector('summary span');
+      var itens = l.map(function(x){
+        var chips = prHonChips(x, pm).map(function(c){ return '<span class="pb-tg ' + (c[1] === 'ok' ? 'ok' : '') + '">' + escapeHtml(c[0]) + '</span>'; }).join(' '), pz = prPrazosAbertos(x).length, reu = prReu(x), orgao = x.doc.orgao || '';
+        return '<div class="cli-item"><div class="t"><span><span class="badge">Processo</span> ' + escapeHtml(prTitulo(x)) + (prArquivado(x) ? ' <span class="badge arq">Arquivado</span>' : '') + '</span></div>' +
+          '<div class="s">' + escapeHtml([x.numero, orgao].filter(Boolean).join(' · ')) + '</div>' +
+          (reu || pz ? '<div class="s">' + escapeHtml([reu ? 'Réu: ' + reu : '', pz ? pz + (pz === 1 ? ' prazo aberto' : ' prazos abertos') : ''].filter(Boolean).join(' · ')) + '</div>' : '') +
+          '<div class="pb-tags" style="margin-top:4px">' + chips + '</div><div class="bt"><button type="button" data-pr-abrir="' + escapeHtml(x.num) + '">Abrir</button></div></div>';
       }).join('');
-      body.insertAdjacentHTML('beforeend', secPerfil('processos', 'Processos', l.length, corpo));
+      var vazio = cont.querySelector(':scope > .s'); if (vazio && /Nenhum lançamento/.test(vazio.textContent)) vazio.remove();
+      cont.insertAdjacentHTML('afterbegin', itens);
+      var m = /\((\d+)\)/.exec(sp.textContent), n0 = m ? Number(m[1]) : 0;
+      sp.textContent = 'Processos e atos (' + (n0 + l.length) + ')';
     }catch(e){ console.error('processos no perfil', e); }
     return r;
   };
