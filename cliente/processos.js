@@ -795,6 +795,7 @@ function prVincEscolher(id, seguir){
     var r = origPerfil.apply(this, arguments);
     try{
       var body = qs('perfilBody'), id = perfilClienteId; if (!body || !id) return r;
+      var ac = body.querySelector('.cli-acoes'); if (ac && !body.querySelector('[data-pr-relcli]')) ac.insertAdjacentHTML('afterend', '<div class="cli-acoes"><button type="button" class="btn btn-ghost" data-pr-relcli="' + escapeHtml(id) + '" style="width:100%;justify-content:center;">🖨 Relatório de processos deste cliente</button></div>');
       var mp = prMapa(), pm = pendentesPorDoc(), l = mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(x){ return x.doc && prClienteIds(x).indexOf(id) >= 0; });
       var det = body.querySelector('details[data-sec="atos"]'); if (!det || !l.length) return r;
       var cont = det.querySelector('.cli-sec-body'), sp = det.querySelector('summary span');
@@ -842,6 +843,8 @@ function prVincEscolher(id, seguir){
   document.addEventListener('click', function(ev){
     var t = ev.target, a = t.closest ? t.closest('[data-pr-abrir]') : null;
     if (a){ ev.stopPropagation(); prAbrir(a.getAttribute('data-pr-abrir')); return; }
+    var rc = t.closest ? t.closest('[data-pr-relcli]') : null;
+    if (rc){ ev.stopPropagation(); rptProcessosCliente(rc.getAttribute('data-pr-relcli')); return; }
     var re = t.closest ? t.closest('[data-pr-reabrir]') : null;
     if (re){ ev.stopPropagation(); prReabrir(re.getAttribute('data-pr-reabrir')); }
   }, true);

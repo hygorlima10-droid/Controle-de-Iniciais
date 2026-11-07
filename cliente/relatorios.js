@@ -29,6 +29,7 @@ function rptAbrir(cfg){
   rptMontar(); rptCfg = cfg; qs('rptTit').textContent = cfg.titulo;
   qs('rptOps').innerHTML = (cfg.opcoes || []).map(function(o){
     if (o.tipo === 'check') return '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="rptop_' + o.id + '" data-rptop="1"' + (o.padrao ? ' checked' : '') + '><span class="ad-t">' + rptE(o.rot) + '</span></label>';
+    if (o.tipo === 'date') return '<div class="field"><label class="field-label" for="rptop_' + o.id + '">' + rptE(o.rot) + '</label><input type="date" id="rptop_' + o.id + '" data-rptop="1" value="' + rptE(o.padrao || '') + '"></div>';
     return '<div class="field"><label class="field-label" for="rptop_' + o.id + '">' + rptE(o.rot) + '</label><select id="rptop_' + o.id + '" class="filter-select" data-rptop="1" style="width:100%">' + o.valores.map(function(v){ return '<option value="' + rptE(v[0]) + '"' + (v[0] === o.padrao ? ' selected' : '') + '>' + rptE(v[1]) + '</option>'; }).join('') + '</select></div>';
   }).join('');
   rptGerar();
@@ -135,10 +136,61 @@ function rptProcesso(num){
   } });
 }
 
+/* ---------- Cliente: processos em andamento e arquivados, com partes, vara, últimos andamentos e próximos passos ---------- */
+function rptProcessosCliente(cid){
+  var cli = clienteById(cid); if (!cli) return;
+  rptAbrir({ titulo: 'Relatório de processos: ' + cli.nome, opcoes: [
+    { id: 'periodo', rot: 'Período', padrao: '12m', valores: [['12m', 'Últimos 12 meses'], ['ano', 'Este ano'], ['tudo', 'Tudo'], ['custom', 'Escolher as datas abaixo']] },
+    { id: 'de', rot: 'De (só vale em “Escolher as datas”)', tipo: 'date', padrao: '' }, { id: 'ate', rot: 'Até', tipo: 'date', padrao: '' },
+    { id: 'quais', rot: 'Quais processos', padrao: 'todos', valores: [['todos', 'Em andamento e arquivados'], ['andamento', 'Só em andamento'], ['arquivados', 'Só arquivados']] },
+    { id: 'pubs', rot: 'Mostrar o trecho das publicações nos andamentos', tipo: 'check', padrao: true },
+    { id: 'hon', rot: 'Incluir os honorários a receber', tipo: 'check', padrao: false }], gerar: function(op){ return rptProcessosClienteGerar(cid, op); } });
+}
+function rptProcessosClienteGerar(cid, op){
+  var cli = clienteById(cid), hoje = todayISO(), ini, fim = hoje, nome;
+  if (op.periodo === 'ano'){ ini = hoje.slice(0, 4) + '-01-01'; nome = 'Este ano'; }
+  else if (op.periodo === 'tudo'){ ini = '0000-01-01'; fim = '9999-12-31'; nome = 'Todo o período'; }
+  else if (op.periodo === 'custom'){ ini = op.de || '0000-01-01'; fim = op.ate || hoje; nome = (op.de ? fmtData(op.de) : 'início') + ' a ' + (op.ate ? fmtData(op.ate) : fmtData(hoje)); }
+  else { ini = pbSoma(hoje, -365); nome = 'Últimos 12 meses'; }
+  var mp = prMapa(), pm = pendentesPorDoc(), todos = mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){ return prClienteIds(r).indexOf(cid) >= 0; });
+  var and = todos.filter(function(r){ return !prArquivado(r) && (!panDe(r) || panDe(r) <= fim); });
+  var arq = todos.filter(function(r){ var d = prArquivado(r) ? String(r.doc.dataArquivo || r.doc.arquivadoEm || '').slice(0, 10) : ''; return d && d >= ini && d <= fim; });
+  if (op.quais === 'andamento') arq = []; else if (op.quais === 'arquivados') and = [];
+  and.sort(function(a, b){ var pa = prPrazosAbertos(a), pb2 = prPrazosAbertos(b); return (pa.length ? pa[0].data : '9999').localeCompare(pb2.length ? pb2[0].data : '9999') || prTitulo(a).localeCompare(prTitulo(b), 'pt-BR'); });
+  arq.sort(function(a, b){ return String(b.doc.dataArquivo || '').localeCompare(String(a.doc.dataArquivo || '')); });
+  var exito = 0, comRes = 0; arq.forEach(function(r){ if (PR_RES[r.doc.resultado]){ comRes++; if (PR_RES_EXITO[r.doc.resultado]) exito++; } });
+  function bloco(r){
+    var d = r.doc || {}, arqv = prArquivado(r), ev = prEventos(r), px = prProximaInfo(r);
+    var passados = ev.filter(function(e){ return !prEhFuturo(e, hoje) && e.data >= ini && e.data <= fim && !/^Cadastrado no Horus/.test(e.titulo); }).sort(function(a, b){ return b.data.localeCompare(a.data); });
+    var foraDoPeriodo = false;
+    if (!passados.length){ passados = ev.filter(function(e){ return !prEhFuturo(e, hoje) && !/^Cadastrado no Horus/.test(e.titulo); }).sort(function(a, b){ return b.data.localeCompare(a.data); }).slice(0, 1); foraDoPeriodo = passados.length > 0; }
+    passados = passados.slice(0, 5);
+    var passos = [];
+    if (!arqv){
+      if (px && !px.feito) passos.push(['Providência', px.txt + (px.data ? ' (até ' + fmtData(px.data) + ')' : ''), '']);
+      prPrazosAbertos(r).forEach(function(i){ passos.push([i.tipo === 'audiencia' ? 'Audiência' : 'Prazo', i.titulo + (i.hora ? ' às ' + i.hora : ''), fmtData(i.data) + (i.data < hoje && i.tipo !== 'audiencia' ? ' (ATRASADO)' : '')]); });
+    }
+    var linhas = [['Partes', prTitulo(r)], ['Vara / órgão', prOrgaoDe(r)], ['Classe e assunto', [d.classe, d.assunto].filter(Boolean).join(' · ')], ['Área', panArea(r)], ['Ajuizado em', d.ajuizamento ? fmtData(d.ajuizamento) : ''], ['Valor da causa', d.valorCausa ? fmtMoeda(d.valorCausa) : ''], ['Réu / parte contrária', prReu(r)]];
+    if (arqv) linhas.push(['Situação', 'Arquivado em ' + fmtData(String(d.dataArquivo || d.arquivadoEm || '').slice(0, 10)) + (d.motivoArquivo ? ' · ' + d.motivoArquivo : '') + (PR_RES[d.resultado] ? ' · Resultado: ' + PR_RES[d.resultado] : '')]);
+    else linhas.push(['Situação', 'Em andamento']);
+    if (op.hon) linhas.push(['Honorários', prHonChips(r, pm).map(function(c){ return c[0]; }).join('; ')]);
+    var h = '<div class="rpt-it"><div class="rpt-l1"><b>' + rptE(r.numero) + '</b> · ' + (arqv ? 'arquivado' : 'em andamento') + '</div><table class="rpt-tab rpt-dados"><tbody>' + linhas.filter(function(x){ return x[1]; }).map(function(x){ return '<tr><th>' + rptE(x[0]) + '</th><td>' + rptE(x[1]) + '</td></tr>'; }).join('') + '</tbody></table>';
+    h += '<div class="rpt-peq" style="margin-top:6px"><b>Últimos andamentos' + (foraDoPeriodo ? ' (nenhum no período; mostrando o último conhecido)' : '') + '</b></div>' + (passados.length ? '<ul class="rpt-ul">' + passados.map(function(e){ return '<li>' + rptE(fmtData(e.data) + ' · ' + PR_TL[e.tipo][0] + ': ' + e.titulo) + (e.estado ? ' <span class="rpt-peq">(' + rptE(e.estado.split('|')[0]) + ')</span>' : '') + ((op.pubs || e.tipo !== 'pub') && e.sub ? '<br><span class="rpt-peq">' + rptE(e.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="rpt-peq">Sem andamentos registrados.</div>');
+    if (!arqv) h += '<div class="rpt-peq" style="margin-top:6px"><b>Próximos passos</b></div>' + (passos.length ? '<ul class="rpt-ul">' + passos.map(function(x){ return '<li>' + rptE(x[0] + ': ' + x[1] + (x[2] ? ' · ' + x[2] : '')) + '</li>'; }).join('') + '</ul>' : '<div class="rpt-peq">Sem prazos ou providências em aberto.</div>');
+    return h + '</div>';
+  }
+  var resumo = rptTabela(['Em andamento', 'Arquivados no período', 'Resultado dos arquivados'], [[rptE(String(and.length)), rptE(String(arq.length)), rptE(comRes ? exito + ' com êxito e ' + (comRes - exito) + ' sem êxito' + (arq.length > comRes ? ' (' + (arq.length - comRes) + ' sem resultado informado)' : '') : 'sem resultado informado')]]);
+  var html = resumo;
+  if (and.length) html += '<h2 class="rpt-dia">Em andamento (' + and.length + ')</h2>' + and.map(bloco).join('');
+  if (arq.length) html += '<h2 class="rpt-dia">Arquivados no período (' + arq.length + ')</h2>' + arq.map(bloco).join('');
+  if (!and.length && !arq.length) html += '<div class="rpt-vazio">Nenhum processo deste cliente neste período.</div>';
+  return { sub: cli.nome + ' · ' + nome + ' · ' + (and.length + arq.length) + (and.length + arq.length === 1 ? ' processo' : ' processos'), html: html };
+}
+
 /* ---------- estilo: na tela e na impressão ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '#overlayRpt{z-index:400}.rpt-modal{max-width:920px;width:100%}.rpt-folha{background:#fff;color:#111;border-radius:12px;padding:18px 16px;font-size:13px;line-height:1.4;overflow-x:auto}.rpt-cab{border-bottom:2px solid #111;margin-bottom:10px;padding-bottom:6px}.rpt-marca{font-weight:800;letter-spacing:.08em;font-size:12px}.rpt-folha h1{font-size:20px;margin:2px 0}.rpt-sub{font-size:12px;color:#444}' +
+  st.textContent = '.rpt-ul{margin:3px 0 0 18px;padding:0;font-size:12px}.rpt-ul li{margin:2px 0}#overlayRpt{z-index:400}.rpt-modal{max-width:920px;width:100%}.rpt-folha{background:#fff;color:#111;border-radius:12px;padding:18px 16px;font-size:13px;line-height:1.4;overflow-x:auto}.rpt-cab{border-bottom:2px solid #111;margin-bottom:10px;padding-bottom:6px}.rpt-marca{font-weight:800;letter-spacing:.08em;font-size:12px}.rpt-folha h1{font-size:20px;margin:2px 0}.rpt-sub{font-size:12px;color:#444}' +
     '.rpt-dia{font-size:14px;margin:14px 0 4px;padding-bottom:2px;border-bottom:1px solid #999;color:#111}.rpt-tab{width:100%;min-width:620px;border-collapse:collapse;font-size:12px}.rpt-tab td:first-child,.rpt-tab thead th:first-child{white-space:nowrap}.rpt-dados{min-width:0}.rpt-dados td:first-child{white-space:normal}.rpt-tab th,.rpt-tab td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}.rpt-tab thead th{background:#eee}.rpt-dados th{width:30%;background:#f3f3f3}.rpt-peq{font-size:11px;color:#444}.rpt-vazio{padding:14px 0;color:#555}' +
     '.rpt-it{border:1px solid #bbb;border-radius:6px;padding:6px 8px;margin:6px 0;page-break-inside:avoid}.rpt-l1{font-size:12px;color:#222}.rpt-trecho{font-size:12px;margin-top:2px}' +
     '@media print{body.rpt-aberto{background:#fff!important}body.rpt-aberto>*:not(#overlayRpt){display:none!important}body.rpt-aberto #overlayRpt{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important}body.rpt-aberto #overlayRpt .modal{box-shadow:none!important;max-width:none!important;width:auto!important;max-height:none!important;padding:0!important;background:#fff!important;border:0!important}body.rpt-aberto #overlayRpt .modal-body{padding:0!important}body.rpt-aberto .rpt-barra{display:none!important}.rpt-folha{padding:0!important;border-radius:0;overflow:visible!important}.rpt-tab tr{page-break-inside:avoid}.rpt-dia{page-break-after:avoid}@page{size:A4;margin:14mm}}';
