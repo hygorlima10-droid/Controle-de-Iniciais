@@ -288,6 +288,11 @@ async function inscricoes(env) {
 }
 const hashCurto = async (s) => b64u(await sha256('sub:' + s)).slice(0, 24);
 const moeda = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const diasEntre = (de, ate) => Math.round((Date.parse(ate + 'T12:00:00Z') - Date.parse(de + 'T12:00:00Z')) / 864e5);
+/* prazos que merecem aviso hoje: no dia e nos dias de antecedência escolhidos (padrão 5, 2 e 1 dia antes) */
+export function prazosDoDia(prazos, hoje) {
+  return (Array.isArray(prazos) ? prazos : []).map((p) => ({ ...p, dif: diasEntre(hoje, p.d) })).filter((p) => p.dif >= 0 && (Array.isArray(p.a) ? p.a : [5, 2, 1, 0]).includes(p.dif)).sort((x, y) => x.d.localeCompare(y.d) || (x.h || '').localeCompare(y.h || ''));
+}
 export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = []) {
   const lista = [];
   const esconder = !!config.esconder;
@@ -296,6 +301,14 @@ export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = [
     const linhas = itens.slice(0, MAX_NOTIF_ITENS).map((i) => `${i.n}${i.l ? ' · ' + i.l : ''}${i.v != null ? ' · ' + moeda(i.v) : ''}`);
     if (itens.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${itens.length - MAX_NOTIF_ITENS}`);
     lista.push({ tag: 'hoje-' + hoje, titulo: itens.length === 1 ? '1 item vence hoje' : `${itens.length} itens vencem hoje`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
+  }
+  const prazos = prazosDoDia(resumo.prazos, hoje);
+  if (prazos.length) {
+    const nHoje = prazos.filter((p) => p.dif === 0).length, nBreve = prazos.length - nHoje;
+    const partes = []; if (nHoje) partes.push(`${nHoje} ${nHoje === 1 ? 'vence' : 'vencem'} hoje`); if (nBreve) partes.push(`${nBreve} nos próximos dias`);
+    const linhas = prazos.slice(0, MAX_NOTIF_ITENS).map((p) => `${p.l}${p.n ? ' · ' + p.n : ''}${p.h ? ' · ' + p.h : ''} (${p.dif === 0 ? 'HOJE' : p.dif === 1 ? 'amanhã' : 'em ' + p.dif + ' dias'})`);
+    if (prazos.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${prazos.length - MAX_NOTIF_ITENS}`);
+    lista.push({ tag: 'prazos-' + hoje, titulo: 'Prazos: ' + partes.join(', '), corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
   }
   if (pubs.length) {
     const linhas = pubs.slice(0, MAX_NOTIF_ITENS).map((p) => `${p.tribunal ? p.tribunal + ' · ' : ''}${p.tipo || 'Publicação'}${p.numero ? ' · ' + p.numero : ''}`);
@@ -380,8 +393,9 @@ async function notif(request, env, partes) {
     const limpa = (s) => String(s == null ? '' : s).slice(0, 140);
     const itens = (Array.isArray(r.itens) ? r.itens : []).slice(0, 300).filter((i) => i && /^\d{4}-\d{2}-\d{2}$/.test(i.d || '')).map((i) => ({ d: i.d, t: limpa(i.t), n: limpa(i.n), l: limpa(i.l), v: i.v == null ? null : Number(i.v) || 0 }));
     const alertas = (Array.isArray(r.alertas) ? r.alertas : []).slice(0, 10).filter((a) => a && a.chave).map((a) => ({ chave: limpa(a.chave), titulo: limpa(a.titulo), detalhe: limpa(a.detalhe) }));
-    await gravarReservado(env, 'resumo', { geradoEm: new Date().toISOString(), itens, alertas });
-    return json({ ok: true, itens: itens.length, alertas: alertas.length });
+    const prazos = (Array.isArray(r.prazos) ? r.prazos : []).slice(0, 200).filter((p) => p && /^\d{4}-\d{2}-\d{2}$/.test(p.d || '')).map((p) => ({ d: p.d, h: /^\d{2}:\d{2}$/.test(p.h || '') ? p.h : '', n: limpa(p.n), l: limpa(p.l), t: ['prazo', 'audiencia', 'tarefa'].includes(p.t) ? p.t : 'prazo', a: (Array.isArray(p.a) ? p.a : [5, 2, 1, 0]).map(Number).filter((x) => Number.isInteger(x) && x >= 0 && x <= 30).slice(0, 8) }));
+    await gravarReservado(env, 'resumo', { geradoEm: new Date().toISOString(), itens, alertas, prazos });
+    return json({ ok: true, itens: itens.length, alertas: alertas.length, prazos: prazos.length });
   }
   if (acao === 'teste' && m === 'POST') return json(await enviarResumoDiario(env, { teste: true, forcar: true }));
   if (acao === 'agora' && m === 'POST') return json(await enviarResumoDiario(env, { forcar: !!new URL(request.url).searchParams.get('forcar') }));

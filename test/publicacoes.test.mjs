@@ -124,28 +124,22 @@ const esp5 = await page.evaluate(h => { const H = window.__horusTeste; return H.
 check((await t('#pbCalc')).includes(esp5) && !(await t('#pbCalc')).includes(esperado), 'mudar os dias recalcula na hora (5 dias → ' + esp5 + ')');
 await page.fill('#pbf_dias', '15'); await page.fill('#pbf_desc', 'Recolher o sistema (PrevJUD)'); await page.waitForTimeout(200);
 await page.click('[data-pbd="confirmar"]'); await page.waitForTimeout(1500);
-const pz = (await f('GET', '/api/db/prazosPub')).j.docs;
-check(pz.length === 1 && pz[0].data.pubId === '900002' && pz[0].data.descricao === 'Recolher o sistema (PrevJUD)' && pz[0].data.data.length === 10 && pz[0].data.concluido === false && pz[0].data.contagem === 'uteis', 'o prazo confirmado fica gravado (' + (pz[0] && pz[0].data.data) + ')');
+const pz = (await f('GET', '/api/db/agenda')).j.docs;
+check(pz.length === 1 && pz[0].data.pubId === '900002' && pz[0].data.titulo === 'Recolher o sistema (PrevJUD)' && pz[0].data.tipo === 'prazo' && pz[0].data.data.length === 10 && pz[0].data.concluido === false && pz[0].data.contagem === 'uteis', 'o prazo confirmado fica gravado (' + (pz[0] && pz[0].data.data) + ')');
 await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(300);
 check(/prazo \d\d\/\d\d\/\d{4}/.test(await cardDe('900002')), 'o cartão passa a mostrar o prazo confirmado (e sai de "não lidas" porque já foi aberto)');
-// Central de atenção + avisos das 10h
+// Início, Agenda e avisos das 10h
 const venc = pz[0].data.data;
 await page.evaluate(() => document.querySelector('[data-tab="inicio"]').click()); await page.waitForTimeout(1200);
-const aten = await t('#atencaoLista');
-check(venc > new Date(Date.now() + 10 * 864e5).toISOString().slice(0, 10) && !/Recolher o sistema/.test(aten), 'prazo ainda distante (mais de 10 dias) não polui a Central de atenção');
-const resumo = await page.evaluate(() => window.__horusTeste.ntResumo());
-check(resumo.itens.some(i => i.t === 'prazo' && /Recolher o sistema/.test(i.l) && i.d === venc), 'mas já entra na lista que gera a notificação das 10h (até 45 dias)');
-// prazo próximo: força um prazo para amanhã e confere a Central e a notificação
-await f('POST', '/api/db/prazosPub', { pubId: '', processo: '5593217-64.2021.8.09.0107', cliente: 'Cooperativa Mista', descricao: 'Juntar documentos', dias: 15, contagem: 'uteis', disp: hoje, inicio: hoje, data: new Date(Date.now() + 86400000).toISOString().slice(0, 10), concluido: false, criadoEm: agora });
+check(!/Recolher o sistema/.test(await t('#atencaoLista')), 'a Central de atenção não recebe prazos processuais (só dinheiro)');
+check(/Prazos processuais/.test(await t('#inicioPrazos')), 'o Início tem o cartão "Prazos processuais"');
+await f('POST', '/api/db/agenda', { tipo: 'prazo', titulo: 'Juntar documentos', processo: '5593217-64.2021.8.09.0107', cliente: 'Cooperativa Mista', data: new Date(Date.now() + 86400000).toISOString().slice(0, 10), situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], criadoEm: agora });
 await page.reload(); await page.waitForTimeout(3200);
-const aten2 = await t('#atencaoLista');
-check(/Prazo · Cooperativa Mista/.test(aten2) && /Juntar documentos/.test(aten2) && /vence em/.test(aten2), 'prazo de amanhã aparece na Central: ' + aten2.replace(/\n/g, ' ').slice(0, 90));
-check((await page.evaluate(() => window.__horusTeste.ntResumo().itens.filter(i => i.t === 'prazo' && /Juntar documentos/.test(i.l)).length)) === 1, 'e entra na lista de notificações');
-await page.click('[data-pb-prazo]'); await page.waitForTimeout(500);
-check(await page.evaluate(() => document.getElementById('overlayPbPrazo').classList.contains('show')), 'tocar no prazo da Central abre as opções');
-await page.click('#pbpFeito'); await page.waitForTimeout(1200);
-check((await f('GET', '/api/db/prazosPub')).j.docs.filter(d => d.data.concluido).length === 1, 'marcar como cumprido grava e tira da Central');
-check(await page.evaluate(() => getComputedStyle(document.getElementById('atencaoSection')).display === 'none' || !/Juntar documentos/.test(document.getElementById('atencaoLista').innerText)), 'o prazo cumprido some da Central de atenção');
+const card = await t('#inicioPrazos');
+check(/Juntar documentos/.test(card) && /Cooperativa Mista/.test(card) && /Amanhã/.test(card), 'prazo de amanhã aparece no cartão do Início: ' + card.replace(/\n/g, ' ').slice(0, 100));
+check(!/Juntar documentos/.test(await t('#atencaoLista')), 'e continua fora da Central de atenção');
+const resumo = await page.evaluate(() => window.__horusTeste.ntResumo());
+check(resumo.prazos.some(i => /Juntar documentos/.test(i.l) && i.t === 'prazo' && JSON.stringify(i.a) === '[5,2,1,0]') && !resumo.prazos.some(i => /Recolher o sistema/.test(i.l)) && !resumo.itens.some(i => i.t === 'prazo'), 'os prazos dos próximos 10 dias vão numa lista própria para a notificação (e não misturam com o dinheiro)');
 // OABs na tela
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(900);
 await page.click('[data-pb="oabs"]'); await page.waitForTimeout(500);

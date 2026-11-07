@@ -24,3 +24,10 @@
 
 /* Marca (logo) e componentes de entrada compartilhados */
 .marca{width:88px;height:88px;border-radius:22px;display:block;box-shadow:0 14px 34px rgba(10,10,12,.28);}
+
+/* Menu lateral no celular: fica parado (não rola de lado) e os nomes longos quebram de linha */
+.drawer,.dr-nav{overflow-x:hidden;}
+.drawer{overscroll-behavior:contain;touch-action:pan-y;}
+.dr-it{white-space:normal;line-height:1.25;overflow-wrap:anywhere;}
+.dr-it .lab{min-width:0;flex:1 1 auto;}
+.dr-grp,.dr-name{white-space:normal;}

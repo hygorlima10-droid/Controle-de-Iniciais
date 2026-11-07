@@ -5,7 +5,7 @@
    - o prazo é sempre SUGERIDO (texto da publicação) e CONFIRMADO por você; a data usa o calendário do TJGO
    ============================================================ */
 var pbS = { carregado: false, carregando: false, buscando: false, pubs: [], oabs: [], ultima: null, filtro: 'naolidas', oab: 'todas', mais: 1, abertos: false };
-var pbPrazos = [], pbPrazosOk = false, pbEdOabs = [], pbDetId = null, pbTextos = {};
+var pbEdOabs = [], pbDetId = null, pbTextos = {};
 function pbApi(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
     .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); });
@@ -70,7 +70,6 @@ function pbVinculo(proc){
 }
 function pbOabDe(id){ for (var i = 0; i < pbS.oabs.length; i++) if (pbS.oabs[i].id === id) return pbS.oabs[i]; return null; }
 function pbPrimeiroNome(o){ return o ? String(o.nome || '').split(' ')[0] : ''; }
-function pbPrazoDaPub(pubId){ for (var i = 0; i < pbPrazos.length; i++) if (pbPrazos[i].pubId === pubId) return pbPrazos[i]; return null; }
 /* o que aparece: de OABs ativas; as de "só processos em conjunto" só mostram processo cadastrado ou que também vem pela sua OAB */
 function pbVisiveis(){
   var meus = {};
@@ -113,14 +112,6 @@ function pbCarregar(silencioso){
     pbS.carregando = false; pbAtualizarBadge(); if (!silencioso && activeTab === 'publicacoes') pbRender();
   });
 }
-function pbCarregarPrazos(){
-  if (!window.__SERVIDOR) return Promise.resolve();
-  return pbApi('/api/db/prazosPub').then(function(r){
-    pbPrazos = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); pbPrazosOk = true;
-    try{ renderPainelAtencao(); }catch(e){}
-    if (activeTab === 'publicacoes') pbRender();
-  }).catch(function(){ pbPrazosOk = true; });
-}
 function pbAtualizarBadge(){
   var n = pbVisiveis().filter(function(p){ return !p.lida; }).length, e = qs('menuNPub'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
@@ -149,8 +140,6 @@ function pbMontarTela(){
     else if (a === 'cadastrar') pbCadastrar(id);
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
-    else if (a === 'prazos-toggle'){ pbS.abertos = !pbS.abertos; pbRender(); }
-    else if (a === 'prazo-ver') pbAbrirPrazo(b.getAttribute('data-pid'));
   });
   qs('pbWrap').addEventListener('change', function(e){ if (e.target && e.target.id === 'pbOabSel'){ pbS.oab = e.target.value; pbS.mais = 1; pbRender(); } });
 }
@@ -169,19 +158,9 @@ function pbRender(){
   var vis = pbVisiveis(), naoLidas = vis.filter(function(p){ return !p.lida; });
   var aDefinir = vis.filter(function(p){ return p.sug && !p.semPrazo && !pbPrazoDaPub(p.id) && !p.lida; }).length;
   var semProc = naoLidas.filter(function(p){ return !pbVinculo(p.processo); }).length;
-  var prazosAbertos = pbPrazos.filter(function(x){ return !x.concluido; }).sort(function(a, b){ return (a.data || '').localeCompare(b.data || ''); });
   var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
   h += '<div class="pb-barra"><button type="button" class="btn btn-primary" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</button><button type="button" class="btn btn-ghost" data-pb="oabs">OABs monitoradas</button></div>';
-  if (prazosAbertos.length){
-    var hoje = todayISO();
-    h += '<div class="ini-card pb-prazos"><button type="button" class="pb-prazos-top" data-pb="prazos-toggle"><span>' + fvIc('clip', '#D93B3B') + '<b>Prazos abertos</b> <span class="saldo-data" style="display:inline">(' + prazosAbertos.length + ')</span></span><span class="saldo-data">' + (pbS.abertos ? 'recolher' : 'ver') + '</span></button>';
-    if (pbS.abertos) h += prazosAbertos.map(function(x){
-      var atr = x.data < hoje, dd = Math.round((Date.parse(x.data + 'T12:00:00Z') - Date.parse(hoje + 'T12:00:00Z')) / 86400000);
-      return '<div class="pb-prazo-lin" data-pb="prazo-ver" data-pid="' + escapeHtml(x.id) + '"><div class="up-data' + (atr ? ' up-d-atraso' : (x.data === hoje ? ' up-d-hoje' : '')) + '"><b>' + x.data.slice(8, 10) + '</b><span>' + MES_CURTO_AT[Number(x.data.slice(5, 7)) - 1] + '</span></div><div class="pb-prazo-tx"><b>' + escapeHtml(x.cliente || 'Sem nome') + '</b><span>' + escapeHtml(x.descricao || 'Prazo') + '</span></div><span class="est ' + (atr ? 'est-atraso' : (dd <= 3 ? 'est-breve' : 'est-ok')) + '">' + (atr ? 'Vencido' : (dd === 0 ? 'Hoje' : (dd === 1 ? 'Amanhã' : 'Em ' + dd + ' dias'))) + '</span></div>';
-    }).join('');
-    h += '</div>';
-  }
   var ativos = pbS.oabs.filter(function(o){ return o.ativo; });
   h += '<div class="pb-filtros"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     (pbS.oabs.length > 1 ? '<select id="pbOabSel" class="filter-select" aria-label="OAB"><option value="todas">Todas as OABs</option>' + pbS.oabs.map(function(o){ return '<option value="' + escapeHtml(o.id) + '"' + (pbS.oab === o.id ? ' selected' : '') + '>' + escapeHtml(o.nome) + ' · ' + escapeHtml(o.numero + '/' + o.uf) + '</option>'; }).join('') + '</select>' : '') + '</div>';
@@ -278,7 +257,7 @@ function pbDesenharDetalhe(){
   }
   h += '</div>';
   c.innerHTML = h;
-  var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); pbAbrirPrazo(pz.id); });
+  var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();
 }
 function pbAtualizarCalculo(){
@@ -295,69 +274,13 @@ function pbSalvarPrazo(){
   var dias = parseInt(qs('pbf_dias').value, 10), tipo = qs('pbf_tipo').value, desc = qs('pbf_desc').value.trim(), manual = qs('pbf_manual').value, err = qs('pbErro');
   if (!dias || dias < 1){ err.textContent = 'Informe os dias do prazo.'; return; }
   if (!desc){ err.textContent = 'Escreva uma descrição.'; return; }
-  var r = pbCalcular(p.data, dias, tipo), venc = manual || r.venc, v = pbVinculo(p.processo);
-  var doc = { pubId: p.id, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), descricao: desc, dias: dias, contagem: tipo, disp: p.data, inicio: r.ini, data: venc, manual: !!manual, tribunal: p.tribunal || '', concluido: false, criadoEm: new Date().toISOString() };
-  pbApi('/api/db/prazosPub', 'POST', doc).then(function(j){
-    doc.id = j.id; pbPrazos.push(doc); pbMarcar([p.id], { lida: true, semPrazo: false });
-    qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '.');
-    try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender();
+  var r = pbCalcular(p.data, dias, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '';
+  var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias, contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '', criadoEm: new Date().toISOString() }).then(function(){
+    pbMarcar([p.id], { lida: true, semPrazo: false });
+    qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '. Está na Agenda.');
   }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }
-
-/* ---------- prazo confirmado: Central de atenção, avisos de 10h e tela de ações ---------- */
-function pbAvisos(){
-  var hoje = todayISO(), lim = somarDias(hoje, 10);
-  return pbPrazos.filter(function(x){ return !x.concluido && x.data && x.data <= lim; }).map(function(x){
-    return { tipo: 'prazopub', id: x.id, d: x.data, titulo: 'Prazo · ' + (x.cliente || 'Sem nome'), detalhe: (x.descricao || 'Prazo') + ' · ' + (x.data < hoje ? 'venceu em ' : 'vence em ') + fmtData(x.data), atraso: x.data < hoje };
-  }).sort(function(a, b){ return a.d.localeCompare(b.d); });
-}
-function pbLinhaAviso(a){
-  var hoje = a.d === todayISO(), urgente = a.atraso || hoje;
-  return '<div class="stall-chip pb-aviso' + (urgente ? '' : ' tipo-murilo') + '" data-pb-prazo="' + escapeHtml(a.id) + '"><div class="up-data' + (a.atraso ? ' up-d-atraso' : (hoje ? ' up-d-hoje' : '')) + '"><b>' + a.d.slice(8, 10) + '</b><span>' + MES_CURTO_AT[Number(a.d.slice(5, 7)) - 1].toUpperCase() + '</span></div>' +
-    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span></div><div class="up-when">' + escapeHtml(a.detalhe) + '</div></div>';
-}
-function pbItens(hoje, lim){
-  return pbPrazos.filter(function(x){ return !x.concluido && x.data && x.data >= hoje && x.data <= lim; }).map(function(x){ return { d: x.data, t: 'prazo', n: x.cliente || 'Sem nome', l: 'Prazo: ' + (x.descricao || 'processual'), v: null }; });
-}
-function pbMontarPrazo(){
-  if (qs('overlayPbPrazo')) return;
-  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayPbPrazo';
-  d.innerHTML = '<div class="modal"><div class="modal-head"><h2 id="pbpTit">Prazo</h2><button class="icon-btn" id="pbpX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="parcela-sum" id="pbpInfo"></div>' +
-    '<button type="button" class="btn btn-primary" id="pbpFeito" style="width:100%;justify-content:center;">Marcar como cumprido</button>' +
-    '<div class="field"><label class="field-label" for="pbpData">Alterar a data do prazo</label><input type="date" id="pbpData"></div><button type="button" class="btn btn-ghost" id="pbpSalvarData" style="width:100%;justify-content:center;">Salvar nova data</button>' +
-    '<button type="button" class="btn btn-ghost" id="pbpVer" style="width:100%;justify-content:center;">Ver a publicação</button><button type="button" class="btn-text" id="pbpExcluir" style="color:var(--urgente)">Excluir este prazo</button><div class="form-error" id="pbpErro"></div></div></div>';
-  document.body.appendChild(d);
-  adAbrirData(qs('pbpData'));
-  d.addEventListener('click', function(e){ if (e.target === d || (e.target.closest && e.target.closest('#pbpX'))) d.classList.remove('show'); });
-  qs('pbpFeito').addEventListener('click', function(){ pbAtualizarPrazo({ concluido: true, concluidoEm: todayISO() }, 'Prazo cumprido.'); });
-  qs('pbpSalvarData').addEventListener('click', function(){ var n = qs('pbpData').value; if (!n){ qs('pbpErro').textContent = 'Escolha a nova data.'; return; } pbAtualizarPrazo({ data: n, manual: true }, 'Prazo alterado para ' + fmtData(n) + '.'); });
-  qs('pbpVer').addEventListener('click', function(){ var x = pbPrazoAtual(); d.classList.remove('show'); if (x && x.pubId){ if (!pbPub(x.pubId)){ toast('A publicação está fora dos últimos 90 dias.'); return; } setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(x.pubId); }, 60); } });
-  qs('pbpExcluir').addEventListener('click', function(){
-    var b = qs('pbpExcluir'), x = pbPrazoAtual(); if (!x) return;
-    if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para excluir'; return; }
-    pbApi('/api/db/prazosPub/' + encodeURIComponent(x.id), 'DELETE').then(function(){ pbPrazos = pbPrazos.filter(function(y){ return y.id !== x.id; }); d.classList.remove('show'); toast('Prazo excluído.'); try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender(); }).catch(function(e){ qs('pbpErro').textContent = e.message; });
-  });
-}
-var pbPrazoId = null;
-function pbPrazoAtual(){ for (var i = 0; i < pbPrazos.length; i++) if (pbPrazos[i].id === pbPrazoId) return pbPrazos[i]; return null; }
-function pbAbrirPrazo(id){
-  pbMontarPrazo(); pbPrazoId = id; var x = pbPrazoAtual(); if (!x) return;
-  qs('pbpTit').textContent = x.cliente || 'Prazo'; qs('pbpInfo').innerHTML = escapeHtml((x.descricao || 'Prazo') + ' · vence em ' + fmtData(x.data) + ' (' + pbDiaSem(x.data) + ')') + (x.processo ? '<br><span class="saldo-data">' + escapeHtml(x.processo) + '</span>' : '');
-  qs('pbpData').value = ''; qs('pbpErro').textContent = ''; qs('pbpExcluir').removeAttribute('data-sure'); qs('pbpExcluir').textContent = 'Excluir este prazo';
-  qs('pbpFeito').style.display = x.concluido ? 'none' : ''; qs('pbpVer').style.display = x.pubId ? '' : 'none';
-  qs('overlayPbPrazo').classList.add('show');
-}
-function pbAtualizarPrazo(campos, msg){
-  var x = pbPrazoAtual(); if (!x) return;
-  var novo = Object.assign({}, x, campos); delete novo.id;
-  pbApi('/api/db/prazosPub/' + encodeURIComponent(x.id), 'PUT', novo).then(function(){
-    Object.assign(x, campos); qs('overlayPbPrazo').classList.remove('show'); toast(msg); try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender();
-  }).catch(function(e){ qs('pbpErro').textContent = 'Não consegui salvar: ' + e.message; });
-}
-document.addEventListener('click', function(ev){
-  var el = ev.target.closest ? ev.target.closest('[data-pb-prazo]') : null; if (!el) return;
-  pbAbrirPrazo(el.getAttribute('data-pb-prazo'));
-});
 
 /* ---------- OABs monitoradas ---------- */
 function pbMontarOabs(){
@@ -412,7 +335,7 @@ function pbSalvarOabs(){
 }
 
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); } };
+window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){
@@ -436,7 +359,7 @@ window.__horusTeste = { pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);
   if (window.__SERVIDOR){
-    pbCarregarPrazos(); pbCarregar(true);
+    pbCarregar(true);
     document.addEventListener('visibilitychange', function(){ if (!document.hidden){ pbCarregar(true); } });
   }
 })();

@@ -643,8 +643,8 @@
   .ad-it .ad-t b{display:block;}
   .ad-it .ad-v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
   /* ---- faixa de ações do Início, folha "Novo", alertas na Central ---- */
-  .ini-grid.sem-extr{grid-template-areas:"busca" "acoes" "hero" "kpi" "atencao" "divisao";}
-  @media (min-width:1000px){ .ini-grid.sem-extr{grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "divisao atencao";grid-template-rows:auto auto auto auto minmax(0,1fr);} }
+  .ini-grid.sem-extr{grid-template-areas:"busca" "acoes" "hero" "kpi" "prazos" "atencao" "divisao";}
+  @media (min-width:1000px){ .ini-grid.sem-extr{grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "prazos atencao" "divisao atencao";grid-template-rows:auto auto auto auto auto minmax(0,1fr);} }
   .ini-acoes{grid-area:acoes;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;}
   .ini-acoes .acao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:64px;padding:9px 4px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-weight:600;font-size:var(--t2);cursor:pointer;font-family:inherit;}
   .ini-acoes .acao svg{width:23px;height:23px;}
@@ -927,16 +927,17 @@
     .scrim{display:none!important;}
   }
   /* Início */
-  .ini-grid{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);grid-template-areas:"busca" "acoes" "hero" "kpi" "atencao" "extratos" "divisao";padding-top:12px;}
+  .ini-grid{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);grid-template-areas:"busca" "acoes" "hero" "kpi" "prazos" "atencao" "extratos" "divisao";padding-top:12px;}
   .ini-busca{grid-area:busca;}
   .ini-busca .busca-global{margin-top:0;}
   .ini-hero{grid-area:hero;}
   .ini-kpi{grid-area:kpi;}
   .ini-atencao{grid-area:atencao;}
+  .ini-prazos{grid-area:prazos;}
   .ini-divisao{grid-area:divisao;}
   .ini-atalhos{grid-area:atalhos;}
   @media (min-width:900px){
-    .ini-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "extratos atencao" "divisao atencao";grid-template-rows:auto auto auto auto auto minmax(0,1fr);align-items:start;}
+    .ini-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "prazos atencao" "extratos atencao" "divisao atencao";grid-template-rows:auto auto auto auto auto auto minmax(0,1fr);align-items:start;}
   }
   .ini-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:13px 15px;}
   .ini-card .lbl,.ini-div-grid .lbl{font-size:var(--t2);color:var(--ink-soft);margin-bottom:3px;}
@@ -1448,6 +1449,7 @@
 <symbol id="ic-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></symbol>
 <symbol id="ic-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></symbol>
 <symbol id="ic-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></symbol>
+<symbol id="ic-agenda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol>
 <symbol id="ic-news" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14a2 2 0 002 2H6a2 2 0 01-2-2z"/><path d="M17 9h3v10a2 2 0 01-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/></symbol>
 <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 003.4 0"/></symbol>
 <symbol id="ic-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></symbol>
@@ -1467,9 +1469,10 @@
     <div class="dr-brand"><div class="dr-logo"><img src="data:image/webp;base64,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" alt="Horus"></div><div class="dr-name">Horus</div></div>
     <nav class="dr-nav" id="mainTabs">
       <button type="button" class="dr-it" data-tab="inicio" title="Início"><svg><use href="#ic-home"/></svg><span class="lab">Início</span><span class="dr-n red" id="menuBadgeInicio"></span></button>
-      <button type="button" class="dr-it" data-tab="peticoes" title="Petições"><svg><use href="#ic-file"/></svg><span class="lab">Petições</span><span class="dr-n" id="menuNPeticoes"></span></button>
+      <button type="button" class="dr-it" data-tab="peticoes" title="Novas ações"><svg><use href="#ic-file"/></svg><span class="lab">Novas ações</span><span class="dr-n" id="menuNPeticoes"></span></button>
       <button type="button" class="dr-it" data-tab="acordos" title="Termos de Acordo"><svg><use href="#ic-clip"/></svg><span class="lab">Termos de Acordo</span><span class="dr-n" id="menuNAcordos"></span></button>
       <button type="button" class="dr-it" data-tab="alvaras" title="Alvarás"><svg><use href="#ic-stamp"/></svg><span class="lab">Alvarás</span><span class="dr-n" id="menuNAlvaras"></span></button>
+      <button type="button" class="dr-it" data-tab="agenda" title="Agenda de prazos"><svg><use href="#ic-agenda"/></svg><span class="lab">Agenda</span><span class="dr-n red" id="menuNAgenda"></span></button>
       <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial"><svg><use href="#ic-news"/></svg><span class="lab">Publicações</span><span class="dr-n red" id="menuNPub"></span></button>
       <button type="button" class="dr-it" data-tab="clientes" title="Clientes"><svg><use href="#ic-users"/></svg><span class="lab">Clientes</span></button>
       <button type="button" class="dr-it" data-tab="arquivados" title="Arquivados"><svg><use href="#ic-arch"/></svg><span class="lab">Arquivados</span></button>
@@ -1497,7 +1500,7 @@
   </aside>
   <nav class="btbar" id="btbar" aria-label="Navegação rápida">
     <button type="button" class="bt-it" data-tab="inicio"><svg><use href="#ic-home"/></svg><span>Início</span><span class="bt-n" id="btBadgeInicio"></span></button>
-    <button type="button" class="bt-it" data-tab="peticoes"><svg><use href="#ic-file"/></svg><span>Petições</span></button>
+    <button type="button" class="bt-it" data-tab="peticoes"><svg><use href="#ic-file"/></svg><span>Novas ações</span></button>
     <button type="button" class="bt-it" data-tab="acordos"><svg><use href="#ic-clip"/></svg><span>Acordos</span></button>
     <button type="button" class="bt-it" data-tab="alvaras"><svg><use href="#ic-stamp"/></svg><span>Alvarás</span></button>
     <button type="button" class="bt-it" data-tab="financeiro" data-fin="geral"><svg><use href="#ic-pie"/></svg><span>Finanças</span></button>
@@ -1666,7 +1669,7 @@
         <div class="filtros-extra" hidden>
           <select class="filter-select" id="filtroArqTipo">
           <option value="todos">Todos os tipos</option>
-          <option value="caso">Petições</option>
+          <option value="caso">Novas ações</option>
           <option value="acordo">Termos de acordo</option>
           <option value="alvara">Alvarás</option>
         </select>
@@ -1685,7 +1688,7 @@
     <div class="ini-grid sem-extr">
       <div class="ini-busca">
     <div class="busca-global" id="buscaGlobalWrap">
-      <input type="text" id="buscaGlobalInput" placeholder="Buscar em petições, acordos, alvarás e clientes…">
+      <input type="text" id="buscaGlobalInput" placeholder="Buscar em novas ações, acordos, alvarás e clientes…">
       <div class="busca-global-resultados" id="buscaGlobalResultados" style="display:none;"></div>
     </div>
 
@@ -1729,6 +1732,7 @@
     </div>
 
       </div>
+      <div class="ini-prazos" id="inicioPrazos"></div>
       <div class="ini-atencao">
   <section class="upcoming" id="atencaoSection" style="display:none;">
     <h2>Central de atenção<span class="count-badge" id="atencaoBadge"></span></h2>
@@ -1775,6 +1779,34 @@
 
   <div id="bodyPublicacoes" style="display:none;">
     <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
   </div>
 
   <div id="bodyAnalises" style="display:none;">
@@ -1841,7 +1873,7 @@
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-head">
-      <h2 id="modalTitle">Nova petição</h2>
+      <h2 id="modalTitle">Nova ação</h2>
       <button class="icon-btn" id="closeModal">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -3184,7 +3216,7 @@
   var TIPO_LABEL = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial' };
   var ORIGEM_LABEL = { murilo:'Cliente Murilo', proprio:'Cliente próprio' };
   var ORIGEM_LABEL_PROCESSO = { murilo:'Processo Murilo', proprio:'Processo próprio' };
-  var TAB_LABEL = { peticao:'Petição', acordo:'Termo de acordo', alvara:'Alvará', cliente:'Cliente', despesa:'Despesa', receita:'Receita', meta:'Meta', obra:'Obra', extrato:'Extrato' };
+  var TAB_LABEL = { peticao:'Nova ação', acordo:'Termo de acordo', alvara:'Alvará', cliente:'Cliente', despesa:'Despesa', receita:'Receita', meta:'Meta', obra:'Obra', extrato:'Extrato' };
   var CATEGORIA_LABEL = { estrutura:'Estrutura', impostos:'Impostos', pessoal:'Pessoal', sistemas:'Sistemas', outros:'Outros' };
 
   function normalizarProcesso(s){
@@ -4273,11 +4305,6 @@
       if (u.kind === 'parcela') it.parcelaNumero = u.numero;
       items.push(it);
     });
-    casos.forEach(function(c){
-      if (!c.arquivado && c.prazo && c.prazo.data && !c.prazo.concluido){
-        items.push({ casoId:c.id, cliente:c.cliente, valor:null, data:c.prazo.data, label:c.prazo.descricao || 'Prazo processual', tipoItem:'prazo', chave:c.id+'|prazo' });
-      }
-    });
     items.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); });
     return items;
   }
@@ -4352,9 +4379,6 @@
     });
     if (typeof ob7Avisos === 'function'){
       try{ ob7Avisos().forEach(function(a){ itens.push({ origem: 'obra', ordem: 1, dataOrdenacao: a.d, atrasado: !!a.atraso, a: a }); }); }catch(e){ console.error('avisos da obra', e); }
-    }
-    if (typeof pbAvisos === 'function'){
-      try{ pbAvisos().forEach(function(a){ itens.push({ origem: 'prazopub', ordem: 1, dataOrdenacao: a.d, atrasado: !!a.atraso, a: a }); }); }catch(e){ console.error('prazos das publicações', e); }
     }
     itens.sort(function(a,b){
       if (a.ordem !== b.ordem) return a.ordem - b.ordem;
@@ -4611,7 +4635,6 @@
 
     qs('atencaoLista').innerHTML = itens.slice(0, atencaoExpandida ? 40 : 5).map(function(x){
       if (x.origem === 'obra') return ob7LinhaAviso(x.a);
-      if (x.origem === 'prazopub') return pbLinhaAviso(x.a);
       if (x.origem === 'upcoming'){
         var it = x.it, atrasado = x.atrasado, ehHoje = it.data === hoje, ehPrazo = x.ehPrazo, ehAcordo = x.ehAcordo, ehAlvara = x.ehAlvara;
         if (it.chave === confirmandoUpcomingKey){
@@ -6141,7 +6164,7 @@
     h += '<div class="fp-proj"><div class="fv-k" style="color:var(--accent)">' + (caixa ? 'Projeção · ainda não é dinheiro na conta' : 'Resultado do mês selecionado') + '</div>' + linhas +
       '<div class="saldo-data" style="margin-top:8px;">' + escapeHtml(legendaResultado(resultado)) + '</div>' +
       '<div class="fp-prev"><span>Já recebido no mês <b>' + fmtMoeda(projecao.recebido) + '</b></span><span>Ainda a receber <b>' + fmtMoeda(projecao.previsto) + '</b></span></div>' +
-      '<div class="saldo-data">O que ainda vai entrar (Petições, Termos de Acordo e Alvarás com previsão neste mês, total ' + fmtMoeda(projecao.total) + ') não entra no "Vai sobrar" até ser recebido.</div></div>';
+      '<div class="saldo-data">O que ainda vai entrar (Novas ações, Termos de Acordo e Alvarás com previsão neste mês, total ' + fmtMoeda(projecao.total) + ') não entra no "Vai sobrar" até ser recebido.</div></div>';
     h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>' +
       '<div class="financeiro-totais">Total no mês: <span class="v">' + fmtMoeda(recebidas) + '</span> <small class="saldo-data">(automático das 3 abas + lançamentos manuais)</small></div>' + htmlReceitas + '</div>';
     h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">+ Nova despesa</button></div>' +
@@ -6343,7 +6366,7 @@
           '<div class="resultado-mes-item"><div class="lbl">Já recebido</div><div class="val">'+fmtMoeda(projecao.recebido)+'</div></div>' +
           '<div class="resultado-mes-item"><div class="lbl">Previsto a receber</div><div class="val">'+fmtMoeda(projecao.previsto)+'</div></div>' +
         '</div>' +
-        '<div class="saldo-data" style="margin-top:8px;">Projeção total do mês: '+fmtMoeda(projecao.total)+'. Considera as entradas previstas em Petições, Termos de Acordo e Alvarás (com previsão informada) ainda pendentes com vencimento neste mês (não entra em "Vai sobrar ao final").</div></div>'
+        '<div class="saldo-data" style="margin-top:8px;">Projeção total do mês: '+fmtMoeda(projecao.total)+'. Considera as entradas previstas em Novas ações, Termos de Acordo e Alvarás (com previsão informada) ainda pendentes com vencimento neste mês (não entra em "Vai sobrar ao final").</div></div>'
       ) : '') +
       '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="'+coluna+'">+ Nova despesa</button></div>' +
         '<div class="financeiro-totais">Pago: <span class="v">'+fmtMoeda(despesasResumo.pago)+'</span> · Pendente: <span class="v">'+fmtMoeda(despesasResumo.pendente)+'</span></div>' +
@@ -7064,7 +7087,7 @@
 
   function abrirNovo(){
     editingId = null;
-    qs('modalTitle').textContent = 'Nova petição';
+    qs('modalTitle').textContent = 'Nova ação';
     formState = { tipo:'inicial', origem:'murilo', prioridade:'normal', status:STATUS_ORDEM[0], modalidade:'fixo', pagamento:'avista' };
     setSegValue('segTipo', formState.tipo);
     setSegValue('segOrigem', formState.origem);
@@ -7099,7 +7122,7 @@
     var c = casos.find(function(x){ return x.id === id; });
     if (!c) return;
     editingId = id;
-    qs('modalTitle').textContent = 'Editar petição';
+    qs('modalTitle').textContent = 'Editar ação';
     formState = { tipo:c.tipo, origem:c.origem, prioridade:c.prioridade, status:statusDe(c), modalidade:c.modalidadeHonorario||'fixo', pagamento:c.formaPagamento||'avista' };
     setSegValue('segTipo', formState.tipo);
     setSegValue('segOrigem', formState.origem);
@@ -7134,7 +7157,7 @@
     if (!c) return;
     abrirEdicao(id);
     editingId = null;
-    qs('modalTitle').textContent = 'Nova petição (duplicada)';
+    qs('modalTitle').textContent = 'Nova ação (duplicada)';
     qs('processoInput').value = '';
     qs('prazoDataInput').value = '';
     qs('prazoDescInput').value = '';
@@ -7722,13 +7745,13 @@
       ['FECHAMENTO — ' + mes, ''],
       ['', ''],
       ['RECEBIDO NO MÊS', fmtMoeda(recTotal)],
-      ['  Petições', fmtMoeda(sp.recebido)],
+      ['  Novas ações', fmtMoeda(sp.recebido)],
       ['  Termos de Acordo', fmtMoeda(sa.recebido)],
       ['  Alvarás', fmtMoeda(sv.recebido)]
     ].concat(outrasRec > 0.004 ? [['  Outras receitas (lançadas no Financeiro)', fmtMoeda(outrasRec)]] : [], [
       ['', ''],
       ['A RECEBER (todos os meses)', fmtMoeda(sp.pendente + sa.pendente + sv.pendente)],
-      ['  Petições', fmtMoeda(sp.pendente)],
+      ['  Novas ações', fmtMoeda(sp.pendente)],
       ['  Termos de Acordo', fmtMoeda(sa.pendente)],
       ['  Alvarás', fmtMoeda(sv.pendente)],
       ['', ''],
@@ -9463,16 +9486,17 @@
     qs('bodyAnalises').style.display = (tab === 'analises') ? '' : 'none';
     qs('bodyObra').style.display = (tab === 'obra') ? '' : 'none';
     qs('bodyPublicacoes').style.display = (tab === 'publicacoes') ? '' : 'none';
+    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';
     qs('headFinanceiro').style.display = (tab === 'financeiro') ? '' : 'none';
     qs('bodyPeticoes').style.display = (tab === 'peticoes') ? '' : 'none';
     qs('bodyAcordos').style.display = (tab === 'acordos') ? '' : 'none';
     qs('bodyAlvaras').style.display = (tab === 'alvaras') ? '' : 'none';
     qs('bodyClientes').style.display = (tab === 'clientes') ? '' : 'none';
     qs('bodyFinanceiro').style.display = (tab === 'financeiro') ? '' : 'none';
-    qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
-    qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra' || tab === 'publicacoes') ? 'none' : '';
+    qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
+    qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda') ? 'none' : '';
     if (tab !== 'financeiro') qs('finFabMenu').style.display = 'none';
-    qs('fabNew').title = (tab === 'peticoes') ? 'Nova petição' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
+    qs('fabNew').title = (tab === 'peticoes') ? 'Nova ação' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
     atualizarMenuAtivo();
     atualizarTituloTela();
     try{ window.scrollTo(0, 0); }catch(e){}
@@ -9486,13 +9510,14 @@
     else if (tab === 'analises') renderAnalises();
     else if (tab === 'obra') renderObra();
     else if (tab === 'publicacoes') pbRender();
+    else if (tab === 'agenda') agRender();
     else renderFinanceiro();
   }
 
   /* ============================================================
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
-  var TITULOS_TELA = { inicio:'Início', peticoes:'Petições', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', financeiro:'Financeiro' };
+  var TITULOS_TELA = { inicio:'Início', peticoes:'Novas ações', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', financeiro:'Financeiro' };
   var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
   var atencaoExpandida = false;
   var menuAberto = false;
@@ -9505,6 +9530,7 @@
     else if (activeTab === 'analises') qs('subtitle').textContent = 'Gráficos do que entrou e saiu · projeção do caixa';
     else if (activeTab === 'extratos') qs('subtitle').textContent = 'Leitura dos extratos do Drive · você confere antes de lançar';
     else if (activeTab === 'publicacoes') qs('subtitle').textContent = 'Diário Oficial (DJEN) · leitura automática todo dia às 10:00';
+    else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';
   }
   function atualizarMenuAtivo(){
     document.body.setAttribute('data-tab', activeTab);
@@ -9982,7 +10008,7 @@
   }
 
   qs('exportBtn').addEventListener('click', function(){
-    if (activeTab === 'inicio' || activeTab === 'financeiro'){ toast('Abra Petições, Termos de Acordo, Alvarás, Clientes ou Arquivados para exportar a lista.'); return; }
+    if (activeTab === 'inicio' || activeTab === 'financeiro'){ toast('Abra Novas ações, Termos de Acordo, Alvarás, Clientes ou Arquivados para exportar a lista.'); return; }
     comValoresReais(function(){
       if (activeTab === 'acordos') exportarAcordos();
       else if (activeTab === 'alvaras') exportarAlvaras();
@@ -12153,7 +12179,7 @@
   /* editor de lista (colunas das Petições, fases dos Alvarás, categorias de despesa) */
   var ed = { modo: null, itens: [], removidos: [], movimentos: {}, confirmIdx: null, novaCor: PALETA_CATEGORIA[0] };
   var ED_TEXTOS = {
-    peticao: { titulo: 'Colunas do quadro de Petições', ph: 'Nome da nova coluna', unidade: 'petição(ões)',
+    peticao: { titulo: 'Colunas do quadro de Novas ações', ph: 'Nome da nova coluna', unidade: 'petição(ões)',
       ajuda: 'Cada item é uma coluna do quadro. A ordem da lista (de cima para baixo) é a ordem das colunas (da esquerda para a direita). Ao excluir uma coluna que tem petições, você escolhe para onde elas vão.' },
     alvara: { titulo: 'Fases do quadro de Alvarás', ph: 'Nome da nova fase', unidade: 'alvará(s)',
       ajuda: 'A última fase marca o alvará como recebido: você pode renomeá-la, mas ela fica sempre por último e não pode ser excluída. Ao excluir uma fase que tem alvarás, você escolhe para onde eles vão.' },
@@ -15845,7 +15871,6 @@ function ntResumo(){
     if (restanteUn(u) <= 0.004 || !u.data || u.data < hoje || u.data > lim || u.arquivado || (d && d.atipica)) return;
     itens.push({ d: u.data, t: u.docTipo === 'alvara' ? 'alvara' : 'pagamento', n: u.cliente, l: u.labelAlerta || u.label, v: r2(restanteMeu(u)) });
   });
-  casos.forEach(function(c){ if (!c.arquivado && c.prazo && c.prazo.data && !c.prazo.concluido && c.prazo.data >= hoje && c.prazo.data <= lim) itens.push({ d: c.prazo.data, t: 'prazo', n: c.cliente || 'Sem nome', l: 'Prazo: ' + (c.prazo.descricao || 'processual'), v: null }); });
   var m0 = hoje.slice(0, 7);
   [m0, deslocarMes(m0, 1)].forEach(function(m){
     comMes(m, function(){
@@ -15860,10 +15885,11 @@ function ntResumo(){
     });
   });
   try{ if (typeof ob7Itens === 'function') ob7Itens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
-  try{ if (typeof pbItens === 'function') pbItens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
   var alertas = []; /* atrasos de clientes você confere no app: só chegam alertas de caixa, reserva, despesas e alvarás */
   try{ alertas = paAlertas().filter(function(a){ return String(a.chave).indexOf('cliente|') !== 0; }).map(function(a){ return { chave: a.chave, titulo: a.titulo, detalhe: a.detalhe }; }); }catch(e){}
-  return { itens: itens, alertas: alertas };
+  var prazos = []; /* prazos processuais, audiências e tarefas da Agenda: aviso separado do dinheiro */
+  try{ prazos = agPrazosResumo(hoje, somarDias(hoje, 10)); }catch(e){ console.error('prazos', e); }
+  return { itens: itens, alertas: alertas, prazos: prazos };
 }
 var ntAtraso = null, ntUltimo = '';
 function ntAgendarEnvio(){
@@ -15921,7 +15947,7 @@ function ntMontar(){
 function ntDesenhar(){
   var c = qs('ntCorpo'); if (!c) return;
   var neste = ntEstado.neste;
-  c.innerHTML = '<div class="parcela-sum">Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir.</div>' +
+  c.innerHTML = '<div class="parcela-sum">Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir. Prazos processuais e audiências da Agenda avisam em mensagem separada, nos dias de antecedência de cada item (padrão: 5, 2 e 1 dia antes e no dia).</div>' +
     '<div class="cli-box"><div class="cli-linha"><span class="l">Neste aparelho</span><b style="color:' + (neste ? 'var(--success)' : 'var(--ink-soft)') + '">' + (neste ? 'Ativadas' : 'Desativadas') + '</b></div><div class="cli-linha"><span class="l">Aparelhos recebendo</span><b>' + ntEstado.aparelhos + '</b></div>' +
     (ntEstado.resumoEm ? '<div class="cli-linha"><span class="l">Lista de vencimentos atualizada em</span><span>' + escapeHtml(extFmtQuando(ntEstado.resumoEm)) + '</span></div>' : '') + '</div>' +
     (neste ? '<button type="button" class="btn btn-ghost" data-nt="desativar" style="width:100%;justify-content:center;">Desativar neste aparelho</button>' : '<button type="button" class="btn btn-primary" data-nt="ativar" style="width:100%;justify-content:center;">Ativar notificações neste aparelho</button>') +
@@ -16667,7 +16693,7 @@ function ctJaHtml(){
    - o prazo é sempre SUGERIDO (texto da publicação) e CONFIRMADO por você; a data usa o calendário do TJGO
    ============================================================ */
 var pbS = { carregado: false, carregando: false, buscando: false, pubs: [], oabs: [], ultima: null, filtro: 'naolidas', oab: 'todas', mais: 1, abertos: false };
-var pbPrazos = [], pbPrazosOk = false, pbEdOabs = [], pbDetId = null, pbTextos = {};
+var pbEdOabs = [], pbDetId = null, pbTextos = {};
 function pbApi(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
     .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); });
@@ -16732,7 +16758,6 @@ function pbVinculo(proc){
 }
 function pbOabDe(id){ for (var i = 0; i < pbS.oabs.length; i++) if (pbS.oabs[i].id === id) return pbS.oabs[i]; return null; }
 function pbPrimeiroNome(o){ return o ? String(o.nome || '').split(' ')[0] : ''; }
-function pbPrazoDaPub(pubId){ for (var i = 0; i < pbPrazos.length; i++) if (pbPrazos[i].pubId === pubId) return pbPrazos[i]; return null; }
 /* o que aparece: de OABs ativas; as de "só processos em conjunto" só mostram processo cadastrado ou que também vem pela sua OAB */
 function pbVisiveis(){
   var meus = {};
@@ -16775,14 +16800,6 @@ function pbCarregar(silencioso){
     pbS.carregando = false; pbAtualizarBadge(); if (!silencioso && activeTab === 'publicacoes') pbRender();
   });
 }
-function pbCarregarPrazos(){
-  if (!window.__SERVIDOR) return Promise.resolve();
-  return pbApi('/api/db/prazosPub').then(function(r){
-    pbPrazos = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); pbPrazosOk = true;
-    try{ renderPainelAtencao(); }catch(e){}
-    if (activeTab === 'publicacoes') pbRender();
-  }).catch(function(){ pbPrazosOk = true; });
-}
 function pbAtualizarBadge(){
   var n = pbVisiveis().filter(function(p){ return !p.lida; }).length, e = qs('menuNPub'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
@@ -16811,8 +16828,6 @@ function pbMontarTela(){
     else if (a === 'cadastrar') pbCadastrar(id);
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
-    else if (a === 'prazos-toggle'){ pbS.abertos = !pbS.abertos; pbRender(); }
-    else if (a === 'prazo-ver') pbAbrirPrazo(b.getAttribute('data-pid'));
   });
   qs('pbWrap').addEventListener('change', function(e){ if (e.target && e.target.id === 'pbOabSel'){ pbS.oab = e.target.value; pbS.mais = 1; pbRender(); } });
 }
@@ -16831,19 +16846,9 @@ function pbRender(){
   var vis = pbVisiveis(), naoLidas = vis.filter(function(p){ return !p.lida; });
   var aDefinir = vis.filter(function(p){ return p.sug && !p.semPrazo && !pbPrazoDaPub(p.id) && !p.lida; }).length;
   var semProc = naoLidas.filter(function(p){ return !pbVinculo(p.processo); }).length;
-  var prazosAbertos = pbPrazos.filter(function(x){ return !x.concluido; }).sort(function(a, b){ return (a.data || '').localeCompare(b.data || ''); });
   var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
   h += '<div class="pb-barra"><button type="button" class="btn btn-primary" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</button><button type="button" class="btn btn-ghost" data-pb="oabs">OABs monitoradas</button></div>';
-  if (prazosAbertos.length){
-    var hoje = todayISO();
-    h += '<div class="ini-card pb-prazos"><button type="button" class="pb-prazos-top" data-pb="prazos-toggle"><span>' + fvIc('clip', '#D93B3B') + '<b>Prazos abertos</b> <span class="saldo-data" style="display:inline">(' + prazosAbertos.length + ')</span></span><span class="saldo-data">' + (pbS.abertos ? 'recolher' : 'ver') + '</span></button>';
-    if (pbS.abertos) h += prazosAbertos.map(function(x){
-      var atr = x.data < hoje, dd = Math.round((Date.parse(x.data + 'T12:00:00Z') - Date.parse(hoje + 'T12:00:00Z')) / 86400000);
-      return '<div class="pb-prazo-lin" data-pb="prazo-ver" data-pid="' + escapeHtml(x.id) + '"><div class="up-data' + (atr ? ' up-d-atraso' : (x.data === hoje ? ' up-d-hoje' : '')) + '"><b>' + x.data.slice(8, 10) + '</b><span>' + MES_CURTO_AT[Number(x.data.slice(5, 7)) - 1] + '</span></div><div class="pb-prazo-tx"><b>' + escapeHtml(x.cliente || 'Sem nome') + '</b><span>' + escapeHtml(x.descricao || 'Prazo') + '</span></div><span class="est ' + (atr ? 'est-atraso' : (dd <= 3 ? 'est-breve' : 'est-ok')) + '">' + (atr ? 'Vencido' : (dd === 0 ? 'Hoje' : (dd === 1 ? 'Amanhã' : 'Em ' + dd + ' dias'))) + '</span></div>';
-    }).join('');
-    h += '</div>';
-  }
   var ativos = pbS.oabs.filter(function(o){ return o.ativo; });
   h += '<div class="pb-filtros"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     (pbS.oabs.length > 1 ? '<select id="pbOabSel" class="filter-select" aria-label="OAB"><option value="todas">Todas as OABs</option>' + pbS.oabs.map(function(o){ return '<option value="' + escapeHtml(o.id) + '"' + (pbS.oab === o.id ? ' selected' : '') + '>' + escapeHtml(o.nome) + ' · ' + escapeHtml(o.numero + '/' + o.uf) + '</option>'; }).join('') + '</select>' : '') + '</div>';
@@ -16940,7 +16945,7 @@ function pbDesenharDetalhe(){
   }
   h += '</div>';
   c.innerHTML = h;
-  var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); pbAbrirPrazo(pz.id); });
+  var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();
 }
 function pbAtualizarCalculo(){
@@ -16957,69 +16962,13 @@ function pbSalvarPrazo(){
   var dias = parseInt(qs('pbf_dias').value, 10), tipo = qs('pbf_tipo').value, desc = qs('pbf_desc').value.trim(), manual = qs('pbf_manual').value, err = qs('pbErro');
   if (!dias || dias < 1){ err.textContent = 'Informe os dias do prazo.'; return; }
   if (!desc){ err.textContent = 'Escreva uma descrição.'; return; }
-  var r = pbCalcular(p.data, dias, tipo), venc = manual || r.venc, v = pbVinculo(p.processo);
-  var doc = { pubId: p.id, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), descricao: desc, dias: dias, contagem: tipo, disp: p.data, inicio: r.ini, data: venc, manual: !!manual, tribunal: p.tribunal || '', concluido: false, criadoEm: new Date().toISOString() };
-  pbApi('/api/db/prazosPub', 'POST', doc).then(function(j){
-    doc.id = j.id; pbPrazos.push(doc); pbMarcar([p.id], { lida: true, semPrazo: false });
-    qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '.');
-    try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender();
+  var r = pbCalcular(p.data, dias, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '';
+  var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias, contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '', criadoEm: new Date().toISOString() }).then(function(){
+    pbMarcar([p.id], { lida: true, semPrazo: false });
+    qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '. Está na Agenda.');
   }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }
-
-/* ---------- prazo confirmado: Central de atenção, avisos de 10h e tela de ações ---------- */
-function pbAvisos(){
-  var hoje = todayISO(), lim = somarDias(hoje, 10);
-  return pbPrazos.filter(function(x){ return !x.concluido && x.data && x.data <= lim; }).map(function(x){
-    return { tipo: 'prazopub', id: x.id, d: x.data, titulo: 'Prazo · ' + (x.cliente || 'Sem nome'), detalhe: (x.descricao || 'Prazo') + ' · ' + (x.data < hoje ? 'venceu em ' : 'vence em ') + fmtData(x.data), atraso: x.data < hoje };
-  }).sort(function(a, b){ return a.d.localeCompare(b.d); });
-}
-function pbLinhaAviso(a){
-  var hoje = a.d === todayISO(), urgente = a.atraso || hoje;
-  return '<div class="stall-chip pb-aviso' + (urgente ? '' : ' tipo-murilo') + '" data-pb-prazo="' + escapeHtml(a.id) + '"><div class="up-data' + (a.atraso ? ' up-d-atraso' : (hoje ? ' up-d-hoje' : '')) + '"><b>' + a.d.slice(8, 10) + '</b><span>' + MES_CURTO_AT[Number(a.d.slice(5, 7)) - 1].toUpperCase() + '</span></div>' +
-    '<div class="up-top"><span>' + escapeHtml(a.titulo) + '</span></div><div class="up-when">' + escapeHtml(a.detalhe) + '</div></div>';
-}
-function pbItens(hoje, lim){
-  return pbPrazos.filter(function(x){ return !x.concluido && x.data && x.data >= hoje && x.data <= lim; }).map(function(x){ return { d: x.data, t: 'prazo', n: x.cliente || 'Sem nome', l: 'Prazo: ' + (x.descricao || 'processual'), v: null }; });
-}
-function pbMontarPrazo(){
-  if (qs('overlayPbPrazo')) return;
-  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayPbPrazo';
-  d.innerHTML = '<div class="modal"><div class="modal-head"><h2 id="pbpTit">Prazo</h2><button class="icon-btn" id="pbpX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="parcela-sum" id="pbpInfo"></div>' +
-    '<button type="button" class="btn btn-primary" id="pbpFeito" style="width:100%;justify-content:center;">Marcar como cumprido</button>' +
-    '<div class="field"><label class="field-label" for="pbpData">Alterar a data do prazo</label><input type="date" id="pbpData"></div><button type="button" class="btn btn-ghost" id="pbpSalvarData" style="width:100%;justify-content:center;">Salvar nova data</button>' +
-    '<button type="button" class="btn btn-ghost" id="pbpVer" style="width:100%;justify-content:center;">Ver a publicação</button><button type="button" class="btn-text" id="pbpExcluir" style="color:var(--urgente)">Excluir este prazo</button><div class="form-error" id="pbpErro"></div></div></div>';
-  document.body.appendChild(d);
-  adAbrirData(qs('pbpData'));
-  d.addEventListener('click', function(e){ if (e.target === d || (e.target.closest && e.target.closest('#pbpX'))) d.classList.remove('show'); });
-  qs('pbpFeito').addEventListener('click', function(){ pbAtualizarPrazo({ concluido: true, concluidoEm: todayISO() }, 'Prazo cumprido.'); });
-  qs('pbpSalvarData').addEventListener('click', function(){ var n = qs('pbpData').value; if (!n){ qs('pbpErro').textContent = 'Escolha a nova data.'; return; } pbAtualizarPrazo({ data: n, manual: true }, 'Prazo alterado para ' + fmtData(n) + '.'); });
-  qs('pbpVer').addEventListener('click', function(){ var x = pbPrazoAtual(); d.classList.remove('show'); if (x && x.pubId){ if (!pbPub(x.pubId)){ toast('A publicação está fora dos últimos 90 dias.'); return; } setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(x.pubId); }, 60); } });
-  qs('pbpExcluir').addEventListener('click', function(){
-    var b = qs('pbpExcluir'), x = pbPrazoAtual(); if (!x) return;
-    if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para excluir'; return; }
-    pbApi('/api/db/prazosPub/' + encodeURIComponent(x.id), 'DELETE').then(function(){ pbPrazos = pbPrazos.filter(function(y){ return y.id !== x.id; }); d.classList.remove('show'); toast('Prazo excluído.'); try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender(); }).catch(function(e){ qs('pbpErro').textContent = e.message; });
-  });
-}
-var pbPrazoId = null;
-function pbPrazoAtual(){ for (var i = 0; i < pbPrazos.length; i++) if (pbPrazos[i].id === pbPrazoId) return pbPrazos[i]; return null; }
-function pbAbrirPrazo(id){
-  pbMontarPrazo(); pbPrazoId = id; var x = pbPrazoAtual(); if (!x) return;
-  qs('pbpTit').textContent = x.cliente || 'Prazo'; qs('pbpInfo').innerHTML = escapeHtml((x.descricao || 'Prazo') + ' · vence em ' + fmtData(x.data) + ' (' + pbDiaSem(x.data) + ')') + (x.processo ? '<br><span class="saldo-data">' + escapeHtml(x.processo) + '</span>' : '');
-  qs('pbpData').value = ''; qs('pbpErro').textContent = ''; qs('pbpExcluir').removeAttribute('data-sure'); qs('pbpExcluir').textContent = 'Excluir este prazo';
-  qs('pbpFeito').style.display = x.concluido ? 'none' : ''; qs('pbpVer').style.display = x.pubId ? '' : 'none';
-  qs('overlayPbPrazo').classList.add('show');
-}
-function pbAtualizarPrazo(campos, msg){
-  var x = pbPrazoAtual(); if (!x) return;
-  var novo = Object.assign({}, x, campos); delete novo.id;
-  pbApi('/api/db/prazosPub/' + encodeURIComponent(x.id), 'PUT', novo).then(function(){
-    Object.assign(x, campos); qs('overlayPbPrazo').classList.remove('show'); toast(msg); try{ renderPainelAtencao(); }catch(e){} if (activeTab === 'publicacoes') pbRender();
-  }).catch(function(e){ qs('pbpErro').textContent = 'Não consegui salvar: ' + e.message; });
-}
-document.addEventListener('click', function(ev){
-  var el = ev.target.closest ? ev.target.closest('[data-pb-prazo]') : null; if (!el) return;
-  pbAbrirPrazo(el.getAttribute('data-pb-prazo'));
-});
 
 /* ---------- OABs monitoradas ---------- */
 function pbMontarOabs(){
@@ -17074,7 +17023,7 @@ function pbSalvarOabs(){
 }
 
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); } };
+window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){
@@ -17098,12 +17047,349 @@ window.__horusTeste = { pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);
   if (window.__SERVIDOR){
-    pbCarregarPrazos(); pbCarregar(true);
+    pbCarregar(true);
     document.addEventListener('visibilitychange', function(){ if (!document.hidden){ pbCarregar(true); } });
   }
 })();
 
 /*PB-FIM*/
+/*AG-INICIO*/
+/* ============================================================
+   AGENDA DE PRAZOS PROCESSUAIS, AUDIÊNCIAS E TAREFAS
+   - separada da Central de atenção (que fica só com dinheiro)
+   - junta o que você cadastra na Agenda, os prazos confirmados nas Publicações e os prazos que já existiam nas Novas ações
+   - cartão "Prazos processuais" no Início e avisos no celular (5, 2 e 1 dia antes e no dia, configurável por item)
+   ============================================================ */
+var agDocs = [], agOk = false, agEditKey = null, agEditTipo = 'prazo';
+var agS = { vista: 'semana', filtro: 'tudo', ref: '', mes: '', sel: '', feitos: false };
+var AG_PADRAO = [5, 2, 1, 0];
+var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
+var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em elaboração', feito: 'Concluído' };
+var AG_DOW = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], AG_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+function agHoje(){ return todayISO(); }
+function agDias(iso){ return Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(agHoje() + 'T12:00:00Z')) / 86400000); }
+function agMesCurto(iso){ return AG_MESES[Number(iso.slice(5, 7)) - 1].slice(0, 3).toUpperCase(); }
+function agNomeFeriado(iso){
+  var md = iso.slice(5);
+  if (pbFeriado(iso)){
+    if (PB_FER_NOMES[md]) return PB_FER_NOMES[md];
+    var d = Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(pbPascoa(Number(iso.slice(0, 4))) + 'T12:00:00Z')) / 86400000);
+    return ({ '-48': 'Carnaval', '-47': 'Carnaval', '-46': 'Carnaval', '-4': 'Semana Santa', '-3': 'Quinta-feira Santa', '-2': 'Sexta-feira Santa', '60': 'Corpus Christi' })[String(d)] || 'Feriado';
+  }
+  return '';
+}
+function agAntesUteis(iso, n){ var d = iso; while (n > 0){ d = pbSoma(d, -1); if (!pbNaoUtil(d)) n--; } return d; }
+
+/* ---------- dados ---------- */
+function agCarregar(){
+  if (!window.__SERVIDOR) { agOk = true; agDepois(); return Promise.resolve(); }
+  return pbApi('/api/db/prazosPub').catch(function(){ return { docs: [] }; }).then(function(old){   /* migra os prazos da primeira versão */
+    var docs = old.docs || []; if (!docs.length) return null;
+    return Promise.all(docs.map(function(d){
+      var x = d.data || {};
+      return pbApi('/api/db/agenda', 'POST', { tipo: 'prazo', titulo: x.descricao || 'Prazo', processo: x.processo || '', cliente: x.cliente || '', data: x.data, trabalhar: '', situacao: x.concluido ? 'feito' : 'afazer', concluido: !!x.concluido, pubId: x.pubId || '', dias: x.dias, contagem: x.contagem, disp: x.disp, inicio: x.inicio, manual: !!x.manual, tribunal: x.tribunal || '', avisos: AG_PADRAO.slice(), criadoEm: x.criadoEm || new Date().toISOString() })
+        .then(function(){ return pbApi('/api/db/prazosPub/' + encodeURIComponent(d.id), 'DELETE'); });
+    }));
+  }).then(function(){ return pbApi('/api/db/agenda'); }).then(function(r){
+    agDocs = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); agOk = true; agDepois();
+  }).catch(function(){ agOk = true; agDepois(); });
+}
+function agDepois(){
+  try{ agRenderInicio(); }catch(e){ console.error('prazos no início', e); }
+  agAtualizarBadge();
+  if (activeTab === 'agenda') agRender();
+  if (activeTab === 'publicacoes') pbRender();
+  try{ ntAgendarEnvio(); }catch(e){}
+}
+function pbPrazoDaPub(pubId){
+  for (var i = 0; i < agDocs.length; i++) if (agDocs[i].pubId === pubId) return { id: agDocs[i].id, data: agDocs[i].data, concluido: !!agDocs[i].concluido, descricao: agDocs[i].titulo };
+  return null;
+}
+function agCriar(doc){
+  return pbApi('/api/db/agenda', 'POST', doc).then(function(j){ doc.id = j.id; agDocs.push(doc); agDepois(); return doc; });
+}
+function agItens(){
+  var l = [];
+  agDocs.forEach(function(d){
+    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d });
+  });
+  casos.forEach(function(c){   /* prazos que já existiam nas Novas ações */
+    if (c.arquivado || !c.prazo || !c.prazo.data) return;
+    l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c });
+  });
+  return l.filter(function(i){ return /^\d{4}-\d{2}-\d{2}$/.test(i.data); });
+}
+function agOrdem(a, b){ return (a.data + (a.hora || '99:99')).localeCompare(b.data + (b.hora || '99:99')) || (a.tipo || '').localeCompare(b.tipo || ''); }
+function agAbertos(){ return agItens().filter(function(i){ return !i.concluido; }).sort(agOrdem); }
+function agChip(i){
+  if (i.concluido) return { t: i.tipo === 'audiencia' ? 'Realizada' : 'Concluído', c: 'ok' };
+  var d = agDias(i.data);
+  if (d < 0) return { t: i.tipo === 'audiencia' ? 'Passou' : 'Atrasado', c: 'atraso' };
+  if (d === 0) return { t: 'Hoje' + (i.hora ? ' ' + i.hora : ''), c: 'atraso' };
+  if (d === 1) return { t: 'Amanhã', c: 'breve' };
+  return { t: 'Em ' + d + ' dias', c: d <= 3 ? 'breve' : 'ok' };
+}
+function agAtualizarBadge(){
+  var n = agAbertos().filter(function(i){ return i.data <= agHoje(); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
+}
+function agPrazosResumo(hoje, lim){
+  return agAbertos().filter(function(i){ return i.data >= hoje && i.data <= lim; }).map(function(i){ return { d: i.data, h: i.hora || '', n: i.cliente || 'Sem nome', l: i.titulo, t: i.tipo, a: i.avisos }; });
+}
+
+/* ---------- cartão no Início ---------- */
+function agRenderInicio(){
+  var el = qs('inicioPrazos'); if (!el) return;
+  var hoje = agHoje(), lim = pbSoma(hoje, 7), l = agAbertos().filter(function(i){ return i.data <= lim; });
+  var atr = l.filter(function(i){ return i.data < hoje && i.tipo !== 'audiencia'; }).length;
+  var sem = l.filter(function(i){ return i.data >= hoje && i.tipo !== 'audiencia'; }).length;
+  var aud = l.filter(function(i){ return i.data >= hoje && i.tipo === 'audiencia'; }).length;
+  l = l.filter(function(i){ return !(i.tipo === 'audiencia' && i.data < hoje); });
+  var chips = (atr ? rsChip(atr + (atr === 1 ? ' atrasado' : ' atrasados'), 'neg') : '') + (sem ? rsChip(sem + (sem === 1 ? ' prazo' : ' prazos'), '') : '') + (aud ? rsChip(aud + (aud === 1 ? ' audiência' : ' audiências'), '') : '');
+  var npub = 0; try{ if (pbS.carregado) npub = pbVisiveis().filter(function(p){ return !p.lida; }).length; }catch(e){}
+  var h = '<div class="ini-card ag-cartao"><div class="ag-cab"><span class="ag-tit">' + fvIc('scale', '#D93B3B') + '<b>Prazos processuais</b></span><span class="saldo-data">próximos 7 dias</span></div>' + (chips ? '<div class="ag-chips">' + chips + '</div>' : '');
+  if (!l.length) h += '<div class="saldo-data" style="margin:8px 0;">Nenhum prazo nos próximos 7 dias.</div>';
+  else h += l.slice(0, 5).map(function(i){ return agLinha(i); }).join('') + (l.length > 5 ? '<div class="saldo-data" style="margin-top:6px;">e mais ' + (l.length - 5) + '</div>' : '');
+  h += '<div class="ag-rod"><button type="button" class="btn-text" data-ag-ir="agenda">Ver agenda completa ›</button>' + (npub ? '<button type="button" class="btn-text" data-ag-ir="publicacoes">● ' + npub + (npub === 1 ? ' publicação nova' : ' publicações novas') + ' ›</button>' : '') + '</div></div>';
+  el.innerHTML = h;
+}
+function agLinha(i){
+  var c = agChip(i), hoje = agHoje(), atr = !i.concluido && i.data < hoje;
+  return '<div class="ag-lin" data-ag-abrir="' + escapeHtml(i.key) + '"><div class="ag-dt' + (atr ? ' atr' : (i.data === hoje ? ' hoje' : '')) + '"><b>' + i.data.slice(8, 10) + '</b><span>' + agMesCurto(i.data) + '</span></div><div class="ag-lin-tx"><b>' + escapeHtml((i.tipo === 'audiencia' ? 'Audiência' + (i.hora ? ' ' + i.hora : '') + ' · ' : i.titulo + (i.cliente ? ' · ' : '')) + (i.tipo === 'audiencia' ? (i.cliente || i.titulo) : (i.cliente || ''))) + '</b><span>' + escapeHtml(i.processo || (i.tipo === 'audiencia' ? i.titulo : '')) + '</span></div><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div>';
+}
+(function(){
+  var orig = renderPainelAtencao;
+  renderPainelAtencao = function(){ var r = orig.apply(this, arguments); try{ agRenderInicio(); }catch(e){ console.error('prazos no início', e); } return r; };
+  document.addEventListener('click', function(ev){
+    var t = ev.target, a = t.closest ? t.closest('[data-ag-abrir]') : null;
+    if (a){ agAbrir(a.getAttribute('data-ag-abrir')); return; }
+    var g = t.closest ? t.closest('[data-ag-ir]') : null;
+    if (g) setActiveTab(g.getAttribute('data-ag-ir'));
+  });
+})();
+
+/* ---------- tela da Agenda ---------- */
+function agIniSemana(iso){ return pbSoma(iso, -((pbDow(iso) + 6) % 7)); }
+function agFiltrados(l){
+  return l.filter(function(i){ return (agS.filtro === 'tudo' || i.tipo === agS.filtro) && (agS.feitos || !i.concluido); });
+}
+function agMontarTela(){
+  var w = qs('agWrap'); if (!w || w.getAttribute('data-ok')) return; w.setAttribute('data-ok', '1');
+  w.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('[data-ag]') : null; if (!b) return;
+    var a = b.getAttribute('data-ag'), v = b.getAttribute('data-v'), k = b.getAttribute('data-k');
+    if (a === 'vista'){ agS.vista = v; agRender(); }
+    else if (a === 'filtro'){ agS.filtro = v; agRender(); }
+    else if (a === 'feitos'){ agS.feitos = !agS.feitos; agRender(); }
+    else if (a === 'novo') agAbrir(null);
+    else if (a === 'nav'){ var n = Number(v); if (agS.vista === 'mes'){ var d = new Date(agS.mes + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); agS.mes = d.toISOString().slice(0, 7); agS.sel = agS.mes + '-01'; } else { agS.ref = pbSoma(agS.ref, 7 * n); } agRender(); }
+    else if (a === 'hoje'){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); agRender(); }
+    else if (a === 'dia'){ agS.sel = v; if (agS.vista === 'mes' && v.slice(0, 7) !== agS.mes) agS.mes = v.slice(0, 7); agRender(); if (agS.vista === 'semana'){ var g = qs('agd-' + v); if (g && g.scrollIntoView) g.scrollIntoView({ block: 'start' }); } }
+    else if (a === 'abrir') agAbrir(k);
+    else if (a === 'concluir') agConcluir(k, true);
+    else if (a === 'reabrir') agConcluir(k, false);
+    else if (a === 'pub'){ var it = agItens().filter(function(x){ return x.key === k; })[0]; if (it && it.pubId){ setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(it.pubId); }, 80); } }
+    else if (a === 'acao'){ var it2 = agItens().filter(function(x){ return x.key === k; })[0]; if (it2) irParaRelacionado('peticao', it2.id); }
+  });
+}
+function agRender(){
+  agMontarTela();
+  var w = qs('agWrap'); if (!w) return;
+  if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
+  var h = '<div class="ag-topo"><div class="segmented" id="agSeg">' + [['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.vista === f[0] ? ' active' : '') + '" data-ag="vista" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div><button type="button" class="btn btn-primary" data-ag="novo">+ Novo</button></div>';
+  h += '<div class="ag-filtros">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas']].map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '<button type="button" class="ag-f' + (agS.feitos ? ' on' : '') + '" data-ag="feitos">Concluídos</button></div>';
+  var todos = agFiltrados(agItens()).sort(agOrdem);
+  if (agS.vista === 'semana') h += agVistaSemana(todos);
+  else if (agS.vista === 'mes') h += agVistaMes(todos);
+  else h += agVistaLista(todos);
+  w.innerHTML = h;
+}
+function agPorDia(l){ var m = {}; l.forEach(function(i){ (m[i.data] = m[i.data] || []).push(i); }); return m; }
+function agPontos(l){
+  var s = {}; l.forEach(function(i){ if (i.concluido) return; s[i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')] = 1; });
+  return ['pr', 'au', 'pe'].filter(function(k){ return s[k]; }).map(function(k){ return '<s class="ag-p ' + k + '"></s>'; }).join('');
+}
+function agTrabalhos(l){   /* "trabalhar até" dos prazos: marcador dourado no dia */
+  var m = {}; l.forEach(function(i){ if (!i.concluido && i.tipo === 'prazo' && i.trabalhar && i.trabalhar < i.data) (m[i.trabalhar] = m[i.trabalhar] || []).push(i); }); return m;
+}
+function agCabDia(iso){
+  var f = agNomeFeriado(iso), rec = !f && pbRecesso(iso) && pbDow(iso) !== 0 && pbDow(iso) !== 6;
+  var nome = PB_DIAS[pbDow(iso)]; nome = nome.charAt(0).toUpperCase() + nome.slice(1).split('-')[0];
+  return '<div class="ag-dia' + (iso === agHoje() ? ' hoje' : '') + '" id="agd-' + iso + '">' + nome + ' · ' + fmtData(iso).slice(0, 5) + (iso === agHoje() ? ' · hoje' : '') + (f ? ' · ' + escapeHtml(f) + ' (sem expediente)' : '') + (rec ? ' · recesso: prazos suspensos' : '') + '</div>';
+}
+function agVistaSemana(todos){
+  var ini = agIniSemana(agS.ref), dias = [], i;
+  for (i = 0; i < 7; i++) dias.push(pbSoma(ini, i));
+  var por = agPorDia(todos), trab = agTrabalhos(todos), hoje = agHoje();
+  var h = '<div class="ag-nav"><button type="button" class="icon-btn" data-ag="nav" data-v="-1" aria-label="Semana anterior">‹</button><b>' + fmtData(dias[0]).slice(0, 5) + ' a ' + fmtData(dias[6]).slice(0, 5) + '</b><button type="button" class="icon-btn" data-ag="nav" data-v="1" aria-label="Próxima semana">›</button><button type="button" class="btn-text" data-ag="hoje">Hoje</button></div>';
+  h += '<div class="ag-sem">' + dias.map(function(d){
+    var dots = agPontos(por[d] || []) + (trab[d] ? '<s class="ag-p pe"></s>' : '') + (agNomeFeriado(d) ? '<s class="ag-p fe"></s>' : '');
+    return '<button type="button" class="ag-d' + (d === agS.sel ? ' on' : '') + (d === hoje ? ' hoje' : '') + '" data-ag="dia" data-v="' + d + '"><span>' + AG_DOW[pbDow(d)] + '</span><b>' + d.slice(8, 10) + '</b><i>' + dots + '</i></button>';
+  }).join('') + '</div>';
+  var atrasados = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; });
+  var vazio = true;
+  if (atrasados.length){ vazio = false; h += '<div class="ag-dia atr">Atrasado</div>' + atrasados.map(agCartao).join(''); }
+  dias.forEach(function(d){
+    var l = (por[d] || []).filter(function(x){ return !(x.data < hoje && !x.concluido && x.tipo !== 'audiencia'); }), tr = trab[d] || [];
+    if (!l.length && !tr.length && !agNomeFeriado(d)) return;
+    vazio = false; h += agCabDia(d) + l.map(agCartao).join('') + tr.map(function(x){ return agCartaoTrabalho(x); }).join('');
+  });
+  if (vazio) h += '<div class="financeiro-vazio">Nada na agenda nesta semana.</div>';
+  return h;
+}
+function agVistaMes(todos){
+  var primeiro = agS.mes + '-01', ini = pbSoma(primeiro, -pbDow(primeiro)), por = agPorDia(todos), trab = agTrabalhos(todos), hoje = agHoje(), c = '', i, d;
+  var mesTxt = AG_MESES[Number(agS.mes.slice(5, 7)) - 1];
+  mesTxt = mesTxt.charAt(0).toUpperCase() + mesTxt.slice(1) + ' ' + agS.mes.slice(0, 4);
+  c += '<div class="ag-nav"><button type="button" class="icon-btn" data-ag="nav" data-v="-1" aria-label="Mês anterior">‹</button><b>' + mesTxt + '</b><button type="button" class="icon-btn" data-ag="nav" data-v="1" aria-label="Próximo mês">›</button><button type="button" class="btn-text" data-ag="hoje">Hoje</button></div>';
+  c += '<div class="ag-mes">' + ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(function(x){ return '<div class="h">' + x + '</div>'; }).join('');
+  for (i = 0; i < 42; i++){
+    d = pbSoma(ini, i);
+    var fora = d.slice(0, 7) !== agS.mes, fer = !!agNomeFeriado(d) || pbDow(d) === 0;
+    c += '<button type="button" class="ag-c' + (fora ? ' fora' : '') + (fer ? ' fer' : '') + (d === agS.sel ? ' on' : '') + (d === hoje ? ' hoje' : '') + '" data-ag="dia" data-v="' + d + '">' + Number(d.slice(8)) + '<i>' + agPontos(por[d] || []) + (trab[d] ? '<s class="ag-p pe"></s>' : '') + (agNomeFeriado(d) ? '<s class="ag-p fe"></s>' : '') + '</i></button>';
+  }
+  c += '</div><div class="ag-leg"><span><s class="ag-p pr"></s>prazo</span><span><s class="ag-p pe"></s>tarefa / trabalhar até</span><span><s class="ag-p au"></s>audiência</span><span><s class="ag-p fe"></s>feriado (TJGO)</span></div>';
+  var l = por[agS.sel] || [], tr = trab[agS.sel] || [];
+  c += agCabDia(agS.sel) + (l.length || tr.length ? l.map(agCartao).join('') + tr.map(function(x){ return agCartaoTrabalho(x); }).join('') : '<div class="financeiro-vazio">Nada neste dia.</div>');
+  return c;
+}
+function agVistaLista(todos){
+  var hoje = agHoje(), h = '', atr = todos.filter(function(x){ return !x.concluido && x.data < hoje && x.tipo !== 'audiencia'; }), futuros = todos.filter(function(x){ return !x.concluido && !(x.data < hoje); }), feitos = todos.filter(function(x){ return x.concluido; }).sort(function(a, b){ return agOrdem(b, a); });
+  if (atr.length) h += '<div class="ag-dia atr">Atrasado</div>' + atr.map(agCartao).join('');
+  var ult = '';
+  futuros.slice(0, 80).forEach(function(i){ if (i.data !== ult){ ult = i.data; h += agCabDia(i.data); } h += agCartao(i); });
+  if (futuros.length > 80) h += '<div class="saldo-data">Mostrando os 80 primeiros. Use o mês ou a semana para ver os demais.</div>';
+  if (agS.feitos && feitos.length) h += '<div class="ag-dia">Concluídos</div>' + feitos.slice(0, 30).map(agCartao).join('');
+  if (!atr.length && !futuros.length && !(agS.feitos && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
+  return h;
+}
+function agTipoLinha(i){
+  if (i.tipo === 'audiencia') return 'Audiência ' + fmtData(i.data).slice(0, 5) + (i.hora ? ' · ' + i.hora : '');
+  if (i.tipo === 'tarefa') return 'Fazer até ' + fmtData(i.data).slice(0, 5);
+  return 'Prazo fatal ' + fmtData(i.data).slice(0, 5) + (!i.concluido && i.trabalhar && i.trabalhar < i.data ? ' · trabalhar até ' + fmtData(i.trabalhar).slice(0, 5) : '');
+}
+function agCartao(i){
+  var c = agChip(i), cls = i.concluido ? 'ok' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')), v = i.processo ? pbVinculo(i.processo) : null, tags = '';
+  tags += '<span class="pb-tg ' + (i.situacao === 'feito' ? 'ok' : (i.situacao === 'elaboracao' ? 'pz' : '')) + '">' + (i.tipo === 'audiencia' && i.situacao === 'feito' ? 'Realizada' : AG_SITUACAO[i.situacao]) + '</span>';
+  if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ' cadastrada</span>';
+  if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
+  if (i.fonte === 'caso') tags += '<span class="pb-tg">da nova ação</span>';
+  var btn = '';
+  if (!i.concluido) btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + escapeHtml(i.key) + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
+  else btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + escapeHtml(i.key) + '">Reabrir</button>';
+  btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="abrir" data-k="' + escapeHtml(i.key) + '">Editar</button>';
+  if (i.pubId) btn += '<button type="button" class="btn-text pb-b" data-ag="pub" data-k="' + escapeHtml(i.key) + '">Ver publicação</button>';
+  if (i.fonte === 'caso') btn += '<button type="button" class="btn-text pb-b" data-ag="acao" data-k="' + escapeHtml(i.key) + '">Abrir ação</button>';
+  return '<div class="ag-it ' + cls + '"><div class="pb-l1"><span>' + escapeHtml(agTipoLinha(i)) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div><div class="pb-tags">' + tags + '</div><div class="pb-acts">' + btn + '</div></div>';
+}
+function agCartaoTrabalho(i){
+  return '<div class="ag-it pe"><div class="pb-l1"><span>Dia de trabalhar na peça</span><span class="est est-breve">interno</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">Prazo fatal ' + fmtData(i.data).slice(0, 5) + (i.cliente ? ' · ' + escapeHtml(i.cliente) : '') + '</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-ag="abrir" data-k="' + escapeHtml(i.key) + '">Abrir prazo</button></div></div>';
+}
+
+/* ---------- criar, editar, concluir ---------- */
+function agConcluir(key, feito){
+  var i = agItens().filter(function(x){ return x.key === key; })[0]; if (!i) return;
+  if (i.fonte === 'caso'){
+    persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { concluido: feito }) });
+    setTimeout(function(){ agDepois(); }, 400); toast(feito ? 'Prazo concluído.' : 'Prazo reaberto.'); return;
+  }
+  var doc = Object.assign({}, i.doc, { concluido: feito, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '' }); delete doc.id;
+  pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ Object.assign(i.doc, doc); agDepois(); toast(feito ? (i.tipo === 'prazo' ? 'Prazo marcado como protocolado.' : 'Concluído.') : 'Reaberto.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
+}
+function agMontarEd(){
+  if (qs('overlayAg')) return;
+  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayAg';
+  d.innerHTML = '<div class="modal"><div class="modal-head"><h2 id="agEdTit">Novo item da agenda</h2><button class="icon-btn" id="agEdX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body" id="agEdCorpo"></div></div>';
+  document.body.appendChild(d);
+  d.addEventListener('click', function(e){
+    if (e.target === d || (e.target.closest && e.target.closest('#agEdX'))){ d.classList.remove('show'); return; }
+    var b = e.target.closest ? e.target.closest('[data-age]') : null; if (!b) return;
+    var a = b.getAttribute('data-age');
+    if (a === 'tipo'){ agEditTipo = b.getAttribute('data-v'); agAjustarCampos(); Array.prototype.forEach.call(d.querySelectorAll('[data-age="tipo"]'), function(x){ x.classList.toggle('active', x === b); }); }
+    else if (a === 'salvar') agSalvarEd();
+    else if (a === 'excluir') agExcluirEd(b);
+  });
+  d.addEventListener('input', function(e){
+    if (e.target && e.target.id === 'age_proc'){
+      var v = pbVinculo(e.target.value), dica = qs('age_dica'); if (dica) dica.textContent = v ? '✓ ' + v.rotulo.toLowerCase() + ' cadastrada · cliente: ' + v.cliente : '';
+      if (v && !qs('age_cli').value.trim()) qs('age_cli').value = v.cliente;
+    }
+  });
+}
+function agAjustarCampos(){
+  var t = agEditTipo, rot = { prazo: 'Peça / o que fazer', audiencia: 'Assunto da audiência', tarefa: 'Tarefa' };
+  qs('age_tit_l').textContent = rot[t]; qs('age_data_l').textContent = t === 'prazo' ? 'Prazo fatal' : (t === 'audiencia' ? 'Data da audiência' : 'Fazer até');
+  qs('age_hora_box').style.display = t === 'audiencia' ? '' : 'none'; qs('age_trab_box').style.display = t === 'prazo' ? '' : 'none';
+  qs('age_sit_box').style.display = t === 'audiencia' ? 'none' : '';
+  qs('age_data').closest('.pb-dois').style.gridTemplateColumns = t === 'audiencia' ? '1fr 1fr' : '1fr';
+}
+function agPresetAvisos(a){ var s = JSON.stringify(a || AG_PADRAO); return s === '[1,0]' ? 'umdia' : (s === '[0]' ? 'dia' : (s === '[]' ? 'nenhum' : 'padrao')); }
+function agAbrir(key){
+  agMontarEd();
+  var i = key ? agItens().filter(function(x){ return x.key === key; })[0] : null; if (key && !i) return;
+  agEditKey = key || null; agEditTipo = i ? i.tipo : 'prazo';
+  var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
+  var h = '<div class="segmented" id="age_seg"' + (i ? ' style="display:none"' : '') + '>' + ['prazo', 'audiencia', 'tarefa'].map(function(t){ return '<button type="button" class="seg-btn' + (agEditTipo === t ? ' active' : '') + '" data-age="tipo" data-v="' + t + '">' + AG_TIPOS[t] + '</button>'; }).join('') + '</div>';
+  if (caso) h += '<div class="parcela-sum">Este prazo é da ação nova <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
+  h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(i ? i.titulo : '') + '" placeholder="Ex.: Contestação"></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(i ? i.processo : '') + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(i ? i.cliente : '') + '"></div>' +
+    '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(i ? i.data : '') + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(i ? i.hora : '') + '"></div></div>' +
+    '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : '') + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
+    '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + '>Em elaboração</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
+    (i && !caso ? '<button type="button" class="btn-text" data-age="excluir" style="color:var(--urgente)">Excluir este item</button>' : '');
+  qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da ação nova' : 'Editar item') : 'Novo item da agenda';
+  adAbrirData(qs('age_data')); adAbrirData(qs('age_trab'));
+  agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
+  qs('overlayAg').classList.add('show');
+}
+function agSalvarEd(){
+  var t = agEditTipo, tit = qs('age_tit').value.trim(), data = qs('age_data').value, err = qs('age_erro');
+  var i = agEditKey ? agItens().filter(function(x){ return x.key === agEditKey; })[0] : null, caso = i && i.fonte === 'caso';
+  if (!caso && !tit){ err.textContent = 'Escreva o que precisa ser feito.'; return; }
+  if (!data){ err.textContent = 'Escolha a data.'; return; }
+  var sit = t === 'audiencia' ? (i && i.concluido ? 'feito' : 'afazer') : qs('age_sit').value;
+  if (caso){
+    persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { data: data, concluido: sit === 'feito' }) });
+    qs('overlayAg').classList.remove('show'); toast('Prazo atualizado.'); setTimeout(agDepois, 400); return;
+  }
+  var trab = t === 'prazo' ? qs('age_trab').value : '';
+  if (t === 'prazo' && !trab){ var auto = agAntesUteis(data, 2); if (auto >= agHoje() && auto < data) trab = auto; }
+  var av = { padrao: AG_PADRAO.slice(), umdia: [1, 0], dia: [0], nenhum: [] }[qs('age_av').value] || AG_PADRAO.slice();
+  var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '' }; delete base.id;
+  var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av });
+  var p = i ? pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ doc.id = i.id; agDocs = agDocs.map(function(x){ return x.id === i.id ? doc : x; }); }) : agCriar(doc);
+  p.then(function(){ qs('overlayAg').classList.remove('show'); toast('Salvo na agenda.'); agDepois(); }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
+}
+function agExcluirEd(b){
+  var i = agItens().filter(function(x){ return x.key === agEditKey; })[0]; if (!i) return;
+  if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para excluir'; return; }
+  pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'DELETE').then(function(){ agDocs = agDocs.filter(function(x){ return x.id !== i.id; }); qs('overlayAg').classList.remove('show'); toast('Item excluído.'); agDepois(); }).catch(function(e){ qs('age_erro').textContent = e.message; });
+}
+
+/* ---------- estilo e partida ---------- */
+(function(){
+  var st = document.createElement('style');
+  st.textContent = '.ag-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;border-radius:12px;background:var(--surface-2);line-height:1.15}.ag-dt b{font-size:var(--t5)}.ag-dt span{font-size:var(--t1);font-weight:700;color:var(--ink-soft)}.ag-dt.atr{background:rgba(217,59,59,.12)}.ag-dt.atr b,.ag-dt.atr span{color:var(--urgente)}.ag-dt.hoje{background:rgba(183,121,30,.15)}.ag-dt.hoje b,.ag-dt.hoje span{color:var(--tutela)}' +
+    '.ag-cartao{padding:14px 16px}.ag-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ag-tit{display:flex;align-items:center;gap:10px;font-size:var(--t4)}.ag-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}' +
+    '.ag-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.ag-lin-tx{display:flex;flex-direction:column;min-width:0}.ag-lin-tx b{font-size:var(--t4);overflow-wrap:anywhere}.ag-lin-tx span{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}' +
+    '.ag-rod{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-topo{display:flex;gap:8px;align-items:center}.ag-topo .segmented{flex:1;flex-wrap:nowrap}.ag-topo .seg-btn{flex:1;justify-content:center}.ag-filtros{display:flex;gap:6px;flex-wrap:wrap}' +
+    '.ag-f{font-family:inherit;font-size:var(--t2);font-weight:600;padding:7px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-f.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}' +
+    '.ag-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}.ag-nav b{font-size:var(--t4)}' +
+    '.ag-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.ag-d{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 5px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-d span{font-size:var(--t1);text-transform:uppercase;font-weight:600}.ag-d b{font-size:var(--t5);color:var(--ink)}.ag-d.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}.ag-d.on b{color:var(--bg)}.ag-d.hoje:not(.on){border-color:var(--accent)}' +
+    '.ag-d i,.ag-c i{display:flex;gap:2px;justify-content:center;min-height:6px;font-style:normal}.ag-p{display:inline-block;width:5px;height:5px;border-radius:50%}.ag-p.pr{background:var(--urgente)}.ag-p.au{background:var(--info)}.ag-p.pe{background:var(--c-gold,#C98500)}.ag-p.fe{background:#9a9aa3}' +
+    '.ag-d.on .ag-p.fe{background:#ddd}.ag-mes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:10px}.ag-mes .h{text-align:center;font-size:var(--t1);font-weight:700;color:var(--ink-soft);padding:3px 0}' +
+    '.ag-c{font-family:inherit;font-size:var(--t3);font-weight:600;padding:7px 0 4px;border-radius:10px;border:0;background:transparent;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}.ag-c.fora{color:var(--ink-soft);opacity:.45}.ag-c.fer{color:var(--urgente)}.ag-c.on{background:var(--ink);color:var(--bg)}.ag-c.hoje:not(.on){box-shadow:inset 0 0 0 2px var(--accent)}' +
+    '.ag-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:var(--t1);color:var(--ink-soft);font-weight:600}.ag-leg span{display:inline-flex;align-items:center;gap:5px}' +
+    '.ag-dia{font-size:var(--t2);font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;margin:6px 4px 0}.ag-dia.atr{color:var(--urgente)}.ag-dia.hoje{color:var(--accent)}' +
+    '.ag-it{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px 14px 12px 17px;position:relative;overflow:hidden;box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.06))}.ag-it:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ag-c,#C4C4CB)}' +
+    '.ag-it.pr{--ag-c:var(--urgente)}.ag-it.au{--ag-c:var(--info)}.ag-it.pe{--ag-c:var(--c-gold,#C98500)}.ag-it.ok{--ag-c:var(--success);opacity:.7}';
+  document.head.appendChild(st);
+  agCarregar();
+})();
+
+/*AG-FIM*/
 
 /* ---------- adiar parcela (só o vencimento de uma parcela; as outras não mudam) ---------- */
 function adPodeAdiar(u){

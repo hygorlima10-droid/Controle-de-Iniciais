@@ -23,7 +23,6 @@ function ntResumo(){
     if (restanteUn(u) <= 0.004 || !u.data || u.data < hoje || u.data > lim || u.arquivado || (d && d.atipica)) return;
     itens.push({ d: u.data, t: u.docTipo === 'alvara' ? 'alvara' : 'pagamento', n: u.cliente, l: u.labelAlerta || u.label, v: r2(restanteMeu(u)) });
   });
-  casos.forEach(function(c){ if (!c.arquivado && c.prazo && c.prazo.data && !c.prazo.concluido && c.prazo.data >= hoje && c.prazo.data <= lim) itens.push({ d: c.prazo.data, t: 'prazo', n: c.cliente || 'Sem nome', l: 'Prazo: ' + (c.prazo.descricao || 'processual'), v: null }); });
   var m0 = hoje.slice(0, 7);
   [m0, deslocarMes(m0, 1)].forEach(function(m){
     comMes(m, function(){
@@ -38,10 +37,11 @@ function ntResumo(){
     });
   });
   try{ if (typeof ob7Itens === 'function') ob7Itens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
-  try{ if (typeof pbItens === 'function') pbItens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
   var alertas = []; /* atrasos de clientes você confere no app: só chegam alertas de caixa, reserva, despesas e alvarás */
   try{ alertas = paAlertas().filter(function(a){ return String(a.chave).indexOf('cliente|') !== 0; }).map(function(a){ return { chave: a.chave, titulo: a.titulo, detalhe: a.detalhe }; }); }catch(e){}
-  return { itens: itens, alertas: alertas };
+  var prazos = []; /* prazos processuais, audiências e tarefas da Agenda: aviso separado do dinheiro */
+  try{ prazos = agPrazosResumo(hoje, somarDias(hoje, 10)); }catch(e){ console.error('prazos', e); }
+  return { itens: itens, alertas: alertas, prazos: prazos };
 }
 var ntAtraso = null, ntUltimo = '';
 function ntAgendarEnvio(){
@@ -99,7 +99,7 @@ function ntMontar(){
 function ntDesenhar(){
   var c = qs('ntCorpo'); if (!c) return;
   var neste = ntEstado.neste;
-  c.innerHTML = '<div class="parcela-sum">Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir.</div>' +
+  c.innerHTML = '<div class="parcela-sum">Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir. Prazos processuais e audiências da Agenda avisam em mensagem separada, nos dias de antecedência de cada item (padrão: 5, 2 e 1 dia antes e no dia).</div>' +
     '<div class="cli-box"><div class="cli-linha"><span class="l">Neste aparelho</span><b style="color:' + (neste ? 'var(--success)' : 'var(--ink-soft)') + '">' + (neste ? 'Ativadas' : 'Desativadas') + '</b></div><div class="cli-linha"><span class="l">Aparelhos recebendo</span><b>' + ntEstado.aparelhos + '</b></div>' +
     (ntEstado.resumoEm ? '<div class="cli-linha"><span class="l">Lista de vencimentos atualizada em</span><span>' + escapeHtml(extFmtQuando(ntEstado.resumoEm)) + '</span></div>' : '') + '</div>' +
     (neste ? '<button type="button" class="btn btn-ghost" data-nt="desativar" style="width:100%;justify-content:center;">Desativar neste aparelho</button>' : '<button type="button" class="btn btn-primary" data-nt="ativar" style="width:100%;justify-content:center;">Ativar notificações neste aparelho</button>') +
