@@ -52,6 +52,16 @@ await page.click('[data-pr="novo"]'); await page.waitForTimeout(300); await page
 check(/já está cadastrado/.test(await t('#pr_erro')), 'não deixa cadastrar o mesmo número duas vezes');
 await page.click('#prX');
 
+// cadastrar um cliente novo de dentro do cadastro de processo (a janela do cliente tem de abrir por cima)
+await page.click('[data-pr="novo"]'); await page.waitForTimeout(400);
+await page.fill('#pr_numero', '5000333-02.2024.8.09.0107'); await page.fill('#pr_cli', 'Cliente Novo Teste'); await page.waitForTimeout(300);
+await page.click('#pr_sug [data-prf="cli-new"]'); await page.waitForTimeout(500);
+const topo = await page.evaluate(() => { const el = document.getElementById('cliNomeInput'), r = el.getBoundingClientRect(), x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { aberto: document.getElementById('overlayClienteEdit').classList.contains('show'), porCima: !!(x && x.closest('#overlayClienteEdit')), nome: el.value }; });
+check(topo.aberto && topo.porCima && topo.nome === 'Cliente Novo Teste', 'o cadastro de cliente abre por cima do cadastro de processo, com o nome já preenchido');
+await page.click('#cliSalvarBtn'); await page.waitForTimeout(1000);
+check(/Cliente Novo Teste/.test(await t('#pr_chips')) && (await docs('clientes')).some(c => c.nome === 'Cliente Novo Teste'), 'ao salvar, o cliente é cadastrado e já fica vinculado ao processo');
+await page.click('#prX'); await page.waitForTimeout(300);
+
 // reconhecimento nos formulários de Acordo e Alvará
 await page.evaluate(() => document.querySelector('#drawer [data-tab="acordos"]').click()); await page.waitForTimeout(500);
 await page.click('#fabNew'); await page.waitForTimeout(300); await page.click('[data-novo-k="acordo"]'); await page.waitForTimeout(500);

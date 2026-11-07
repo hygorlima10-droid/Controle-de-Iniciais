@@ -31,3 +31,6 @@
 .dr-it{white-space:normal;line-height:1.25;overflow-wrap:anywhere;}
 .dr-it .lab{min-width:0;flex:1 1 auto;}
 .dr-grp,.dr-name{white-space:normal;}
+
+/* O cadastro de cliente pode ser aberto de dentro de outras janelas (ficha do processo): fica por cima */
+#overlayClienteEdit{z-index:300;}
