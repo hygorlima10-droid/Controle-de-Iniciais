@@ -16810,6 +16810,20 @@ function pbCarregar(silencioso){
     pbS.carregando = false; pbAtualizarBadge(); if (!silencioso && activeTab === 'publicacoes') pbRender();
   });
 }
+/* Leitura ao abrir o app: a leitura automática do servidor às vezes é recusada pelo DJEN (o horário agendado roda num ponto qualquer do Cloudflare),
+   mas a leitura disparada daqui, perto de você, funciona. Se há erro ou ainda não leu hoje, o app lê sozinho ao abrir (no máximo a cada 30 min).
+   Para desligar: localStorage horus.leituraAuto = 0. */
+function pbLeituraAutomatica(){
+  try{ if (localStorage.getItem('horus.leituraAuto') === '0') return; }catch(e){}
+  if (!window.__SERVIDOR || document.hidden || pbS.buscando || !pbS.carregado) return;
+  var ativas = pbS.oabs.filter(function(o){ return o.ativo; }); if (!ativas.length) return;
+  var hoje = todayISO(); if (!ativas.some(function(o){ return o.erro || o.ultima !== hoje; })) return;
+  var ult = 0; try{ ult = Number(localStorage.getItem('horus.leituraAutoEm') || 0); }catch(e){}
+  if (Date.now() - ult < 30 * 60 * 1000) return;
+  try{ localStorage.setItem('horus.leituraAutoEm', String(Date.now())); }catch(e){}
+  pbS.buscando = true;
+  return pbApi('/api/djen/buscar', 'POST', {}).then(function(r){ if (r && r.novas) toast(r.novas + (r.novas === 1 ? ' publicação nova no Diário Oficial.' : ' publicações novas no Diário Oficial.')); }).catch(function(){}).then(function(){ pbS.buscando = false; return pbCarregar(); });
+}
 function pbAtualizarBadge(){
   var n = pbContaNaoLidas(), e = qs('menuNPub'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
@@ -17077,7 +17091,7 @@ function pbAvisoLeitura(){
   var comErro = ativas.filter(function(o){ return o.erro; }), parada = !pbS.ultima || (Date.now() - Date.parse(pbS.ultima)) > 30 * 3600e3, msg = '';
   if (comErro.length) msg = 'A última leitura falhou para ' + comErro.map(function(o){ return o.nome; }).join(', ') + ' (' + comErro[0].erro + '). Pode haver publicação que você ainda não viu.';
   else if (parada) msg = pbS.ultima ? 'A leitura automática não roda desde ' + pbQuandoAtualizou() + '. Pode haver publicação que você ainda não viu.' : 'A leitura automática do Diário Oficial ainda não rodou.';
-  if (comErro.length && /\b(403|429|5\d\d)\b/.test(comErro[0].erro)) msg += ' O app tenta de novo sozinho de 2 em 2 horas, até as 18h.';
+  if (comErro.length && /\b(403|429|5\d\d)\b/.test(comErro[0].erro)) msg += ' A leitura feita daqui do app costuma funcionar: o app tenta sozinho ao ser aberto, e o servidor tenta de novo de 2 em 2 horas, até as 18h.';
   return msg ? '<div class="aviso-sis" id="pbAvisoLeitura"><span class="as-txt">' + escapeHtml(msg) + ' Toque em “Buscar agora”.</span></div>' : '';
 }
 /* menu "☰": o que não é de uso toda hora (peças e prazos, relatório, marcar tudo como lido) */
@@ -17340,8 +17354,8 @@ window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agIt
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);
   if (window.__SERVIDOR){
-    pbCarregar(true); pbCarregarAprend();
-    document.addEventListener('visibilitychange', function(){ if (!document.hidden){ pbCarregar(true); } });
+    pbCarregar(true).then(pbLeituraAutomatica); pbCarregarAprend();
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden){ pbCarregar(true).then(pbLeituraAutomatica); } });
   }
 })();
 
