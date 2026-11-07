@@ -408,7 +408,7 @@ function pbSalvarOabs(){
 }
 
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); } };
+window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){

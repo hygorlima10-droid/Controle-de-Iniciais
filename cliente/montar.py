@@ -150,6 +150,17 @@ rep("grupo: c.tipo === 'extrajudicial' ? 'extrajudicial' : 'inicial', clienteIds
 rep("var REL_TIPO_TXT = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial', acordo:'Termo de acordo', alvara:'Alvará' };", "var REL_TIPO_TXT = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial', processo:'Honorários de processo', acordo:'Termo de acordo', alvara:'Alvará' };")
 rep("function tipo(it){ return it.grupo === 'inicial' ? 'Petição inicial' : it.grupo === 'extrajudicial'", "function tipo(it){ return it.grupo === 'processo' ? 'Honorários de processo' : it.grupo === 'inicial' ? 'Petição inicial' : it.grupo === 'extrajudicial'")
 rep("    if (casoAntAt && casoAntAt.atipica) dados.atipica = true;\n", "    if (casoAntAt && casoAntAt.atipica) dados.atipica = true;\n    if ((casoAntAt && casoAntAt.doProcesso) || prModoHon) dados.doProcesso = true;   /* honorários cadastrados pela ficha do processo */\n")
+# ---- Inicial sem processo: caixa no cadastro (só aí) e gravação do campo semProcesso ----
+rep("""        <div class="processo-sugestao" id="processoSugestao" style="display:none;"></div>
+      </div>
+""", """        <div class="processo-sugestao" id="processoSugestao" style="display:none;"></div>
+      </div>
+
+      <div class="field">
+        <label class="ad-it" style="border:0;padding:0;"><input type="checkbox" id="semProcessoInput"><span class="ad-t">Esta inicial não tem processo (extrajudicial ou não ajuizada)</span></label>
+      </div>
+""")
+rep("    if ((casoAntAt && casoAntAt.doProcesso) || prModoHon) dados.doProcesso = true;   /* honorários cadastrados pela ficha do processo */\n", "    if ((casoAntAt && casoAntAt.doProcesso) || prModoHon) dados.doProcesso = true;   /* honorários cadastrados pela ficha do processo */\n    if (!numeroProcesso && qs('semProcessoInput') && qs('semProcessoInput').checked) dados.semProcesso = true;   /* sai da lista de Iniciais a vincular */\n")
 rep("  function irParaCaso(id){\n    var ccArq = casos.filter(function(x){ return x.id === id; })[0];\n", "  function irParaCaso(id){\n    var ccArq = casos.filter(function(x){ return x.id === id; })[0];\n    if (ccArq && ccArq.doProcesso){ prIrParaHonorario(ccArq); return; }\n")
 rep("  function irParaRelacionado(tipo, id){\n    if (tipo === 'processo'){ prAbrir(id); return; }", "  function irParaRelacionado(tipo, id){\n    if (tipo === 'processo'){ prAbrir(id); return; }\n    if (tipo === 'peticao'){ var ddp = docDe('caso', id); if (ddp && ddp.doProcesso){ prIrParaHonorario(ddp); return; } }")
 repm('id="ic-quadro"', '<symbol id="ic-proc" ', '<symbol id="ic-quadro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></symbol>\n<symbol id="ic-proc" ')
