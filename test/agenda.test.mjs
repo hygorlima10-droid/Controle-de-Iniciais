@@ -31,6 +31,7 @@ check(put.s === 200 && put.j.prazos === 1, 'o servidor aceita só prazos com dat
 const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 390, height: 900 } }); const page = await ctx.newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const dc = async col => (await f('GET', '/api/db/' + col)).j.docs.map(d => ({ id: d.id, ...d.data }));
 const ag = async () => (await f('GET', '/api/db/agenda')).j.docs.map(d => ({ id: d.id, ...d.data }));
 let docs = await ag();
 check(docs.length === 1 && docs[0].titulo === 'Recolher o sistema' && docs[0].tipo === 'prazo' && docs[0].pubId === '900002' && (await f('GET', '/api/db/prazosPub')).j.docs.length === 0, 'o prazo da primeira versão foi migrado para a Agenda e a coleção antiga ficou vazia');
@@ -117,5 +118,43 @@ await page.click('[data-age="excluir"]'); await page.waitForTimeout(150);
 check((await ag()).some(d => d.titulo === 'Contestação'), 'o primeiro toque em Excluir só pede confirmação');
 await page.click('[data-age="excluir"]'); await page.waitForTimeout(900);
 check(!(await ag()).some(d => d.titulo === 'Contestação'), 'o segundo toque exclui');
+// Quadro (Kanban geral): prazos da Agenda + prazos das Iniciais + previsões dos Alvarás
+await f('PUT', '/api/db/casos/c2', { tipo: 'inicial', cliente: 'Maria Souza', nomeAcao: 'Cobrança', origem: 'proprio', prioridade: 'normal', status: 'pendente', statusDesde: agora, modalidadeHonorario: 'fixo', formaPagamento: 'parcelado', valorHonorarios: 900, parcelas: [{ numero: 1, valor: 900, data: dia(30), pago: false }], numeroProcesso: '', prazo: { data: dia(1), descricao: 'Protocolar inicial', concluido: false }, clienteIds: [], criadoEm: agora, atualizadoEm: agora });
+await f('PUT', '/api/db/alvaras/v1', { numeroProcesso: '9v1', partes: 'Souza x Seguradora', origem: 'proprio', valorTotalHonorarios: 1500, valorMeuHonorario: 1500, status: 'pendente', fase: 'expedido', faseDesde: dia(-3), previsaoLevantamento: dia(2), clienteIds: [], criadoEm: agora, atualizadoEm: agora });
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(800);
+check(await page.evaluate(() => document.querySelectorAll('#agSeg .acao').length) === 5 && /Quadro/.test(await t('#agSeg')), 'a Agenda tem cinco botões: Semana, Mês, Lista, Quadro e Novo');
+await page.click('[data-ag="vista"][data-v="quadro"]'); await page.waitForTimeout(500);
+check(/Por urgência/.test(await page.evaluate(() => document.querySelector('#agModo .seg-btn.active').innerText)) && (await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-col').length)) === 6, 'o Quadro abre por urgência, com 6 colunas');
+const colTxt = async k => page.evaluate(k => (document.querySelector('[data-agcol="' + k + '"]') || {}).innerText || '', k);
+check(/Preparar inicial/.test(await colTxt('hoje')) || /Preparar inicial/.test(await colTxt('atrasado')), 'a tarefa de hoje está na coluna "Hoje" (ou "Atrasado", se a data do celular já virou)');
+const todosCards = await t('.ag-quadro');
+check(/Protocolar inicial/.test(todosCards) && /Levantamento do alvará/.test(todosCards) && /Audiência de conciliação/.test(todosCards) && /Recolher o sistema/.test(todosCards), 'o Quadro junta prazo da Agenda, audiência, prazo da Inicial e previsão do Alvará');
+const cartaoAlv = await page.evaluate(() => (document.querySelector('.ag-kc.alvara') || {}).innerText || '');
+check(/Alvará · Expedido/.test(cartaoAlv) && /Abrir alvará/.test(cartaoAlv) && !/Marcar protocolada/.test(cartaoAlv), 'o cartão do Alvará mostra a fase dele e abre o alvará (a fase só muda na aba Alvarás)');
+check(/Inicial · Pendente/.test(await page.evaluate(() => (document.querySelector('.ag-kc.inicial') || {}).innerText || '')), 'o cartão da Inicial mostra a fase dela');
+await page.click('[data-ag="filtro"][data-v="inicial"]'); await page.waitForTimeout(300);
+check(await page.evaluate(() => document.querySelectorAll('.ag-kc:not(.inicial)').length) === 0 && await page.evaluate(() => document.querySelectorAll('.ag-kc.inicial').length) >= 1, 'filtro "Iniciais"');
+await page.click('[data-ag="filtro"][data-v="alvara"]'); await page.waitForTimeout(300);
+check(await page.evaluate(() => document.querySelectorAll('.ag-kc:not(.alvara)').length) === 0 && await page.evaluate(() => document.querySelectorAll('.ag-kc.alvara').length) === 1, 'filtro "Alvarás" (só no Quadro)');
+// adiar alvará: grava a previsão na origem
+await page.click('.ag-kc.alvara [data-ag="adiar"]'); await page.waitForTimeout(400);
+await page.fill('#aga_data', dia(10)); await page.click('#agaOk'); await page.waitForTimeout(1200);
+check((await dc('alvaras')).find(a => a.id === 'v1').previsaoLevantamento === dia(10), 'adiar o alvará grava a nova previsão no próprio alvará');
+await page.click('[data-ag="filtro"][data-v="tudo"]'); await page.waitForTimeout(300);
+// concluir o prazo da inicial pelo Quadro
+await page.click('.ag-kc.inicial [data-ag="concluir"]'); await page.waitForTimeout(1200);
+check((await dc('casos')).find(c => c.id === 'c2').prazo.concluido === true && /Protocolar inicial/.test(await colTxt('feito')), 'concluir o prazo da Inicial grava nela e o cartão vai para "Concluídos"');
+check((await dc('casos')).find(c => c.id === 'c2').status === 'pendente', 'e a Inicial continua na fase dela');
+// por situação
+await page.click('[data-ag="modo"][data-v="situacao"]'); await page.waitForTimeout(400);
+check((await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-col').length)) === 4 && /Levantamento do alvará/.test(await colTxt('acomp')), 'por situação: 4 colunas, e o Alvará fica em "Acompanhando"');
+check(/Recolher o sistema/.test(await colTxt('afazer')) && /Avançar/.test(await colTxt('afazer')), 'prazos da Agenda aparecem em "A fazer" com o botão Avançar');
+await page.click('[data-agcol="afazer"] .ag-kc:has-text("Recolher o sistema") [data-ag="mover"]'); await page.waitForTimeout(1000);
+check((await ag()).find(d => d.titulo === 'Recolher o sistema').situacao === 'elaboracao' && /Recolher o sistema/.test(await colTxt('elaboracao')), 'Avançar passa o prazo para "Em elaboração"');
+await page.click('[data-agcol="elaboracao"] .ag-kc:has-text("Recolher o sistema") [data-ag="concluir"]'); await page.waitForTimeout(1000);
+check((await ag()).find(d => d.titulo === 'Recolher o sistema').concluido === true && /Recolher o sistema/.test(await colTxt('feito')), '"Marcar protocolada" leva para "Concluído"');
+await page.click('[data-ag="vista"][data-v="semana"]'); await page.waitForTimeout(400);
+check(!/Levantamento do alvará/.test(await t('#agWrap')), 'a previsão do alvará aparece só no Quadro (não nas outras visões nem no cartão do Início)');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
