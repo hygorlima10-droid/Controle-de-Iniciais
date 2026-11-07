@@ -336,9 +336,11 @@ function paUsoLer(){ try{ return JSON.parse(localStorage.getItem(PA_USO_KEY) || 
 function paUsar(k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(u)); }catch(e){} }
 var PA_NOVO = [
   { k: 'recebi', t: 'Recebi R$', i: 'ic-coin', f: function(){ abrirRecebi(); } },
-  { k: 'peticao', t: 'Petição', i: 'ic-file', f: function(){ abrirNovo(); } },
+  { k: 'peticao', t: 'Inicial', i: 'ic-file', f: function(){ abrirNovo(); } },
   { k: 'acordo', t: 'Acordo', i: 'ic-clip', f: function(){ abrirNovoAcordo(); } },
   { k: 'alvara', t: 'Alvará', i: 'ic-stamp', f: function(){ abrirNovoAlvara(); } },
+  { k: 'processo', t: 'Processo', i: 'ic-proc', f: function(){ prAbrirNovo(null); } },
+  { k: 'prazo', t: 'Prazo', i: 'ic-agenda', f: function(){ agAbrir(null); } },
   { k: 'despesa', t: 'Despesa', i: 'ic-receipt', f: function(){ abrirNovaDespesa('pj'); } },
   { k: 'cliente', t: 'Cliente', i: 'ic-users', f: function(){ abrirClienteEdit({}); } },
   { k: 'foto', t: 'Foto ou PDF', i: 'ic-cam', f: function(){ ldAbrir(); }, ia: true },

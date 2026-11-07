@@ -60,14 +60,7 @@ function pbCalcular(disp, dias, tipo){
 }
 
 /* ---------- vínculo com os processos cadastrados ---------- */
-function pbVinculo(proc){
-  var num = normalizarProcesso(proc); if (!num) return null;
-  var i, c;
-  for (i = 0; i < casos.length; i++){ c = casos[i]; if (normalizarProcesso(c.numeroProcesso) === num) return { tipo: 'peticao', id: c.id, cliente: c.cliente || 'Sem nome', rotulo: 'Petição', arquivado: !!c.arquivado }; }
-  for (i = 0; i < acordos.length; i++){ c = acordos[i]; if (normalizarProcesso(c.numeroProcesso) === num) return { tipo: 'acordo', id: c.id, cliente: c.partes || 'Sem nome', rotulo: 'Termo de acordo', arquivado: !!c.arquivado }; }
-  for (i = 0; i < alvaras.length; i++){ c = alvaras[i]; if (normalizarProcesso(c.numeroProcesso) === num) return { tipo: 'alvara', id: c.id, cliente: c.partes || 'Sem nome', rotulo: 'Alvará', arquivado: !!c.arquivado }; }
-  return null;
-}
+function pbVinculo(proc){ return prVinculo(proc); }
 function pbOabDe(id){ for (var i = 0; i < pbS.oabs.length; i++) if (pbS.oabs[i].id === id) return pbS.oabs[i]; return null; }
 function pbPrimeiroNome(o){ return o ? String(o.nome || '').split(' ')[0] : ''; }
 /* o que aparece: de OABs ativas; as de "só processos em conjunto" só mostram processo cadastrado ou que também vem pela sua OAB */
@@ -139,6 +132,7 @@ function pbMontarTela(){
     else if (a === 'lida') pbMarcar([id], { lida: !(pbPub(id) || {}).lida });
     else if (a === 'todas-lidas'){ var ids = pbListaFiltrada().filter(function(p){ return !p.lida; }).map(function(p){ return p.id; }); if (ids.length) pbMarcar(ids, { lida: true }); }
     else if (a === 'cadastrar') pbCadastrar(id);
+    else if (a === 'reabrir-proc'){ var pp = pbPub(id), vv = pp && pbVinculo(pp.processo); if (vv) prReabrir(vv.id).then(function(){ pbRender(); }); }
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
   });
@@ -227,13 +221,14 @@ function pbRenderLista(){
 }
 function pbCartao(p){
   var v = pbVinculo(p.processo), pz = pbPrazoDaPub(p.id), cls = pbClasseTipo(p.tipo), tags = '';
-  tags += v ? '<button type="button" class="pb-tg ok" data-pb="ir" data-id="' + escapeHtml(p.id) + '">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ' cadastrada' + (v.arquivado ? ' (arquivada)' : '') + '</button>' : '<span class="pb-tg nv">+ processo novo</span>';
+  tags += v ? '<button type="button" class="pb-tg ok" data-pb="ir" data-id="' + escapeHtml(p.id) + '">✓ ' + escapeHtml(v.cadastro) + (v.arquivado ? ' (arquivado)' : '') + '</button>' : '<span class="pb-tg nv">+ processo novo</span>';
   if (pz) tags += '<span class="pb-tg pz">⏱ prazo ' + escapeHtml(fmtData(pz.data)) + (pz.concluido ? ' (cumprido)' : '') + '</span>';
   else if (p.sug && !p.semPrazo) tags += '<span class="pb-tg pz">⏱ sugerido: ' + p.sug.dias + (p.sug.tipo === 'corridos' ? ' dias corridos' : ' dias') + '</span>';
   p.oabs.forEach(function(id){ var o = pbOabDe(id); if (o) tags += '<span class="pb-tg">via OAB ' + escapeHtml(pbPrimeiroNome(o)) + '</span>'; });
   var btn = '';
   if (!pz && p.sug && !p.semPrazo) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Confirmar prazo</button>';
   else if (!pz && !p.semPrazo && cls !== 'out') btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Criar prazo</button>';
+  if (v && v.arquivado) btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="reabrir-proc" data-id="' + escapeHtml(p.id) + '">Reabrir processo</button>';
   if (!v) btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="cadastrar" data-id="' + escapeHtml(p.id) + '">Cadastrar processo</button>';
   btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="abrir" data-id="' + escapeHtml(p.id) + '">Ver texto</button><button type="button" class="btn btn-ghost pb-b" data-pb="lida" data-id="' + escapeHtml(p.id) + '">' + (p.lida ? 'Marcar como não lida' : 'Marcar como lida') + '</button>';
   return '<div class="pb-card ' + cls + (p.lida ? ' lida' : '') + '"><div class="pb-l1"><span>' + (p.lida ? '' : '<i class="pb-dot"></i>') + escapeHtml((p.tribunal ? p.tribunal + ' · ' : '') + (p.orgao || '')) + '</span><span class="pb-tipo ' + cls + '">' + escapeHtml(p.tipo || 'Publicação') + '</span></div>' +
@@ -246,15 +241,8 @@ function pbMarcar(ids, campos){
   var corpo = { ids: ids }; if (typeof campos.lida === 'boolean') corpo.lida = campos.lida; if (typeof campos.semPrazo === 'boolean') corpo.semPrazo = campos.semPrazo;
   return pbApi('/api/djen/marcar', 'POST', corpo).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
-function pbIrVinculo(id){ var p = pbPub(id), v = p && pbVinculo(p.processo); if (v) irParaRelacionado(v.tipo, v.id); }
-function pbCadastrar(id){
-  var p = pbPub(id); if (!p) return;
-  if (activeTab !== 'peticoes') setActiveTab('peticoes');
-  setTimeout(function(){
-    abrirNovo(); qs('processoInput').value = p.numero || p.processo || ''; if (p.classe) qs('nomeAcaoInput').value = p.classe;
-    var a = (p.dest || []).filter(function(d){ return d.p === 'A'; })[0]; if (a && a.n && qs('clienteInput')) qs('clienteInput').value = a.n;
-  }, 40);
-}
+function pbIrVinculo(id){ var p = pbPub(id), v = p && pbVinculo(p.processo); if (v) prAbrir(v.id); }
+function pbCadastrar(id){ prEscolherCadastro(id); }
 
 /* ---------- detalhe da publicação ---------- */
 function pbMontarDetalhe(){
@@ -286,7 +274,7 @@ function pbAbrirDetalhe(id, irParaPrazo){
 function pbDesenharDetalhe(){
   var p = pbPub(pbDetId), c = qs('pbCorpo'); if (!p || !c) return;
   var v = pbVinculo(p.processo), t = pbTextos[p.id], pz = pbPrazoDaPub(p.id), sug = (t && t.ok && t.sug) || p.sug;
-  var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">+ processo novo</span>') + '</div></div>';
+  var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">+ processo novo</span>') + '</div></div>';
   h += '<div class="pb-sec"><div class="pb-sec-t">Texto da publicação</div>';
   if (!t) h += '<div class="saldo-data">Buscando o texto completo no Diário Oficial…</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
   else if (t.ok) h += '<div class="pb-texto">' + escapeHtml(t.texto) + '</div>';

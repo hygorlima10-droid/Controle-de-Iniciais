@@ -44,6 +44,16 @@ if '/*AG-INICIO*/' in s:
 else:
     assert s.count('/*PB-FIM*/\n') == 1
     s = s.replace('/*PB-FIM*/\n', '/*PB-FIM*/\n' + bloco_ag)
+pr = open(R + 'cliente/processos.js', encoding='utf-8').read()
+bloco_pr = '/*PR-INICIO*/\n' + pr + '\n/*PR-FIM*/\n'
+if '/*PR-INICIO*/' in s:
+    s = re.sub(r'/\*PR-INICIO\*/.*?/\*PR-FIM\*/\n', lambda m: bloco_pr, s, flags=re.S)
+else:
+    assert s.count('/*AG-FIM*/\n') == 1
+    s = s.replace('/*AG-FIM*/\n', '/*AG-FIM*/\n' + bloco_pr)
+def repm(marcador, old, new):
+    if marcador in s: return
+    rep(old, new)
 def rep(old, new):
     # Os ajustes são feitos uma vez no index.html; depois outros ajustes mudam o mesmo trecho. Se o trecho antigo já não existe, o ajuste já foi aplicado.
     global s
@@ -61,7 +71,7 @@ rep("else info += '<div class=\"saldo-data\">Prazo: ' + fmtData(m.prazo) + (falt
     "else info += '<div class=\"saldo-data\">Prazo: ' + fmtData(m.prazo) + (falta > 0 ? ' · \\u2248 ' + fmtMoeda(falta / meses) + ' por mês' : '') + '</div>' + paMetaPlanoHtml(m, falta, meses);")
 
 # ---- aba Publicações (Diário Oficial) ----
-rep('  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyPublicacoes" style="display:none;">\n    <div class="ob-wrap" id="pbWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
+repm('id="bodyPublicacoes"', '  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyPublicacoes" style="display:none;">\n    <div class="ob-wrap" id="pbWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
 rep('      <button type="button" class="dr-it" data-tab="clientes" title="Clientes">', '      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial"><svg><use href="#ic-news"/></svg><span class="lab">Publicações</span><span class="dr-n red" id="menuNPub"></span></button>\n      <button type="button" class="dr-it" data-tab="clientes" title="Clientes">')
 rep('<symbol id="ic-bell" ', '<symbol id="ic-news" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14a2 2 0 002 2H6a2 2 0 01-2-2z"/><path d="M17 9h3v10a2 2 0 01-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/></symbol>\n<symbol id="ic-bell" ')
 rep("    qs('bodyObra').style.display = (tab === 'obra') ? '' : 'none';\n", "    qs('bodyObra').style.display = (tab === 'obra') ? '' : 'none';\n    qs('bodyPublicacoes').style.display = (tab === 'publicacoes') ? '' : 'none';\n")
@@ -72,8 +82,8 @@ rep("analises:'Análises', obra:'Construção', financeiro:'Financeiro' };", "an
 rep("    else if (activeTab === 'extratos') qs('subtitle').textContent = 'Leitura dos extratos do Drive · você confere antes de lançar';", "    else if (activeTab === 'extratos') qs('subtitle').textContent = 'Leitura dos extratos do Drive · você confere antes de lançar';\n    else if (activeTab === 'publicacoes') qs('subtitle').textContent = 'Diário Oficial (DJEN) · leitura automática todo dia às 10:00';")
 
 # ---- Agenda, cartão de prazos no Início, "Iniciais" e menu lateral ----
-rep('  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyAgenda" style="display:none;">\n    <div class="ob-wrap" id="agWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
-rep('      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">', '      <button type="button" class="dr-it" data-tab="agenda" title="Agenda de prazos"><svg><use href="#ic-agenda"/></svg><span class="lab">Agenda</span><span class="dr-n red" id="menuNAgenda"></span></button>\n      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">')
+repm('id="bodyAgenda"', '  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyAgenda" style="display:none;">\n    <div class="ob-wrap" id="agWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
+repm('data-tab="agenda"', '      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">', '      <button type="button" class="dr-it" data-tab="agenda" title="Agenda de prazos"><svg><use href="#ic-agenda"/></svg><span class="lab">Agenda</span><span class="dr-n red" id="menuNAgenda"></span></button>\n      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">')
 rep('<symbol id="ic-news" ', '<symbol id="ic-agenda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol>\n<symbol id="ic-news" ')
 rep("    qs('bodyPublicacoes').style.display = (tab === 'publicacoes') ? '' : 'none';\n", "    qs('bodyPublicacoes').style.display = (tab === 'publicacoes') ? '' : 'none';\n    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';\n")
 rep("qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes') ? 'none' : '';", "qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda') ? 'none' : '';")
@@ -110,5 +120,20 @@ for a, b in [
 # ---- ícones e botões no padrão da tela inicial (Publicações e Agenda) ----
 rep('<symbol id="ic-agenda" ', '<symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>\n<symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>\n<symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>\n<symbol id="ic-agenda" ')
 rep('  .ini-acoes .acao.acao-ouro{background:var(--gold-btn);color:var(--gold-ink);border-color:transparent;}', '  .ini-acoes .acao.acao-ouro{background:var(--gold-btn);color:var(--gold-ink);border-color:transparent;}\n  .ini-acoes .acao.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}\n  .ini-acoes .acao:disabled{opacity:.6;cursor:default;}')
+
+# ---- aba Processos ----
+repm('id="bodyProcessos"', '  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyProcessos" style="display:none;">\n    <div class="ob-wrap" id="prWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
+repm('data-tab="processos"', '      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">', '      <button type="button" class="dr-it" data-tab="processos" title="Processos"><svg><use href="#ic-proc"/></svg><span class="lab">Processos</span></button>\n      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">')
+rep('<symbol id="ic-sync" ', '<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>\n<symbol id="ic-sync" ')
+rep("    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';\n", "    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';\n    qs('bodyProcessos').style.display = (tab === 'processos') ? '' : 'none';\n")
+s = s.replace("tab === 'publicacoes' || tab === 'agenda') ? 'none'", "tab === 'publicacoes' || tab === 'agenda' || tab === 'processos') ? 'none'")
+rep("    else if (tab === 'agenda') agRender();\n", "    else if (tab === 'agenda') agRender();\n    else if (tab === 'processos') prRender();\n")
+rep("agenda:'Agenda',", "agenda:'Agenda', processos:'Processos',")
+rep("    else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';", "    else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';\n    else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';")
+rep("cliente:'Cliente', despesa:'Despesa',", "cliente:'Cliente', processo:'Processo', publicacao:'Publicação', despesa:'Despesa',")
+rep("var TIPO_DOC_LABEL = { caso:'Petição', acordo:'Acordo', alvara:'Alvará' };", "var TIPO_DOC_LABEL = { caso:'Inicial', acordo:'Acordo', alvara:'Alvará' };")
+rep('          <option value="alvara">Alvarás</option>\n        </select>\n          <select class="filter-select" id="filtroArqSit">', '          <option value="alvara">Alvarás</option>\n          <option value="processo">Processos</option>\n        </select>\n          <select class="filter-select" id="filtroArqSit">')
+rep("    return resultados;\n  }\n\n  function irParaRelacionado(tipo, id){\n    if (paBuscaExtra[tipo]){ paIrExtra(tipo, id); return; }", "    try{ resultados = resultados.concat(prRelacionados(num, tipoAtual, true)); }catch(e){ console.error('processos', e); }\n    return resultados;\n  }\n\n  function irParaRelacionado(tipo, id){\n    if (tipo === 'processo'){ prAbrir(id); return; }\n    if (paBuscaExtra[tipo]){ paIrExtra(tipo, id); return; }")
+rep("    var matches = buscarRelacionados(numero, tipoAtual, idAtual);\n    var el = qs(sugestaoElId);", "    var matches = buscarRelacionados(numero, tipoAtual, idAtual);\n    if (!matches.length){ try{ matches = prRelacionados(normalizarProcesso(numero), tipoAtual, false); }catch(e){} }\n    var el = qs(sugestaoElId);")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

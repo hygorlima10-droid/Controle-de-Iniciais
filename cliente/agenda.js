@@ -61,7 +61,8 @@ function agItens(){
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
     l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c });
   });
-  return l.filter(function(i){ return /^\d{4}-\d{2}-\d{2}$/.test(i.data); });
+  var arq = {}; try{ arq = prArquivadosSet(); }catch(e){}   /* processo arquivado: seus prazos saem da Agenda (voltam se reabrir) */
+  return l.filter(function(i){ return /^\d{4}-\d{2}-\d{2}$/.test(i.data) && !(i.processo && arq[prNum(i.processo)]); });
 }
 function agOrdem(a, b){ return (a.data + (a.hora || '99:99')).localeCompare(b.data + (b.hora || '99:99')) || (a.tipo || '').localeCompare(b.tipo || ''); }
 function agAbertos(){ return agItens().filter(function(i){ return !i.concluido; }).sort(agOrdem); }
@@ -214,7 +215,7 @@ function agTipoLinha(i){
 function agCartao(i){
   var c = agChip(i), cls = i.concluido ? 'ok' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')), v = i.processo ? pbVinculo(i.processo) : null, tags = '';
   tags += '<span class="pb-tg ' + (i.situacao === 'feito' ? 'ok' : (i.situacao === 'elaboracao' ? 'pz' : '')) + '">' + (i.tipo === 'audiencia' && i.situacao === 'feito' ? 'Realizada' : AG_SITUACAO[i.situacao]) + '</span>';
-  if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ' cadastrada</span>';
+  if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + '</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
   if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
   var btn = '';
@@ -254,7 +255,7 @@ function agMontarEd(){
   });
   d.addEventListener('input', function(e){
     if (e.target && e.target.id === 'age_proc'){
-      var v = pbVinculo(e.target.value), dica = qs('age_dica'); if (dica) dica.textContent = v ? '✓ ' + v.rotulo.toLowerCase() + ' cadastrada · cliente: ' + v.cliente : '';
+      var v = pbVinculo(e.target.value), dica = qs('age_dica'); if (dica) dica.textContent = v ? '✓ ' + v.cadastro + ' · cliente: ' + v.cliente : '';
       if (v && !qs('age_cli').value.trim()) qs('age_cli').value = v.cliente;
     }
   });

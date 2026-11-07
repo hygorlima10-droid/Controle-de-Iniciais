@@ -101,7 +101,7 @@ check(/PUBLICAÇÕES NÃO LIDAS/i.test(await t('#pbWrap')) && (await page.evalua
 check(!/Fulano/i.test(await t('#pbWrap')), 'publicação do Murilo sem processo em comum não aparece (escopo "só em conjunto")');
 const cardDe = async id => page.evaluate(id => { const b = document.querySelector('.pb-b[data-id="' + id + '"]'); return b ? b.closest('.pb-card').innerText : ''; }, id);
 const ta = await cardDe('900001'), tb = await cardDe('900002'), tc = await cardDe('900003');
-check(/petição cadastrada/i.test(ta) && /via OAB Hygor/.test(ta) && /via OAB Murilo/.test(ta) && /Maquele Viana Pacheco/.test(ta), 'processo cadastrado mostra o cliente e as duas OABs de origem');
+check(/inicial cadastrada/i.test(ta) && /via OAB Hygor/.test(ta) && /via OAB Murilo/.test(ta) && /Maquele Viana Pacheco/.test(ta), 'processo cadastrado mostra o cliente e as duas OABs de origem');
 check(/processo novo/i.test(tb) && /sugerido: 15 dias/.test(tb) && /Confirmar prazo/.test(tb) && /Cadastrar processo/.test(tb), 'processo não cadastrado: "+ processo novo", prazo sugerido e botão para cadastrar');
 check(/Ata/i.test(tc) && !/prazo/i.test(tc) && /STJ/.test(tc) && /TRANSPORTADORA NUNES/.test(tc), 'ata do STJ: sem botão de prazo, com as partes');
 // filtros
@@ -178,6 +178,26 @@ check(/Juntar documentos/.test(card) && /Cooperativa Mista/.test(card) && /Amanh
 check(!/Juntar documentos/.test(await t('#atencaoLista')), 'e continua fora da Central de atenção');
 const resumo = await page.evaluate(() => window.__horusTeste.ntResumo());
 check(resumo.prazos.some(i => /Juntar documentos/.test(i.l) && i.t === 'prazo' && JSON.stringify(i.a) === '[5,2,1,0]') && !resumo.prazos.some(i => /Recolher o sistema/.test(i.l)) && !resumo.itens.some(i => i.t === 'prazo'), 'os prazos dos próximos 10 dias vão numa lista própria para a notificação (e não misturam com o dinheiro)');
+// cadastrar processo pela publicação: processo já em andamento (sem honorários) ou nova inicial
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(700);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(300);
+await page.click('.pb-b[data-pb="cadastrar"][data-id="900003"]'); await page.waitForTimeout(400);
+check(await page.evaluate(() => document.getElementById('overlayPrEsc').classList.contains('show')) && /Processo já em andamento/.test(await t('#preCorpo')) && /Nova inicial/.test(await t('#preCorpo')), 'o botão "Cadastrar processo" pergunta: processo já em andamento ou nova inicial');
+await page.click('[data-pre="processo"]'); await page.waitForTimeout(500);
+check((await page.evaluate(() => document.getElementById('pr_numero').value)) === '5385296-78.2023.8.09.0071' && /TRANSPORTADORA/.test(await page.evaluate(() => document.getElementById('pr_partes').value)) && /STJ/.test(await page.evaluate(() => document.getElementById('pr_orgao').value)), 'o cadastro já vem preenchido com número, partes e órgão da publicação');
+await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+const procs = (await f('GET', '/api/db/processos')).j.docs.map(d => d.data);
+check(procs.length === 1 && procs[0].origem === 'publicacao' && procs[0].honorarios === 'sem', 'o processo é gravado (origem: publicação, sem honorários)');
+check(/processo cadastrado/.test(await cardDe('900003')) && !/Cadastrar processo/.test(await cardDe('900003')), 'a publicação passa a mostrar "processo cadastrado"');
+await page.click('[data-pb="ir"][data-id="900003"]'); await page.waitForTimeout(500);
+check(await page.evaluate(() => document.getElementById('overlayPr').classList.contains('show')) && /Últimas publicações/i.test(await t('#prCorpo')), 'tocar na etiqueta abre a ficha do processo, com as publicações');
+await page.click('[data-prf="arquivar"]'); await page.waitForTimeout(400); await page.click('#praOk'); await page.waitForTimeout(1200);
+check(/arquivado/.test(await cardDe('900003')) && /Reabrir processo/.test(await cardDe('900003')), 'processo arquivado: a publicação mostra "arquivado" e oferece "Reabrir processo"');
+await page.click('.pb-b[data-pb="reabrir-proc"][data-id="900003"]'); await page.waitForTimeout(1200);
+check(!/Reabrir processo/.test(await cardDe('900003')) && (await f('GET', '/api/db/processos')).j.docs[0].data.arquivado === false, 'Reabrir processo desfaz');
+await page.click('.pb-b[data-pb="cadastrar"][data-id="900005"]'); await page.waitForTimeout(400); await page.click('[data-pre="inicial"]'); await page.waitForTimeout(700);
+check(await page.evaluate(() => document.getElementById('overlay').classList.contains('show')) && (await page.evaluate(() => document.getElementById('processoInput').value)) === '5706736-75.2025.8.09.0107', 'a outra opção abre o cadastro de Nova inicial com o número preenchido');
+await page.click('#closeModal'); await page.waitForTimeout(300);
 // OABs na tela
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(900);
 await page.click('[data-pb="oabs"]'); await page.waitForTimeout(500);
