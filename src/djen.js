@@ -176,6 +176,12 @@ export async function buscarOab(o, ini, fim, orc) {
   }
   return { itens, total, parcial };
 }
+/* "impressão digital" do texto (mesmo texto = mesma publicação, mesmo que o DJEN dê tipos ou ids diferentes para cada OAB ou destinatário) */
+export function hashTexto(t) {
+  const s = String(t || '').toLowerCase().replace(/\s+/g, ' ').trim(); if (s.length < 10) return '';
+  let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + s.length.toString(36);
+}
 /* peça sugerida (src/pecas.js): natureza do ato, regras do CPC, Juizado e prazo do texto */
 const pcDe = (d, texto, sug) => { if (/ata de distribui/i.test(d.tipo || '')) return null; try { return sugerirPecas({ tipo: d.tipo, comunic: d.comunic, classe: d.classe, orgao: d.orgao, tribunal: d.tribunal, texto, dest: d.dest, diasTexto: sug }); } catch (e) { return null; } };
 function paraDoc(i, o) {
@@ -189,7 +195,7 @@ function paraDoc(i, o) {
     link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto), aud: /ata de distribui/i.test(tipo) ? null : sugerirAudiencia(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
-  doc.pc = pcDe(doc, texto, doc.sug);
+  doc.pc = pcDe(doc, texto, doc.sug); doc.th = hashTexto(texto);
   return doc;
 }
 
@@ -229,6 +235,7 @@ export async function lerDjen(env, opcoes = {}) {
           let mudou = false;
           if (!ex.oabs.includes(o.id)) { ex.oabs.push(o.id); mudou = true; }
           if (!ex.advs && d.advs.length) { ex.advs = d.advs; mudou = true; }
+          if (!ex.th && d.th) { ex.th = d.th; mudou = true; }   /* publicações antigas ganham a impressão digital do texto */
           if (mudou) gravacoes.push(gravar(env, COL_PUB, id, ex));
           continue;
         }

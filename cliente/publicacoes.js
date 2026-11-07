@@ -163,13 +163,13 @@ function pbMontarTela(){
   }
   qs('pbWrap').addEventListener('input', aplicar); qs('pbWrap').addEventListener('change', aplicar);
 }
-/* Publicações idênticas (mesmo processo, data, tipo e órgão) que só mudam o destinatário (vários autores que você representa) viram um cartão só */
+/* Publicações idênticas (mesmo processo, data e texto) que só mudam o destinatário (vários autores que você representa) viram um cartão só */
 function pbAgrupaTodos(){
   var m = {};
   pbS.pubs.forEach(function(p){ p._g = null; p._rep = null; });
   pbS.pubs.forEach(function(p){
     if (!p.processo){ p._g = [p]; p._rep = p; return; }
-    var k = [p.processo, p.data, p.tipo || '', p.orgao || ''].join('|');
+    var k = [p.processo, p.data, p.th || ((p.tipo || '') + '|' + (p.orgao || ''))].join('|');   /* mesmo processo, dia e texto = uma publicação (mesmo com tipos ou ids diferentes) */
     (m[k] = m[k] || []).push(p);
   });
   Object.keys(m).forEach(function(k){ var g = m[k]; g.forEach(function(x){ x._rep = g[0]; }); g[0]._g = g; });
@@ -504,7 +504,7 @@ function pbDesenharDetalhe(){
   var v = pbVinculo(p.processo), t = pbTextos[p.id], pz = pbPrazoGrupo(p), sug = (t && t.ok && t.sug) || p.sug, mem = pbMembros(p);
   var pc = pz ? null : pbPecasDe(p), pcSel = pc ? pbPecaSel(p) : null, usaPc = !!(pcSel && pcSel.dias), stp = pbPeca[p.id] || {};
   var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">+ processo novo</span>') + '</div></div>';
-  if (mem.length > 1) h += '<div class="pb-sec"><div class="pb-sec-t">' + mem.length + ' publicações idênticas reunidas</div><div class="saldo-data">Mesmo processo, data, tipo e órgão; só muda o destinatário. Elas são marcadas como lidas juntas.</div><div class="txt">' + escapeHtml(pbDestinatarios(p).join(', ')) + '</div></div>';
+  if (mem.length > 1) h += '<div class="pb-sec"><div class="pb-sec-t">' + mem.length + ' publicações idênticas reunidas</div><div class="saldo-data">Mesmo processo, dia e texto; só muda o destinatário ou a OAB que a encontrou. Elas são marcadas como lidas juntas.</div><div class="txt">' + escapeHtml(pbDestinatarios(p).join(', ')) + '</div></div>';
   h += '<div class="pb-sec"><div class="pb-sec-t">Texto da publicação</div>';
   if (!t) h += '<div class="saldo-data">Buscando o texto completo no Diário Oficial…</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
   else if (t.ok) h += '<div class="pb-texto">' + escapeHtml(t.texto) + '</div>';
