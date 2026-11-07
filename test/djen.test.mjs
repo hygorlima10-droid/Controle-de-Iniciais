@@ -48,4 +48,33 @@ for (const m of ['recusa', 'silencioso']) {
   check(r.lidas === 13 && !r.porOab[0].erro && !r.porOab[0].parcial, 'lê as 13 publicações (' + m + ') em ' + chamadas + ' consultas');
 }
 srv.close();
+
+// publicações guardadas antes de existir o campo "advogados": a próxima leitura refaz 30 dias uma única vez e completa
+const mem = new Map();
+const stm = (sql, args = []) => ({
+  bind: (...a) => stm(sql, a), sql, args,
+  first: async () => { const d = /SELECT dados FROM docs WHERE colecao = \? AND id = \?/.test(sql) ? mem.get(args[0] + '|' + args[1]) : null; return d ? { dados: d } : null; },
+  all: async () => /id IN/.test(sql) ? { results: args.slice(1).filter(i => mem.has(args[0] + '|' + i)).map(i => ({ id: i, dados: mem.get(args[0] + '|' + i) })) } : { results: [] },
+  run: async () => { if (/^INSERT/.test(sql)) mem.set(args[0] + '|' + args[1], args[2]); return {}; },
+});
+const db2 = { prepare: (sql) => stm(sql), batch: async (l) => { for (const x of l) await x.run(); } };
+const hojeBR = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), somar = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const vistos = [];
+const srv2 = http.createServer((req, res) => {
+  const q = new URL(req.url, 'http://x').searchParams; vistos.push(q.get('dataDisponibilizacaoInicio'));
+  res.setHeader('content-type', 'application/json');
+  res.end(JSON.stringify({ count: 1, items: [{ id: 900, data_disponibilizacao: hojeBR, siglaTribunal: 'TJGO', nomeOrgao: 'Vara', tipoDocumento: 'Decisão', numero_processo: '55932176420218090107', texto: 'DECISÃO\nDEFIRO.', destinatarios: [], destinatarioadvogados: [{ advogado: { nome: 'ALCIONE CELLA', numero_oab: '23852', uf_oab: 'SC' } }, { advogado: { nome: 'HYGOR LIMA ANDRADE', numero_oab: '60456', uf_oab: 'GO' } }] }] }));
+}).listen(0);
+await new Promise(r => srv2.once('listening', r));
+const env2 = { DJEN_URL: 'http://127.0.0.1:' + srv2.address().port + '/x', DB: db2 };
+mem.set('_djen|config', JSON.stringify({ oabs: [{ id: 'o1', nome: 'Hygor', numero: '60456', uf: 'GO', ativo: true, escopo: 'tudo', avisar: true, ultima: hojeBR }], ultimaLeitura: null }));
+mem.set('_pub|900', JSON.stringify({ id: '900', data: hojeBR, oabs: ['o1'], lida: true, notificada: true, trecho: 'DEFIRO.' }));
+await lerDjen(env2);
+let pub900 = JSON.parse(mem.get('_pub|900')), cfg2 = JSON.parse(mem.get('_djen|config'));
+check(vistos[0] === somar(hojeBR, -30), 'a primeira leitura depois da atualização volta 30 dias (pedido: ' + vistos[0] + ')');
+check(pub900.advs && pub900.advs.length === 2 && pub900.advs[0].o === '23852/SC' && pub900.lida === true && pub900.notificada === true, 'a publicação antiga ganha os advogados sem perder "lida" nem virar aviso');
+check(cfg2.advsOk === true, 'a atualização é registrada para não repetir');
+await lerDjen(env2);
+check(vistos[1] === somar(hojeBR, -2), 'as leituras seguintes voltam só 2 dias (pedido: ' + vistos[1] + ')');
+srv2.close();
 console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

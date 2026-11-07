@@ -4,7 +4,7 @@
    - aqui você vê, abre o texto completo, liga ao processo cadastrado e confirma o prazo
    - o prazo é sempre SUGERIDO (texto da publicação) e CONFIRMADO por você; a data usa o calendário do TJGO
    ============================================================ */
-var pbS = { carregado: false, carregando: false, buscando: false, pubs: [], oabs: [], ultima: null, filtro: 'naolidas', oab: 'todas', mais: 1, abertos: false };
+var pbS = { carregado: false, carregando: false, buscando: false, pubs: [], oabs: [], ultima: null, filtro: 'naolidas', f: { q: '', de: '', ate: '', oab: 'todas', adv: '', trib: '' }, fAberto: false, mais: 1 };
 var pbEdOabs = [], pbDetId = null, pbTextos = {};
 function pbApi(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
@@ -75,7 +75,6 @@ function pbVisiveis(){
   var meus = {};
   pbS.pubs.forEach(function(p){ if (p.processo && p.oabs.some(function(id){ var o = pbOabDe(id); return o && o.ativo && o.escopo === 'tudo'; })) meus[p.processo] = 1; });
   return pbS.pubs.filter(function(p){
-    if (pbS.oab !== 'todas' && p.oabs.indexOf(pbS.oab) < 0) return false;
     return p.oabs.some(function(id){
       var o = pbOabDe(id); if (!o || !o.ativo) return false;
       return o.escopo === 'tudo' || !!meus[p.processo] || !!pbVinculo(p.processo);
@@ -133,7 +132,9 @@ function pbMontarTela(){
     if (a === 'filtro'){ pbS.filtro = b.getAttribute('data-v'); pbS.mais = 1; pbRender(); }
     else if (a === 'buscar') pbBuscarAgora();
     else if (a === 'oabs') pbAbrirOabs();
-    else if (a === 'mais'){ pbS.mais++; pbRender(); }
+    else if (a === 'mais'){ pbS.mais++; pbRenderLista(); }
+    else if (a === 'painel'){ pbS.fAberto = !pbS.fAberto; pbRender(); }
+    else if (a === 'limpar'){ pbS.f = { q: '', de: '', ate: '', oab: 'todas', adv: '', trib: '' }; pbS.mais = 1; pbRender(); }
     else if (a === 'abrir') pbAbrirDetalhe(id);
     else if (a === 'lida') pbMarcar([id], { lida: !(pbPub(id) || {}).lida });
     else if (a === 'todas-lidas'){ var ids = pbListaFiltrada().filter(function(p){ return !p.lida; }).map(function(p){ return p.id; }); if (ids.length) pbMarcar(ids, { lida: true }); }
@@ -141,11 +142,35 @@ function pbMontarTela(){
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
   });
-  qs('pbWrap').addEventListener('change', function(e){ if (e.target && e.target.id === 'pbOabSel'){ pbS.oab = e.target.value; pbS.mais = 1; pbRender(); } });
+  var depois = null;
+  function aplicar(e){
+    var k = e.target && e.target.getAttribute ? e.target.getAttribute('data-pbf') : null; if (!k) return;
+    pbS.f[k] = e.target.value; pbS.mais = 1; clearTimeout(depois);
+    depois = setTimeout(function(){ pbRenderLista(); }, e.type === 'input' ? 250 : 0);
+  }
+  qs('pbWrap').addEventListener('input', aplicar); qs('pbWrap').addEventListener('change', aplicar);
 }
 function pbPub(id){ for (var i = 0; i < pbS.pubs.length; i++) if (pbS.pubs[i].id === id) return pbS.pubs[i]; return null; }
+function pbSemAcento(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function pbFiltrosAtivos(){ var f = pbS.f; return (f.q.trim() ? 1 : 0) + (f.de ? 1 : 0) + (f.ate ? 1 : 0) + (f.oab !== 'todas' ? 1 : 0) + (f.adv.trim() ? 1 : 0) + (f.trib ? 1 : 0); }
+function pbPassaFiltros(p){
+  var f = pbS.f;
+  if (f.de && p.data < f.de) return false;
+  if (f.ate && p.data > f.ate) return false;
+  if (f.oab !== 'todas' && p.oabs.indexOf(f.oab) < 0) return false;
+  if (f.trib && p.tribunal !== f.trib) return false;
+  if (f.adv.trim()){
+    var a = pbSemAcento(f.adv.trim()), achou = (p.advs || []).some(function(x){ return pbSemAcento(x.n + ' ' + x.o).indexOf(a) >= 0 || x.o.replace(/\D/g, '').indexOf(a.replace(/\D/g, '') || '@@') >= 0; });
+    if (!achou) return false;
+  }
+  if (f.q.trim()){
+    var q = pbSemAcento(f.q.trim()), v = pbVinculo(p.processo), alvo = pbSemAcento([v ? v.cliente : '', pbNomeParte(p, null), (p.dest || []).map(function(d){ return d.n; }).join(' '), p.processo, p.numero, p.orgao, p.classe].join(' '));
+    if (alvo.indexOf(q) < 0 && (q.replace(/\D/g, '').length < 4 || String(p.processo).indexOf(q.replace(/\D/g, '')) < 0)) return false;
+  }
+  return true;
+}
 function pbListaFiltrada(){
-  var vis = pbVisiveis();
+  var vis = pbVisiveis().filter(pbPassaFiltros);
   if (pbS.filtro === 'naolidas') vis = vis.filter(function(p){ return !p.lida; });
   else if (pbS.filtro === 'meus') vis = vis.filter(function(p){ return !!pbVinculo(p.processo); });
   return vis;
@@ -161,20 +186,44 @@ function pbRender(){
   var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
   h += '<div class="pb-barra"><button type="button" class="btn btn-primary" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</button><button type="button" class="btn btn-ghost" data-pb="oabs">OABs monitoradas</button></div>';
-  var ativos = pbS.oabs.filter(function(o){ return o.ativo; });
-  h += '<div class="pb-filtros"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
-    (pbS.oabs.length > 1 ? '<select id="pbOabSel" class="filter-select" aria-label="OAB"><option value="todas">Todas as OABs</option>' + pbS.oabs.map(function(o){ return '<option value="' + escapeHtml(o.id) + '"' + (pbS.oab === o.id ? ' selected' : '') + '>' + escapeHtml(o.nome) + ' · ' + escapeHtml(o.numero + '/' + o.uf) + '</option>'; }).join('') + '</select>' : '') + '</div>';
+  var n = pbFiltrosAtivos();
+  h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
+    '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button></div>';
+  if (pbS.fAberto) h += pbPainelHtml();
+  h += '</div>';
   if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
-  if (!ativos.length) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';
-  var lista = pbListaFiltrada(), limite = pbS.mais * 30, ultimoDia = '';
-  if (!lista.length && ativos.length) h += '<div class="financeiro-vazio">' + (pbS.filtro === 'naolidas' ? 'Nenhuma publicação nova. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.') + '</div>';
-  if (pbS.filtro === 'naolidas' && naoLidas.length > 1) h += '<div class="pb-todas"><button type="button" class="btn-text" data-pb="todas-lidas">Marcar todas como lidas</button></div>';
+  if (!pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';
+  h += '<div id="pbListaBox" class="pb-lista">' + pbListaHtml() + '</div>';
+  w.innerHTML = h;
+}
+function pbPainelHtml(){
+  var f = pbS.f, trib = {}, i;
+  pbVisiveis().forEach(function(p){ if (p.tribunal) trib[p.tribunal] = 1; });
+  var tribs = Object.keys(trib).sort();
+  return '<div class="pb-painel"><div class="field"><label class="field-label" for="pbf_q">Cliente, partes ou processo</label><input type="text" id="pbf_q" data-pbf="q" value="' + escapeHtml(f.q) + '" placeholder="Ex.: Cooperativa, 5368644…" autocomplete="off"></div>' +
+    '<div class="pb-dois"><div class="field"><label class="field-label" for="pbf_de">Data de</label><input type="date" id="pbf_de" data-pbf="de" value="' + escapeHtml(f.de) + '"></div><div class="field"><label class="field-label" for="pbf_ate">Data até</label><input type="date" id="pbf_ate" data-pbf="ate" value="' + escapeHtml(f.ate) + '"></div></div>' +
+    '<div class="field"><label class="field-label" for="pbOabSel">OAB monitorada</label><select id="pbOabSel" class="filter-select" data-pbf="oab" style="width:100%"><option value="todas">Todas as OABs</option>' + pbS.oabs.map(function(o){ return '<option value="' + escapeHtml(o.id) + '"' + (f.oab === o.id ? ' selected' : '') + '>' + escapeHtml(o.nome) + ' · ' + escapeHtml(o.numero + '/' + o.uf) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label class="field-label" for="pbf_adv">Advogado (nome ou nº da OAB)</label><input type="text" id="pbf_adv" data-pbf="adv" value="' + escapeHtml(f.adv) + '" placeholder="Ex.: Murilo, 49308" autocomplete="off"><div class="saldo-data">Procura entre os advogados citados na publicação (inclusive da parte contrária).</div></div>' +
+    '<div class="field"><label class="field-label" for="pbf_trib">Tribunal</label><select id="pbf_trib" class="filter-select" data-pbf="trib" style="width:100%"><option value="">Todos</option>' + tribs.map(function(t){ return '<option value="' + escapeHtml(t) + '"' + (f.trib === t ? ' selected' : '') + '>' + escapeHtml(t) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pb="limpar">Limpar filtros</button><button type="button" class="btn btn-primary pb-b" data-pb="painel">Fechar</button></div><div class="saldo-data">Mostra as publicações dos últimos 90 dias.</div></div>';
+}
+function pbListaHtml(){
+  var lista = pbListaFiltrada(), limite = pbS.mais * 30, ultimoDia = '', h = '', n = pbFiltrosAtivos();
+  var naoLidas = lista.filter(function(p){ return !p.lida; });
+  if (n) h += '<div class="saldo-data pb-resfiltro">' + lista.length + (lista.length === 1 ? ' publicação' : ' publicações') + ' com os filtros escolhidos. <button type="button" class="btn-text" data-pb="limpar">Limpar</button></div>';
+  if (!lista.length && pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">' + (n ? 'Nenhuma publicação com esses filtros.' : (pbS.filtro === 'naolidas' ? 'Nenhuma publicação nova. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.')) + '</div>';
+  if (naoLidas.length > 1) h += '<div class="pb-todas"><button type="button" class="btn-text" data-pb="todas-lidas">Marcar ' + (n ? 'as ' + naoLidas.length + ' deste filtro' : 'todas') + ' como lidas</button></div>';
   lista.slice(0, limite).forEach(function(p){
     if (p.data !== ultimoDia){ ultimoDia = p.data; h += '<div class="pb-dia">' + escapeHtml(pbQuando(p.data)) + '</div>'; }
     h += pbCartao(p);
   });
   if (lista.length > limite) h += '<button type="button" class="btn btn-ghost" data-pb="mais" style="width:100%;justify-content:center;">Mostrar mais (' + (lista.length - limite) + ')</button>';
-  w.innerHTML = h;
+  return h;
+}
+function pbRenderLista(){
+  var box = qs('pbListaBox'); if (!box) { pbRender(); return; }
+  box.innerHTML = pbListaHtml();
+  var n = pbFiltrosAtivos(), fb = document.querySelector('.pb-funil'); if (fb){ fb.classList.toggle('ativo', n > 0); var i = fb.querySelector('.pb-n'); if (n){ if (!i){ i = document.createElement('i'); i.className = 'pb-n'; fb.appendChild(i); } i.textContent = n; } else if (i) i.remove(); }
 }
 function pbCartao(p){
   var v = pbVinculo(p.processo), pz = pbPrazoDaPub(p.id), cls = pbClasseTipo(p.tipo), tags = '';
@@ -186,7 +235,7 @@ function pbCartao(p){
   if (!pz && p.sug && !p.semPrazo) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Confirmar prazo</button>';
   else if (!pz && !p.semPrazo && cls !== 'out') btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Criar prazo</button>';
   if (!v) btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="cadastrar" data-id="' + escapeHtml(p.id) + '">Cadastrar processo</button>';
-  btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="abrir" data-id="' + escapeHtml(p.id) + '">Ver texto</button><button type="button" class="btn-text pb-b" data-pb="lida" data-id="' + escapeHtml(p.id) + '">' + (p.lida ? 'Marcar não lida' : 'Lida') + '</button>';
+  btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="abrir" data-id="' + escapeHtml(p.id) + '">Ver texto</button><button type="button" class="btn btn-ghost pb-b" data-pb="lida" data-id="' + escapeHtml(p.id) + '">' + (p.lida ? 'Marcar como não lida' : 'Marcar como lida') + '</button>';
   return '<div class="pb-card ' + cls + (p.lida ? ' lida' : '') + '"><div class="pb-l1"><span>' + (p.lida ? '' : '<i class="pb-dot"></i>') + escapeHtml((p.tribunal ? p.tribunal + ' · ' : '') + (p.orgao || '')) + '</span><span class="pb-tipo ' + cls + '">' + escapeHtml(p.tipo || 'Publicação') + '</span></div>' +
     '<div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || p.processo || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div>' +
     (p.trecho ? '<div class="pb-trecho">' + escapeHtml(p.trecho) + '</div>' : '') + '<div class="pb-tags">' + tags + '</div><div class="pb-acts">' + btn + '</div></div>';
@@ -340,7 +389,9 @@ window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado:
 /* ---------- estilo e partida ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '.pb-hero{margin-top:0}.pb-barra{display:flex;gap:8px}.pb-barra .btn{flex:1;justify-content:center}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}' +
+  st.textContent = '.pb-hero{margin-top:0}.pb-barra{display:flex;gap:8px}.pb-barra .btn{flex:1;justify-content:center}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}.pb-lista{display:flex;flex-direction:column;gap:14px}' +
+    '.pb-seg-lin{display:flex;gap:8px;align-items:center}.pb-seg-lin .segmented{flex:1;min-width:0;flex-wrap:nowrap}.pb-seg-lin .seg-btn{flex:1;justify-content:center;white-space:nowrap;padding-left:6px;padding-right:6px}.pb-funil{position:relative;width:46px;height:46px;padding:0;justify-content:center;flex:none}.pb-funil.ativo{border-color:var(--accent);color:var(--accent)}.pb-n{position:absolute;top:-6px;right:-6px;background:var(--urgente);color:#fff;font-style:normal;font-size:var(--t1);font-weight:700;min-width:18px;height:18px;border-radius:99px;display:grid;place-items:center;padding:0 5px}' +
+    '.pb-painel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}.pb-resfiltro{padding:0 4px}' +
     '.pb-dia{font-size:var(--t2);font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;margin:6px 4px 0}.pb-todas{text-align:right}' +
     '.pb-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px 14px 12px 17px;position:relative;overflow:hidden;box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.06))}' +
     '.pb-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pb-bar,#C4C4CB)}.pb-card.dec{--pb-bar:var(--urgente)}.pb-card.ato{--pb-bar:var(--tutela)}.pb-card.lida{opacity:.62}' +
@@ -354,7 +405,7 @@ window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado:
     '.pb-prazo-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--border);cursor:pointer}.pb-prazo-tx{display:flex;flex-direction:column;min-width:0}.pb-prazo-tx b{font-size:var(--t4)}.pb-prazo-tx span{font-size:var(--t2);color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.pb-sec{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}.pb-sec-t{font-size:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft)}.pb-ia{background:rgba(237,161,0,.10);border:1px solid rgba(201,133,0,.35)}.pb-ia .pb-sec-t{color:var(--accent)}' +
     '.pb-texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--t3);line-height:1.5;max-height:42vh;overflow-y:auto;background:var(--surface);border-radius:10px;padding:10px 12px}.pb-frase{font-size:var(--t3);line-height:1.45;font-style:italic}' +
-    '.pb-dois{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pb-calc{display:flex;flex-direction:column}.pb-lin{display:flex;justify-content:space-between;gap:10px;font-size:var(--t3);padding:6px 0;border-top:1px solid var(--border);color:var(--ink-soft)}.pb-lin b{color:var(--ink)}.pb-lin.pb-venc{font-size:var(--t4)}.pb-lin.pb-venc b{color:var(--urgente)}' +
+    '.pb-dois{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.pb-dois .field{min-width:0}.pb-dois input{width:100%;min-width:0;box-sizing:border-box}.pb-calc{display:flex;flex-direction:column}.pb-lin{display:flex;justify-content:space-between;gap:10px;font-size:var(--t3);padding:6px 0;border-top:1px solid var(--border);color:var(--ink-soft)}.pb-lin b{color:var(--ink)}.pb-lin.pb-venc{font-size:var(--t4)}.pb-lin.pb-venc b{color:var(--urgente)}' +
     '.pb-obs{font-size:var(--t2);color:var(--tutela);line-height:1.4;margin-top:6px}.pb-aviso{font-size:var(--t2);color:var(--ink-soft);line-height:1.4}.pb-prazo-ok b{font-size:var(--t7)}' +
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);

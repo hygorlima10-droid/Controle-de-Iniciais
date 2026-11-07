@@ -100,11 +100,12 @@ export async function buscarOab(o, ini, fim, orc) {
 function paraDoc(i, o) {
   const texto = htmlParaTexto(i.texto), processo = String(i.numero_processo || '').replace(/\D/g, '');
   const dest = (Array.isArray(i.destinatarios) ? i.destinatarios : []).slice(0, 4).map((d) => ({ n: String(d.nome || '').replace(/^\d+\.\s*/, '').slice(0, 90), p: d.polo === 'A' ? 'A' : (d.polo === 'P' ? 'P' : '') }));
+  const advs = (Array.isArray(i.destinatarioadvogados) ? i.destinatarioadvogados : []).map((x) => x && x.advogado).filter((a) => a && a.nome).slice(0, 8).map((a) => ({ n: String(a.nome).slice(0, 70), o: String(a.numero_oab || '').replace(/\D/g, '') + '/' + String(a.uf_oab || '').toUpperCase().slice(0, 2) }));
   const tipo = String(i.tipoDocumento || i.tipoComunicacao || '').slice(0, 60);
   return {
     id: String(i.id), data: String(i.data_disponibilizacao || '').slice(0, 10), tribunal: String(i.siglaTribunal || '').slice(0, 12), orgao: String(i.nomeOrgao || '').slice(0, 100),
     tipo, classe: String(i.nomeClasse || '').slice(0, 80), processo, numero: String(i.numeroprocessocommascara || mascara(processo)).slice(0, 40), trecho: trechoDe(texto),
-    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto),
+    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
 }
@@ -126,8 +127,8 @@ export async function lerDjen(env, opcoes = {}) {
   const resumo = { novas: 0, lidas: 0, porOab: [], ms: 0 };
   for (const o of cfg.oabs) {
     if (!o.ativo) continue;
-    const primeira = !o.ultima;
-    const ini = opcoes.dias ? somarDiasISO(hoje, -opcoes.dias) : (o.ultima ? somarDiasISO(o.ultima, -2) : somarDiasISO(hoje, -30));
+    const primeira = !o.ultima, completar = !cfg.advsOk;   // uma vez só: refaz os últimos 30 dias para guardar também os advogados de cada publicação
+    const ini = opcoes.dias ? somarDiasISO(hoje, -opcoes.dias) : (o.ultima && !completar ? somarDiasISO(o.ultima, -2) : somarDiasISO(hoje, -30));
     const r = await buscarOab(o, ini, hoje, orc);
     let novas = 0;
     if (r.itens.length) {
@@ -141,7 +142,13 @@ export async function lerDjen(env, opcoes = {}) {
       const gravacoes = [], recente = somarDiasISO(hoje, -4);
       for (const [id, d] of docs) {
         const ex = existentes.get(id);
-        if (ex) { if (!ex.oabs.includes(o.id)) { ex.oabs.push(o.id); gravacoes.push(gravar(env, COL_PUB, id, ex)); } continue; }
+        if (ex) {
+          let mudou = false;
+          if (!ex.oabs.includes(o.id)) { ex.oabs.push(o.id); mudou = true; }
+          if (!ex.advs && d.advs.length) { ex.advs = d.advs; mudou = true; }
+          if (mudou) gravacoes.push(gravar(env, COL_PUB, id, ex));
+          continue;
+        }
         d.notificada = !(o.avisar && !primeira && d.data >= recente);   // a primeira leitura de uma OAB (histórico) não vira aviso
         gravacoes.push(gravar(env, COL_PUB, id, d)); novas++;
       }
@@ -154,6 +161,7 @@ export async function lerDjen(env, opcoes = {}) {
     resumo.porOab.push({ id: o.id, nome: o.nome, lidas: r.itens.length, novas, erro: o.erro, parcial: !!r.parcial });
   }
   cfg.ultimaLeitura = new Date().toISOString();
+  if (!cfg.advsOk && resumo.porOab.every((x) => !x.erro && !x.parcial)) cfg.advsOk = true;
   await gravarCfg(env, cfg);
   await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND atualizado < ?').bind(COL_PUB, Date.now() - 400 * DIA).run();
   resumo.ms = Date.now() - t0;

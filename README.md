@@ -151,3 +151,8 @@ No contrato de mão de obra, "Abater valor do contrato" registra um pagamento de
 - **Nome:** a aba "Petições" agora é **Novas ações** (menu, barra de baixo, títulos, busca e relatórios). Os dados e o campo `casos` não mudaram.
 - **Menu lateral no celular:** não rola mais de lado (o item arrastava o menu para a esquerda) e os nomes longos quebram de linha (`public/tema.css`).
 - **Testes:** `test/agenda.test.mjs` (o topo do arquivo diz como subir o servidor).
+
+### Publicações: filtros e advogados
+- O botão com símbolo de funil, ao lado de "Não lidas / Meus processos / Todas", abre o painel de filtros: **cliente, partes ou processo** (texto), **data de/até**, **OAB monitorada**, **advogado** (nome ou número da OAB, inclusive o da parte contrária) e **tribunal**. O botão mostra quantos filtros estão ativos; "Limpar filtros" volta tudo. Os filtros valem sobre os últimos 90 dias.
+- Cada publicação passa a guardar os advogados citados (`advs`, nome e OAB). Na primeira leitura depois desta atualização o servidor refaz os últimos 30 dias uma vez só (`advsOk` na configuração) para completar as publicações já guardadas, sem mexer em "lida" nem gerar avisos.
+- O botão de ler passou a se chamar "Marcar como lida" (e "Marcar como não lida"), com o mesmo estilo dos outros botões do cartão.

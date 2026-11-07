@@ -11,10 +11,11 @@ let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA 
 const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), agora = new Date().toISOString();
 
 // ---- Diário Oficial de mentira ----
-const item = (id, disp, tribunal, orgao, tipo, proc, texto, dest) => ({ id, data_disponibilizacao: disp, siglaTribunal: tribunal, nomeOrgao: orgao, tipoDocumento: tipo, tipoComunicacao: 'Intimação', nomeClasse: 'CUMPRIMENTO DE SENTENçA', numero_processo: proc.replace(/\D/g, ''), numeroprocessocommascara: proc, link: 'https://projudi.tjgo.jus.br/p?c=' + id, texto, destinatarios: dest });
-const A = item(900001, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Decisão', '5368644-67.2026.8.09.0107', 'Poder Judici&aacute;rio\nTribunal de Justi&ccedil;a do Estado de Goi&aacute;s\nAutos n.:&nbsp;5368644-67.2026.8.09.0107\nDECIS&Atilde;O\nDEFIRO a per&iacute;cia cont&aacute;bil. Concedo o prazo improrrog&aacute;vel de 15 (quinze) dias para juntada integral dos documentos pela r&eacute;.', [{ nome: 'COOPERATIVA MISTA DOS PRODUTORES', polo: 'P' }]);
-const Bp = item(900002, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Ato ordinatório', '5593217-64.2021.8.09.0107', 'CERTID&Atilde;O\nCertifico que, nesta data, intimei a parte autora/exequente para realizar o recolhimento do sistema deferido, no prazo de quinze dias.\nO referido &eacute; verdade e dou f&eacute;.', [{ nome: 'COOPERATIVA MISTA DOS PRODUTORES', polo: 'A' }]);
-const C = item(900003, hoje, 'STJ', 'COORDENADORIA DE CLASSIFICAÇÃO', 'ATA DE DISTRIBUIÇÃO', '5385296-78.2023.8.09.0071', '<html><body><table><tr><td><b>AREsp 3307791/GO</b></td></tr></table><p>Processo distribuído em 05/11/2026.</p></body></html>', [{ nome: '1. TRANSPORTADORA NUNES (AGRAVANTE)', polo: 'A' }, { nome: '2. LÍDER VIATURAS (AGRAVADO)', polo: 'P' }]);
+const adv = (nome, n, uf) => ({ advogado: { nome, numero_oab: n, uf_oab: uf } });
+const item = (id, disp, tribunal, orgao, tipo, proc, texto, dest, advs = []) => ({ destinatarioadvogados: advs, id, data_disponibilizacao: disp, siglaTribunal: tribunal, nomeOrgao: orgao, tipoDocumento: tipo, tipoComunicacao: 'Intimação', nomeClasse: 'CUMPRIMENTO DE SENTENçA', numero_processo: proc.replace(/\D/g, ''), numeroprocessocommascara: proc, link: 'https://projudi.tjgo.jus.br/p?c=' + id, texto, destinatarios: dest });
+const A = item(900001, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Decisão', '5368644-67.2026.8.09.0107', 'Poder Judici&aacute;rio\nTribunal de Justi&ccedil;a do Estado de Goi&aacute;s\nAutos n.:&nbsp;5368644-67.2026.8.09.0107\nDECIS&Atilde;O\nDEFIRO a per&iacute;cia cont&aacute;bil. Concedo o prazo improrrog&aacute;vel de 15 (quinze) dias para juntada integral dos documentos pela r&eacute;.', [{ nome: 'COOPERATIVA MISTA DOS PRODUTORES', polo: 'P' }], [adv('HYGOR LIMA ANDRADE', '60456', 'GO'), adv('MURILO FALONE ROCHA', '49308', 'GO')]);
+const Bp = item(900002, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Ato ordinatório', '5593217-64.2021.8.09.0107', 'CERTID&Atilde;O\nCertifico que, nesta data, intimei a parte autora/exequente para realizar o recolhimento do sistema deferido, no prazo de quinze dias.\nO referido &eacute; verdade e dou f&eacute;.', [{ nome: 'COOPERATIVA MISTA DOS PRODUTORES', polo: 'A' }], [adv('HYGOR LIMA ANDRADE', '60456', 'GO'), adv('ALCIONE CELLA', '23852', 'SC')]);
+const C = item(900003, hoje, 'STJ', 'COORDENADORIA DE CLASSIFICAÇÃO', 'ATA DE DISTRIBUIÇÃO', '5385296-78.2023.8.09.0071', '<html><body><table><tr><td><b>AREsp 3307791/GO</b></td></tr></table><p>Processo distribuído em 05/11/2026.</p></body></html>', [{ nome: '1. TRANSPORTADORA NUNES (AGRAVANTE)', polo: 'A' }, { nome: '2. LÍDER VIATURAS (AGRAVADO)', polo: 'P' }], [adv('MURILO FALONE ROCHA', '49308', 'GO'), adv('HYGOR LIMA ANDRADE', '60456', 'GO')]);
 const D = item(900004, hoje, 'TJGO', 'Goiânia - 2ª Vara', 'Sentença', '5000001-11.2026.8.09.0051', 'SENTEN&Ccedil;A\nJulgo procedente o pedido. Prazo de 15 dias para recurso.', [{ nome: 'FULANO DE TAL', polo: 'A' }]);
 const E = item(900005, hoje, 'TJGO', 'Morrinhos - Vara Criminal', 'Despacho', '5706736-75.2025.8.09.0107', 'DESPACHO\nIntime-se. Prazo de 5 (cinco) dias.', [{ nome: 'SERGIO PENIDO', polo: 'A' }]);
 const feeds = { '60456': [A, Bp, C], '49308': [A, D], '12345': [] };
@@ -50,6 +51,7 @@ check(pa && pa.processo === '53686446720268090107' && pa.numero === '5368644-67.
 check(pa.trecho.startsWith('DEFIRO a perícia contábil') && !/&\w+;/.test(pa.trecho) && pa.trecho.length <= 300, 'o trecho vem limpo e sem o cabeçalho: ' + pa.trecho.slice(0, 50));
 check(pa.sug && pa.sug.dias === 15 && pa.sug.tipo === 'uteis', 'prazo sugerido: 15 dias úteis');
 check(!pubs.find(p => p.id === '900003').sug, 'ata de distribuição não sugere prazo');
+check(pa.advs && pa.advs.length === 2 && pa.advs[1].n === 'MURILO FALONE ROCHA' && pa.advs[1].o === '49308/GO', 'guarda os advogados citados em cada publicação (nome e OAB)');
 // OAB do Murilo
 let bad = await f('PUT', '/api/djen/oabs', { oabs: [{ numero: '', uf: 'GO' }] });
 check(bad.s === 400, 'não aceita OAB sem número');
@@ -107,9 +109,45 @@ await page.click('[data-pb="filtro"][data-v="meus"]'); await page.waitForTimeout
 check((await page.evaluate(() => document.querySelectorAll('.pb-card').length)) === 1 && /Maquele/.test(await t('#pbWrap')), 'filtro "Meus processos" mostra só os cadastrados');
 await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(300);
 check((await page.evaluate(() => document.querySelectorAll('.pb-card').length)) === 4, 'filtro "Todas"');
-await page.selectOption('#pbOabSel', { index: 2 }); await page.waitForTimeout(300);
-check((await page.evaluate(() => document.querySelectorAll('.pb-card').length)) === 1, 'filtro por OAB (Murilo): só a publicação em comum');
-await page.selectOption('#pbOabSel', { index: 0 }); await page.click('[data-pb="filtro"][data-v="naolidas"]'); await page.waitForTimeout(300);
+// botão "Marcar como lida" igual aos demais
+const lidaBtn = await page.evaluate(() => { const b = document.querySelector('.pb-b[data-pb="lida"]'); return { t: b.innerText.trim(), c: b.className }; });
+check(lidaBtn.t === 'Marcar como lida' && /\bbtn\b/.test(lidaBtn.c) && /btn-ghost/.test(lidaBtn.c) && !/btn-text/.test(lidaBtn.c), 'o botão é "Marcar como lida" e tem o mesmo estilo dos outros: ' + lidaBtn.c);
+// filtros
+check(await page.evaluate(() => !!document.querySelector('.pb-funil svg')) && !(await page.evaluate(() => !!document.querySelector('.pb-painel'))), 'há um botão de filtro com símbolo de funil e o painel começa fechado');
+await page.click('.pb-funil'); await page.waitForTimeout(300);
+check(await page.evaluate(() => ['pbf_q', 'pbf_de', 'pbf_ate', 'pbOabSel', 'pbf_adv', 'pbf_trib'].every(id => !!document.getElementById(id))), 'o painel tem cliente, data (de/até), OAB, advogado e tribunal');
+check(await page.evaluate(() => { const pn = document.querySelector('.pb-painel').getBoundingClientRect(); return Array.from(document.querySelectorAll('.pb-painel input, .pb-painel select')).every(e => { const r = e.getBoundingClientRect(); return r.left >= pn.left - 1 && r.right <= pn.right + 1; }); }), 'os campos do painel cabem na largura do celular (datas lado a lado sem sair da caixa)');
+const nCards = () => page.evaluate(() => document.querySelectorAll('.pb-card').length);
+await page.selectOption('#pbOabSel', { index: 2 }); await page.waitForTimeout(400);
+check(await nCards() === 1 && /1/.test(await t('.pb-funil')), 'filtro por OAB (Murilo): só a publicação em comum, e o botão mostra 1 filtro ativo');
+await page.selectOption('#pbOabSel', { index: 0 }); await page.waitForTimeout(300);
+await page.fill('#pbf_q', 'maquele'); await page.waitForTimeout(600);
+check(await nCards() === 1 && /Maquele/.test(await t('#pbListaBox')), 'filtro por cliente (nome)');
+await page.fill('#pbf_q', '5593217'); await page.waitForTimeout(600);
+check(await nCards() === 1 && /5593217/.test(await t('#pbListaBox')), 'filtro por parte do número do processo');
+await page.fill('#pbf_q', 'zzzz'); await page.waitForTimeout(600);
+check(await nCards() === 0 && /Nenhuma publicação com esses filtros/.test(await t('#pbListaBox')), 'sem resultado: avisa');
+await page.fill('#pbf_q', ''); await page.waitForTimeout(500);
+await page.fill('#pbf_adv', 'alcione'); await page.waitForTimeout(600);
+check(await nCards() === 1 && /5593217/.test(await t('#pbListaBox')), 'filtro por advogado (nome, inclusive o de fora das suas OABs): só a publicação com Alcione');
+await page.fill('#pbf_adv', '49308'); await page.waitForTimeout(600);
+check(await nCards() === 2, 'filtro por advogado (número da OAB)');
+await page.fill('#pbf_adv', ''); await page.waitForTimeout(400);
+await page.selectOption('#pbf_trib', 'STJ'); await page.waitForTimeout(400);
+check(await nCards() === 1 && /STJ/.test(await t('#pbListaBox')), 'filtro por tribunal');
+await page.selectOption('#pbf_trib', ''); await page.waitForTimeout(300);
+await page.fill('#pbf_de', hoje); await page.fill('#pbf_ate', hoje); await page.waitForTimeout(500);
+check(await nCards() === 4, 'filtro por data (só hoje): todas as de hoje');
+const ontem = new Date(Date.parse(hoje + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10);
+await page.fill('#pbf_ate', ontem); await page.waitForTimeout(500);
+check(await nCards() === 0, 'filtro por data (até ontem): nenhuma');
+await page.fill('#pbf_de', ''); await page.fill('#pbf_ate', ''); await page.fill('#pbf_adv', 'hygor'); await page.selectOption('#pbf_trib', 'TJGO'); await page.waitForTimeout(500);
+check(await nCards() === 2 && /2/.test(await t('.pb-funil')), 'filtros combinados (advogado Hygor + TJGO) e o botão mostra 2 filtros');
+await page.click('.pb-painel [data-pb="limpar"]'); await page.waitForTimeout(400);
+check(await nCards() === 4 && !(await page.evaluate(() => !!document.querySelector('.pb-n'))), '"Limpar filtros" volta a lista completa e tira o número do botão');
+await page.click('.pb-painel [data-pb="painel"]'); await page.waitForTimeout(300);
+check(!(await page.evaluate(() => !!document.querySelector('.pb-painel'))), '"Fechar" esconde o painel');
+await page.click('[data-pb="filtro"][data-v="naolidas"]'); await page.waitForTimeout(300);
 // detalhe + prazo
 await page.click('.pb-b[data-pb="prazo"][data-id="900002"]'); await page.waitForTimeout(1500);
 check(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show')), 'abre o detalhe da publicação');
