@@ -95,7 +95,7 @@ function agRenderInicio(){
   var aud = l.filter(function(i){ return i.data >= hoje && i.tipo === 'audiencia'; }).length;
   l = l.filter(function(i){ return !(i.tipo === 'audiencia' && i.data < hoje); });
   var chips = (atr ? rsChip(atr + (atr === 1 ? ' atrasado' : ' atrasados'), 'neg') : '') + (sem ? rsChip(sem + (sem === 1 ? ' prazo' : ' prazos'), '') : '') + (aud ? rsChip(aud + (aud === 1 ? ' audiência' : ' audiências'), '') : '');
-  var npub = 0; try{ if (pbS.carregado) npub = pbVisiveis().filter(function(p){ return !p.lida; }).length; }catch(e){}
+  var npub = 0; try{ if (pbS.carregado) npub = pbContaNaoLidas(); }catch(e){}
   var h = '<div class="ini-card ag-cartao"><div class="ag-cab"><span class="ag-tit">' + fvIc('scale', '#D93B3B') + '<b>Prazos processuais</b></span><span class="saldo-data">próximos 7 dias</span></div>' + (chips ? '<div class="ag-chips">' + chips + '</div>' : '');
   if (!l.length) h += '<div class="saldo-data" style="margin:8px 0;">Nenhum prazo nos próximos 7 dias.</div>';
   else h += l.slice(0, 5).map(function(i){ return agLinha(i); }).join('') + (l.length > 5 ? '<div class="saldo-data" style="margin-top:6px;">e mais ' + (l.length - 5) + '</div>' : '');

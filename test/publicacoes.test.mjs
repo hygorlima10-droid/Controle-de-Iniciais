@@ -198,6 +198,31 @@ check(!/Reabrir processo/.test(await cardDe('900003')) && (await f('GET', '/api/
 await page.click('.pb-b[data-pb="cadastrar"][data-id="900005"]'); await page.waitForTimeout(400); await page.click('[data-pre="inicial"]'); await page.waitForTimeout(700);
 check(await page.evaluate(() => document.getElementById('overlay').classList.contains('show')) && (await page.evaluate(() => document.getElementById('processoInput').value)) === '5706736-75.2025.8.09.0107', 'a outra opção abre o cadastro de Nova inicial com o número preenchido');
 await page.click('#closeModal'); await page.waitForTimeout(300);
+// publicações idênticas (um autor em cada uma) viram um cartão só
+const NG = '5700000-10.2026.8.09.0107', numG = NG.replace(/\D/g, '');
+['AUTOR UM', 'AUTOR DOIS', 'AUTOR TRES'].forEach((n, i) => feeds['60456'].push(item(900101 + i, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Decisão', NG, 'DECISÃO\nIntimem-se os autores para manifestação em 5 (cinco) dias.', [{ nome: n, polo: 'A' }])));
+feeds['60456'].push(item(900104, hoje, 'TJGO', 'Morrinhos - 1ª Vara Cível', 'Ato ordinatório', NG, 'CERTIDÃO\nCertifico o decurso do prazo.', [{ nome: 'AUTOR UM', polo: 'A' }]));
+await f('POST', '/api/djen/buscar', {});
+check((await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.processo === numG).length === 4, 'o servidor guarda as 4 publicações (nada se perde)');
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(800);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(400);
+const doProc = async () => page.evaluate(n => Array.from(document.querySelectorAll('.pb-card')).filter(c => c.innerText.includes(n)).map(c => c.innerText), NG);
+let cg = await doProc();
+check(cg.length === 2, 'no mesmo processo e dia, as 3 decisões idênticas viram 1 cartão e o ato ordinatório (outro tipo) continua separado: ' + cg.length + ' cartões');
+const grupo = cg.find(x => /idênticas reunidas/.test(x)) || '';
+check(/3 publicações idênticas reunidas/.test(grupo) && /AUTOR UM/.test(grupo) && /AUTOR DOIS/.test(grupo) && /AUTOR TRES/.test(grupo), 'o cartão reunido diz quantas são e para quem: ' + grupo.replace(/\n/g, ' | ').slice(0, 130));
+const heroNum = async () => Number(await page.evaluate(() => document.querySelector('.pb-hero .fv-big').innerText));
+const antes = await heroNum();
+await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => /idênticas reunidas/.test(c.innerText)); c.querySelector('[data-pb="lida"]').click(); }); await page.waitForTimeout(1200);
+const lg = (await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.processo === numG);
+check(lg.filter(p => p.lida).map(p => p.id).sort().join() === '900101,900102,900103' && lg.find(p => p.id === '900104').lida === false, 'um toque em "Marcar como lida" marca as 3 de uma vez (e só elas)');
+check(await heroNum() === antes - 1 && String(await page.evaluate(() => document.getElementById('menuNPub').textContent)) === String(await heroNum()), 'o contador de não lidas conta o grupo como 1 (de ' + antes + ' para ' + (antes - 1) + ')');
+await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => /idênticas reunidas/.test(c.innerText)); c.querySelector('[data-pb="abrir"]').click(); }); await page.waitForTimeout(1500);
+check(/3 publicações idênticas reunidas/i.test(await t('#pbCorpo')) && /AUTOR DOIS/.test(await t('#pbCorpo')), 'o detalhe mostra os destinatários reunidos');
+await page.click('#pbFechar'); await page.waitForTimeout(300);
+await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => /idênticas reunidas/.test(c.innerText)); c.querySelector('[data-pb="lida"]').click(); }); await page.waitForTimeout(1000);
+check((await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.processo === numG && !p.lida).length === 4, '"Marcar como não lida" desfaz nas 3');
 // OABs na tela
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(900);
 await page.click('[data-pb="oabs"]'); await page.waitForTimeout(500);

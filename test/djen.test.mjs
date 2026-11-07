@@ -28,6 +28,9 @@ check(n.length === 1 && /2 novas publicações/.test(n[0].titulo) && /TJGO · De
 check(montarNotificacoes({ itens: [], alertas: [] }, { esconder: true }, { alertas: {} }, '2026-11-06', '2026-11', [{ tipo: 'Decisão' }])[0].corpo === 'Abra o app para ver.', 'com "esconder", a notificação não mostra o conteúdo');
 check(montarNotificacoes({ itens: [], alertas: [] }, {}, { alertas: {} }, '2026-11-06', '2026-11').length === 0, 'sem publicações nem vencimentos, não envia nada');
 
+const iguais = [1, 2, 3].map(i => ({ id: String(i), processo: '57000001020268090107', data: '2026-11-06', tipo: 'Decisão', orgao: 'Vara', tribunal: 'TJGO', numero: '5700000-10.2026.8.09.0107' })).concat([{ id: '9', processo: '57000001020268090107', data: '2026-11-06', tipo: 'Ato ordinatório', orgao: 'Vara', tribunal: 'TJGO' }]);
+const nIg = montarNotificacoes({ itens: [], alertas: [] }, {}, { alertas: {} }, '2026-11-06', '2026-11', iguais);
+check(nIg.length === 1 && /^2 novas publicações/.test(nIg[0].titulo), 'o aviso das 10h conta publicações idênticas uma vez só: ' + nIg[0].titulo);
 // leitura paginada: a fonte recusa tamanho 100 (400) e a outra "limita" a página em 5 sem avisar
 const todos = Array.from({ length: 13 }, (_, i) => ({ id: 1000 + i }));
 let modo = 'recusa', chamadas = 0;

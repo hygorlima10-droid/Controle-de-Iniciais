@@ -294,6 +294,7 @@ export function prazosDoDia(prazos, hoje) {
   return (Array.isArray(prazos) ? prazos : []).map((p) => ({ ...p, dif: diasEntre(hoje, p.d) })).filter((p) => p.dif >= 0 && (Array.isArray(p.a) ? p.a : [5, 2, 1, 0]).includes(p.dif)).sort((x, y) => x.d.localeCompare(y.d) || (x.h || '').localeCompare(y.h || ''));
 }
 export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = []) {
+  { const vistos = new Set(); pubs = pubs.filter((p, i) => { const k = p.processo ? [p.processo, p.data, p.tipo || '', p.orgao || ''].join('|') : 'sem-' + i; if (vistos.has(k)) return false; vistos.add(k); return true; }); }   // várias publicações idênticas (um autor cada) contam uma vez
   const lista = [];
   const esconder = !!config.esconder;
   const itens = (resumo.itens || []).filter((i) => i.d === hoje);
