@@ -196,9 +196,24 @@ export function sugerirPecas(ctx){
   itens = itens.slice(0, 7);
   var donoDobro = (ctx.dest || []).filter(function(d){ return d && (!c.polo || d.p === c.polo) && PC_FAZENDA.test(pcNorm(d.n)); })[0];
   if (!itens.length && !c.polo && c.nat === 'outro') return null;
-  return { natureza: c.nat, instancia: c.inst, polo: c.polo, itens: itens, avisos: avisos.slice(0, 3), dobro: (donoDobro && c.inst !== 'juizado') ? 'fazenda' : '', diasTexto: dt ? dt.dias : 0 };
+  return { natureza: c.nat, instancia: c.inst, polo: c.polo, feats: pcFeatures(c, t).slice(0, 40), itens: itens, avisos: avisos.slice(0, 3), dobro: (donoDobro && c.inst !== 'juizado') ? 'fazenda' : '', diasTexto: dt ? dt.dias : 0 };
 }
 
+/* ---- aprendizado: o "jeito do ato" (natureza, instância, lado do cliente, verbos e palavras-chave do texto) ---- */
+var PC_PALAVRAS = ['tutela', 'liminar', 'gratuidade', 'incompetenc', 'litisconsor', 'onus da prova', 'desconsideracao', 'suspeicao', 'impedimento', 'embargos de terceiro', 'reconvencao', 'contestacao', 'replica', 'preliminar', 'laudo', 'perit', 'saneamento', 'testemunh', 'provas', 'emenda', 'documentos', 'calculos', 'contadoria', 'penhora', 'sisbajud', 'renajud', 'infojud', 'bloqueio', 'leilao', 'arrematacao', 'avaliacao', 'cumprimento de sentenca', 'impugnacao', 'execucao', 'embargos de declaracao', 'apelacao', 'agravo', 'contrarrazoes', 'custas', 'recolh', 'diligencia', 'prevjud', 'procuracao', 'substabelecimento', 'vista', 'decurso', 'revelia', 'abandono', 'honorarios', 'multa', 'astreinte', 'obrigacao de fazer', 'alvara', 'acordo', 'homolog', 'desist', 'transito em julgado', 'prescri', 'extin', 'audiencia', 'conciliacao', 'mediacao', 'pagamento', 'sustentacao', 'pauta', 'retorno', 'oficial de justica', 'inventario', 'alimentos', 'guarda', 'usucapiao', 'despejo', 'busca e apreensao'];
+var PC_VERBOS = ['indefiro', 'defiro', 'rejeito', 'acolho', 'julgo procedente', 'julgo improcedente', 'parcialmente procedente', 'nego provimento', 'dou provimento', 'homologo', 'extingo', 'determino', 'intime-se', 'cite-se', 'certifico', 'designo', 'nomeio'];
+export function pcFeatures(c, t){
+  var f = ['n:' + c.nat, 'i:' + c.inst]; if (c.polo) f.push('p:' + c.polo);
+  PC_VERBOS.forEach(function(v){ if (t.indexOf(v) >= 0) f.push('v:' + v); });
+  PC_PALAVRAS.forEach(function(k){ if (t.indexOf(k) >= 0) f.push('k:' + k); });
+  return f;
+}
+export function pcJaccard(a, b){
+  var sa = {}, n = 0, u = 0, k; (a || []).forEach(function(x){ sa[x] = 1; });
+  var sb = {}; (b || []).forEach(function(x){ sb[x] = 1; });
+  for (k in sa){ u++; if (sb[k]) n++; } for (k in sb) if (!sa[k]) u++;
+  return u ? n / u : 0;
+}
 /* sentença: o que fazer depende de quem ganhou */
 function pcAjusteSentenca(lista, c){
   var res = /parcialmente (procedente|procedentes)|procedencia parcial/.test(c.t) ? 'parcial' : (/improcedente/.test(c.t) ? 'improcedente' : (/procedente/.test(c.t) ? 'procedente' : ''));

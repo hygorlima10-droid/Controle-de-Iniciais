@@ -178,7 +178,7 @@ const VERSAO_BACKUP_APP = 1;
 function backupNoFormatoDoApp(docs, exportadoEm) {
   const por = (c) => docs.filter((d) => d.colecao === c).map((d) => Object.assign({}, d.dados, { id: d.id }));
   const mapa = (c) => { const o = {}; docs.filter((d) => d.colecao === c).forEach((d) => { o[d.id] = d.dados; }); return o; };
-  return { versao: VERSAO_BACKUP_APP, exportadoEm, casos: por('casos'), acordos: por('termosAcordo'), alvaras: por('alvaras'), clientes: por('clientes'), despesas: por('despesas'), receitasManuais: por('receitasManuais'), saldos: mapa('saldos'), metas: por('metas'), extratos: por('extratos'), obraMov: por('obraMov'), processos: por('processos'), agenda: por('agenda'), config: mapa('config') };
+  return { versao: VERSAO_BACKUP_APP, exportadoEm, casos: por('casos'), acordos: por('termosAcordo'), alvaras: por('alvaras'), clientes: por('clientes'), despesas: por('despesas'), receitasManuais: por('receitasManuais'), saldos: mapa('saldos'), metas: por('metas'), extratos: por('extratos'), obraMov: por('obraMov'), processos: por('processos'), agenda: por('agenda'), pecasAprendidas: por('pecasAprendidas'), config: mapa('config') };
 }
 async function backups(request, env, partes) {
   const dia = partes[1];

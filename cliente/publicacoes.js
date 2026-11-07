@@ -138,6 +138,7 @@ function pbMontarTela(){
     else if (a === 'prazo') pbAbrirPrazoPub(id);
     else if (a === 'aud') pbCriarAudiencia(id);
     else if (a === 'rel') rptPublicacoes();
+    else if (a === 'pecas') pbAbrirPecas();
   });
   var depois = null;
   function aplicar(e){
@@ -172,13 +173,107 @@ function pbDestinatarios(p){
 /* ---------- peça sugerida (src/pecas.js) ---------- */
 var pbPeca = {};   /* por publicação: { i: índice escolhido, polo: lado informado, pc: sugestão refeita com o lado informado, dobro } */
 var PB_INST = { primeiro: '1º grau', juizado: 'Juizado Especial', tribunal: 'Tribunal' };
-function pbPecasDe(p){
+function pbPecasBase(p){
   var st = pbPeca[p.id], t = pbTextos[p.id];
   if (st && st.pc) return st.pc;
   if (t && t.ok && t.pc) return t.pc;
   if (p.pc) return p.pc;
   try{ return sugerirPecas({ tipo: p.tipo, comunic: p.comunic, classe: p.classe, orgao: p.orgao, tribunal: p.tribunal, texto: p.trecho, dest: p.dest, diasTexto: p.sug }); }catch(e){ return null; }
 }
+function pbPecasDe(p){ var b = pbPecasBase(p); return b ? pbAplicaAprend(b) : b; }
+
+/* ---------- aprendizado (Fase 2): o app guarda o seu jeito de escolher a peça e passa a sugerir o que você mais usa ---------- */
+var pbAprend = [], PB_MIN_USOS = 2, PB_MAX_TROCAS = 3, PB_SIM = 0.6;
+function pbCarregarAprend(){
+  if (!window.__SERVIDOR) return Promise.resolve();
+  return pbApi('/api/db/pecasAprendidas').then(function(r){ pbAprend = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); }).catch(function(){}).then(function(){ try{ if (activeTab === 'publicacoes') pbRender(); }catch(e){} });
+}
+function pbRegraOver(rid){ for (var i = 0; i < pbAprend.length; i++) if (pbAprend[i].tipo === 'regra' && pbAprend[i].rid === rid) return pbAprend[i]; return null; }
+function pbAplicaAprend(pc){
+  if (!pc || !pbAprend.length) return pc;
+  var out = JSON.parse(JSON.stringify(pc)), cand = [];
+  out.itens = out.itens.filter(function(it){ var o = pbRegraOver(it.rid); if (o && o.desativada) return false; if (o && o.dias && it.dias && it.origemPrazo === 'lei'){ it.dias = o.dias; } return true; });
+  pbAprend.forEach(function(e){ if (e.tipo === 'regra' || e.ativa === false || (e.usos || 0) < PB_MIN_USOS) return; var s = pcJaccard(pc.feats || [], e.feats || []); if (s >= PB_SIM) cand.push({ e: e, s: s }); });
+  cand.sort(function(a, b){ return (b.e.usos * b.s) - (a.e.usos * a.s); });
+  if (cand.length){
+    var e = cand[0].e, dias = e.dias, origem = 'lei';
+    if (e.dias && (e.kind || 'manif') === 'manif' && pc.diasTexto && pc.diasTexto !== e.dias){ dias = pc.diasTexto; origem = 'texto'; }
+    out.itens = out.itens.filter(function(it){ return it.peca !== e.peca; });
+    out.itens.forEach(function(it){ it.principal = false; });
+    out.itens.unshift({ rid: 'aprendida', lid: e.id, peca: e.peca, dias: dias, contagem: e.contagem || 'uteis', base: e.base || 'aprendida com você', kind: e.kind || 'manif', nota: 'você usou ' + e.usos + (e.usos === 1 ? ' vez' : ' vezes'), origem: 'aprendida', usos: e.usos, origemPrazo: origem, principal: true });
+  }
+  return out;
+}
+function pbGravarAprend(e){
+  var corpo = Object.assign({}, e); delete corpo.id;
+  if (e.id) return pbApi('/api/db/pecasAprendidas/' + encodeURIComponent(e.id), 'PUT', corpo);
+  return pbApi('/api/db/pecasAprendidas', 'POST', corpo).then(function(j){ e.id = j.id; pbAprend.push(e); });
+}
+/* chamado quando você confirma um prazo: reforça o que o app sugeriu e aprende o que você escolheu de diferente */
+function pbRegistrarEscolha(p, pcMostrado, psel, desc, diasBase, contagem){
+  return Promise.resolve(pbRegistrarEscolha0(p, pcMostrado, psel, desc, diasBase, contagem)).catch(function(){}).then(function(){ try{ if (activeTab === 'publicacoes') pbRender(); }catch(e){} });   /* os cartões passam a mostrar o que acabou de ser aprendido */
+}
+function pbRegistrarEscolha0(p, pcMostrado, psel, desc, diasBase, contagem){
+  var feats = pcMostrado && pcMostrado.feats; if (!feats || !feats.length || !desc) return;
+  var principal = null; pcMostrado.itens.forEach(function(it){ if (it.principal) principal = it; });
+  var escolhida = psel && psel.peca === desc ? psel.peca : desc, kind = psel && psel.peca === desc ? (psel.kind || 'manif') : 'manif';
+  var igual = principal && principal.peca === escolhida && (!principal.dias || principal.dias === diasBase);
+  var ps = [];
+  if (principal && principal.origem === 'aprendida'){
+    var le = pbAprend.filter(function(x){ return x.id === principal.lid; })[0];
+    if (le){ if (igual){ le.usos = (le.usos || 0) + 1; le.trocas = 0; le.ultimaEm = todayISO(); } else { le.trocas = (le.trocas || 0) + 1; if (le.trocas >= PB_MAX_TROCAS) le.ativa = false; } ps.push(pbGravarAprend(le)); }
+  }
+  if (igual && principal && principal.origem !== 'aprendida') return Promise.all(ps);   /* aceitou a regra da lei: nada novo a aprender */
+  if (igual) return Promise.all(ps);
+  var cur = pbAprend.filter(function(x){ return x.tipo !== 'regra' && x.peca === escolhida && pcJaccard(feats, x.feats || []) >= 0.75; })[0];
+  if (cur){
+    var inter = feats.filter(function(f){ return (cur.feats || []).indexOf(f) >= 0; });
+    cur.usos = (cur.usos || 0) + 1; cur.ultimaEm = todayISO(); cur.dias = diasBase || cur.dias; cur.contagem = contagem; cur.ativa = true; cur.trocas = 0; if (inter.length >= 4) cur.feats = inter;
+    ps.push(pbGravarAprend(cur));
+  } else {
+    var nat = PC_NATUREZA[pcMostrado.natureza] || 'Ato', kws = feats.filter(function(f){ return /^[kv]:/.test(f); }).map(function(f){ return f.slice(2); }).slice(0, 3);
+    ps.push(pbGravarAprend({ tipo: 'peca', ato: nat + (pcMostrado.polo ? ' (cliente ' + (pcMostrado.polo === 'A' ? 'autor' : 'réu') + ')' : '') + (kws.length ? ' · ' + kws.join(', ') : ''), feats: feats, peca: escolhida, dias: diasBase || null, contagem: contagem, base: psel && psel.peca === desc ? psel.base : '', kind: kind, usos: 1, trocas: 0, ativa: true, criadoEm: new Date().toISOString(), ultimaEm: todayISO() }));
+  }
+  return Promise.all(ps).catch(function(){});
+}
+/* ---------- tela "Peças e prazos" ---------- */
+function pbMontarPecas(){
+  if (qs('overlayPcs')) return;
+  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayPcs';
+  d.innerHTML = '<div class="modal"><div class="modal-head"><h2>Peças e prazos</h2><button class="icon-btn" id="pcsX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body" id="pcsCorpo"></div></div>';
+  document.body.appendChild(d);
+  d.addEventListener('click', function(e){
+    if (e.target === d || (e.target.closest && e.target.closest('#pcsX'))){ d.classList.remove('show'); return; }
+    var b = e.target.closest ? e.target.closest('[data-pcs]') : null; if (!b) return;
+    var a = b.getAttribute('data-pcs'), id = b.getAttribute('data-id'), ent = pbAprend.filter(function(x){ return x.id === id; })[0];
+    if (a === 'toggle' && ent){ ent.ativa = ent.ativa === false; ent.trocas = 0; pbGravarAprend(ent).then(pbDesenharPecas); }
+    else if (a === 'apagar' && ent){ if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para apagar'; return; } pbApi('/api/db/pecasAprendidas/' + encodeURIComponent(ent.id), 'DELETE').then(function(){ pbAprend = pbAprend.filter(function(x){ return x.id !== id; }); pbDesenharPecas(); pbRender(); }); }
+    else if (a === 'regra'){ var rid = b.getAttribute('data-rid'), o = pbRegraOver(rid); if (o){ o.desativada = !o.desativada; pbGravarAprend(o).then(pbDesenharPecas); } else pbGravarAprend({ tipo: 'regra', rid: rid, desativada: true, criadoEm: new Date().toISOString() }).then(pbDesenharPecas); }
+    else if (a === 'dias' && ent){ var v = parseInt((qs('pcs_dias_' + id) || {}).value, 10); if (v >= 1 && v <= 365){ ent.dias = v; pbGravarAprend(ent).then(function(){ toast('Prazo atualizado.'); pbDesenharPecas(); }); } }
+    else if (a === 'zerar'){ if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para apagar tudo'; return; } var todos = pbAprend.filter(function(x){ return x.tipo !== 'regra'; }); Promise.all(todos.map(function(x){ return pbApi('/api/db/pecasAprendidas/' + encodeURIComponent(x.id), 'DELETE'); })).then(function(){ pbAprend = pbAprend.filter(function(x){ return x.tipo === 'regra'; }); pbDesenharPecas(); pbRender(); toast('O que o app aprendeu foi apagado.'); }); }
+  });
+}
+function pbAbrirPecas(){ pbMontarPecas(); pbDesenharPecas(); qs('overlayPcs').classList.add('show'); }
+function pbDesenharPecas(){
+  var c = qs('pcsCorpo'); if (!c) return;
+  var ap = pbAprend.filter(function(x){ return x.tipo !== 'regra'; }).sort(function(a, b){ return (b.usos || 0) - (a.usos || 0); });
+  var h = '<div class="parcela-sum">O app já sugere a peça pelas regras do CPC. Aqui ele guarda o <b>seu</b> jeito: quando você escolhe a mesma peça duas vezes para o mesmo tipo de ato, passa a sugeri-la como “aprendida”. Se você trocar a sugestão ' + PB_MAX_TROCAS + ' vezes seguidas, ela é desativada.</div>';
+  h += '<div class="pb-sec"><div class="pb-sec-t">Aprendido com você (' + ap.length + ')</div>' + (ap.length ? ap.map(function(e){
+    var ativa = e.ativa !== false && (e.usos || 0) >= PB_MIN_USOS, est = e.ativa === false ? 'desativada' : ((e.usos || 0) >= PB_MIN_USOS ? 'ativa' : 'aprendendo (' + (e.usos || 0) + '/' + PB_MIN_USOS + ')');
+    return '<div class="pb-oab"><div><b style="color:var(--ink)">' + escapeHtml(e.ato) + ' → ' + escapeHtml(e.peca) + '</b><br><span class="saldo-data">' + (e.dias ? e.dias + ' dias ' + (e.contagem === 'corridos' ? 'corridos' : 'úteis') + ' · ' : '') + 'usada ' + (e.usos || 0) + (e.usos === 1 ? ' vez' : ' vezes') + ' · ' + est + '</span></div>' +
+      '<div class="pb-dois"><div class="field"><label class="field-label" for="pcs_dias_' + escapeHtml(e.id) + '">Prazo (dias)</label><input type="number" id="pcs_dias_' + escapeHtml(e.id) + '" min="1" max="365" value="' + (e.dias || '') + '"></div><div class="pb-acts" style="align-self:end;margin:0"><button type="button" class="btn btn-ghost pb-b" data-pcs="dias" data-id="' + escapeHtml(e.id) + '">Salvar prazo</button></div></div>' +
+      '<div class="pb-acts" style="margin:0"><button type="button" class="btn btn-ghost pb-b" data-pcs="toggle" data-id="' + escapeHtml(e.id) + '">' + (e.ativa === false ? 'Ativar' : 'Desativar') + '</button><button type="button" class="btn-text pb-b" style="color:var(--urgente)" data-pcs="apagar" data-id="' + escapeHtml(e.id) + '">Apagar</button></div></div>';
+  }).join('') + '<div class="pb-acts"><button type="button" class="btn-text pb-b" style="color:var(--urgente)" data-pcs="zerar">Desfazer tudo o que aprendeu</button></div>' : '<div class="saldo-data">Ainda nada. Confirme prazos escolhendo a peça e o app começa a aprender.</div>') + '</div>';
+  var vistos = {}, regras = [];
+  PC_REGRAS.forEach(function(r){ if (vistos[r.id]) return; vistos[r.id] = 1; regras.push(r); });
+  h += '<div class="pb-sec"><div class="pb-sec-t">Regras do sistema (' + regras.length + ')</div><div class="saldo-data">Desative as que você não quer ver sugeridas.</div>' + regras.map(function(r){
+    var o = pbRegraOver(r.id), it = r.itens[0];
+    return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(it.peca) + '</b><br><span class="saldo-data">' + escapeHtml((typeof it.dias === 'number' ? it.dias + ' dias · ' : (it.dias === 'texto' ? 'prazo do texto · ' : '')) + it.base) + ' · ' + escapeHtml(r.id) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-pcs="regra" data-rid="' + escapeHtml(r.id) + '">' + (o && o.desativada ? 'Ativar' : 'Desativar') + '</button></div>';
+  }).join('') + '</div>';
+  c.innerHTML = h;
+  try{ if (activeTab === 'publicacoes') pbRender(); }catch(e){}   /* os cartões atrás já refletem a mudança */
+}
+
 function pbPecaPrincipal(pc){ if (!pc) return null; for (var i = 0; i < pc.itens.length; i++) if (pc.itens[i].principal) return pc.itens[i]; return null; }
 function pbPecaIdx(p, pc){
   var st = pbPeca[p.id]; if (st && typeof st.i === 'number' && pc.itens[st.i]) return st.i;
@@ -198,7 +293,7 @@ function pbPecaHtml(p, pc){
   if (!pc.itens.length) return h + '<div class="saldo-data">Não encontrei peça para este ato. Use o prazo manual abaixo, se houver.</div></div>';
   h += pc.itens.map(function(it, i){
     var det = (it.dias ? it.dias + ' dias ' + (it.contagem === 'corridos' ? 'corridos' : 'úteis') + (it.origemPrazo === 'texto' ? ' (do texto)' : (it.origemPrazo === 'supletivo' ? ' (supletivo)' : '')) : 'sem prazo imediato') + ' · ' + it.base;
-    return '<button type="button" class="pb-pc' + (i === idx ? ' on' : '') + '" data-pbd="peca" data-i="' + i + '"><b>' + escapeHtml(it.peca) + '</b><span>' + escapeHtml(det) + (it.nota ? ' · ' + escapeHtml(it.nota) : '') + '</span></button>';
+    return '<button type="button" class="pb-pc' + (i === idx ? ' on' : '') + '" data-pbd="peca" data-i="' + i + '"><b>' + escapeHtml(it.peca) + '</b><span>' + (it.origem === 'aprendida' ? '<b style="color:var(--info)">aprendida</b> · ' : '') + escapeHtml(det) + (it.nota ? ' · ' + escapeHtml(it.nota) : '') + '</span></button>';
   }).join('');
   (pc.avisos || []).forEach(function(a){ h += '<div class="saldo-data">' + escapeHtml(a) + '</div>'; });
   var sel = idx >= 0 ? pc.itens[idx] : null;
@@ -261,7 +356,7 @@ function pbRender(){
   h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button></div>';
   if (pbS.fAberto) h += pbPainelHtml();
-  h += '<div style="text-align:right"><button type="button" class="btn-text" data-pb="rel">🖨 Relatório das publicações</button></div></div>';
+  h += '<div style="text-align:right"><button type="button" class="btn-text" data-pb="pecas">✦ Peças e prazos</button> <button type="button" class="btn-text" data-pb="rel">🖨 Relatório das publicações</button></div></div>';
   if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
   h += pbAvisoLeitura();
   if (!pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">Nenhuma OAB ativa. Toque em “OABs monitoradas” para cadastrar.</div>';
@@ -434,9 +529,11 @@ function pbSalvarPrazo(){
   if (!desc){ err.textContent = 'Escreva uma descrição.'; return; }
   var mult = pbMult(), r = pbCalcular(p.data, dias * mult, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '', psel = pbPecaSel(p), pcz = pbPecasDe(p);
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
+  var pcMostrado = pbPecasDe(p);
   agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
     peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? 'sugerida' : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
+    try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }
     qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '. Está na Agenda.');
   }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }
@@ -528,7 +625,7 @@ window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agIt
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);
   if (window.__SERVIDOR){
-    pbCarregar(true);
+    pbCarregar(true); pbCarregarAprend();
     document.addEventListener('visibilitychange', function(){ if (!document.hidden){ pbCarregar(true); } });
   }
 })();

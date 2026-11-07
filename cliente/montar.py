@@ -172,6 +172,10 @@ rep("      return cadeia.then(function(){ return restaurarConfig(dados.config); 
 rep("(dados.receitasManuais||[]).length + ' receitas manuais.';", "(dados.receitasManuais||[]).length + ' receitas manuais, ' + (dados.processos||[]).length + ' processos e ' + (dados.agenda||[]).length + ' itens da agenda.';")
 
 rep("[db.collection('processos'), prDocs, dados.processos], [db.collection('agenda'), agDocs, dados.agenda]", "[pbRefColecao('processos'), prDocs, dados.processos], [pbRefColecao('agenda'), agDocs, dados.agenda]")   # db não existe fora do início do app
+rep("['agenda', 'itens da agenda']];", "['agenda', 'itens da agenda'], ['pecasAprendidas', 'peças aprendidas']];")
+rep("      agenda: agDocs,\n      config: config", "      agenda: agDocs,\n      pecasAprendidas: pbAprend,\n      config: config")
+rep("[pbRefColecao('agenda'), agDocs, dados.agenda]\n      ].filter(", "[pbRefColecao('agenda'), agDocs, dados.agenda], [pbRefColecao('pecasAprendidas'), pbAprend, dados.pecasAprendidas]\n      ].filter(")
+rep("try{ prCarregar(); agCarregar(); }catch(e){}", "try{ prCarregar(); agCarregar(); pbCarregarAprend(); }catch(e){}")
 # ---- Inicial sem processo: caixa no cadastro (só aí) e gravação do campo semProcesso ----
 rep("""        <div class="processo-sugestao" id="processoSugestao" style="display:none;"></div>
       </div>
