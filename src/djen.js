@@ -128,6 +128,14 @@ async function umaConsulta(url) {
     return { status: r.status, json: j, ms: Date.now() - t0, trecho: r.status === 200 ? '' : trechoResposta(txt, j), server: r.headers.get('server') || '', cfRay: r.headers.get('cf-ray') || '' };
   } catch (e) { return { status: 0, erro: String((e && e.message) || e), ms: Date.now() - t0 }; }
 }
+/* de que país/cidade o Cloudflare enxerga o Worker (o DJEN pode recusar consultas que saem de fora do Brasil); só para diagnóstico */
+export async function ondeRoda() {
+  try {
+    const r = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { signal: AbortSignal.timeout(3000) }), t = await r.text();
+    const pega = (k) => ((new RegExp('^' + k + '=(.*)$', 'm')).exec(t) || [])[1] || '';
+    return { pais: pega('loc'), colo: pega('colo') };
+  } catch (e) { return { pais: '', colo: '' }; }
+}
 async function consultar(params) {
   const url = BASE + '?' + params.toString(); let r = null;
   for (let i = 0; i < 3; i++) {
@@ -135,7 +143,8 @@ async function consultar(params) {
     r = await umaConsulta(url); r.tentativas = i + 1;
     if (r.status === 200 || r.status === 400 || r.status === 404 || r.status === 422) break;   // erro do pedido: repetir não adianta
   }
-  if (r.status !== 200 && !r.erro) r.erro = 'O DJEN respondeu ' + r.status + (r.status === 403 ? ' (recusou o acesso; costuma ser bloqueio temporário contra o servidor)' : '') + (r.trecho ? ': ' + r.trecho : '') + (r.tentativas > 1 ? ' [' + r.tentativas + ' tentativas]' : '');
+  if (r.status === 403){ const o = await ondeRoda(); if (o.pais) r.onde = o; }
+  if (r.status !== 200 && !r.erro) r.erro = 'O DJEN respondeu ' + r.status + (r.status === 403 ? ' (recusou o acesso; costuma ser bloqueio temporário contra o servidor)' : '') + (r.trecho ? ': ' + r.trecho : '') + (r.tentativas > 1 ? ' [' + r.tentativas + ' tentativas]' : '') + (r.onde ? ' [o servidor está consultando de ' + r.onde.pais + '/' + r.onde.colo + ']' : '');
   return r;
 }
 /* tenta 100 por página e, se a fonte recusar, cai para 5 */
@@ -270,7 +279,7 @@ async function djenTeste(request) {
   const base = (n) => paramsOab({ numero: oab, uf }, somarDiasISO(hoje, -n), hoje, 1, 5);
   const grande = paramsOab({ numero: oab, uf }, somarDiasISO(hoje, -3), hoje, 1, 100);
   const cru = async () => { const r = await umaConsulta(BASE + '?' + base(3).toString()); return { status: r.status, ms: r.ms, erro: r.erro, resposta_do_djen: r.trecho, servidor: r.server, cf_ray: r.cfRay }; };
-  return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, tres_dias_tam5: await medir(base(3)), tres_dias_tam100: await medir(grande), trinta_dias: await medir(base(30)), detalhe_de_uma_tentativa: await cru() });
+  return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, tres_dias_tam5: await medir(base(3)), tres_dias_tam100: await medir(grande), trinta_dias: await medir(base(30)), detalhe_de_uma_tentativa: await cru(), servidor_consulta_de: await ondeRoda() });
 }
 export async function djenRotas(request, env, partes) {
   usar(env);

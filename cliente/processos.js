@@ -6,7 +6,7 @@
    - concluir e arquivar (e reabrir); aparece também em Arquivados e no perfil do cliente
    ============================================================ */
 var prCorte = null;   /* dia da implantação do vínculo com Iniciais antigas (config/vinculoIniciais) */
-var prDocs = [], prOk = false, prS = { filtro: 'andamento', busca: '', mais: 1, f: { cli: '', orgao: '' }, fAberto: false, tlTudo: false, sub: 'lista' }, prEd = null, prArqNum = null;
+var prDocs = [], prOk = false, prS = { filtro: 'andamento', busca: '', mais: 1, f: { cli: '', orgao: '' }, fAberto: false, tlTudo: false, sub: 'lista', mAberto: false }, prEd = null, prArqNum = null;
 var PR_HON = { sem: 'Sem honorários', quitados: 'Honorários já quitados' };
 var prModoHon = false, prProximoHon = false;   /* a janela de Inicial aberta para cadastrar os honorários de um processo */
 var PR_MOTIVOS = ['Trânsito em julgado / extinto', 'Acordo cumprido', 'Desistência / renúncia ao mandato', 'Outro'];
@@ -134,7 +134,7 @@ function prMontarTela(){
   w.innerHTML = '<div class="rs-wrap" id="prResumo"></div><div class="ini-acoes"><button type="button" class="acao acao-ouro" data-pr="novo"><svg><use href="#ic-plus"/></svg><span>Novo processo</span></button></div>' +
     '<div class="pb-seg-lin"><div class="segmented" id="prSub"></div></div><div id="prAnalises" style="display:none"></div><div id="prListaBloco">' +
     '<div id="prAvisoVinc"></div><div class="field" style="margin:0"><input type="text" id="prBusca" placeholder="Buscar por cliente, partes ou número…" autocomplete="off"></div>' +
-    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button></div><div id="prPainel"></div><div style="text-align:right"><button type="button" class="btn-text" data-pr="rel">🖨 Relatório da lista</button></div><div id="prLista" class="pb-lista"></div></div>';
+    '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button><button type="button" class="btn btn-ghost pb-funil" id="prMenuBtn" data-pr="menu" aria-label="Mais opções" title="Mais opções"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div><div id="prPainel"></div><div id="prMenu"></div><div id="prLista" class="pb-lista"></div></div>';
   w.addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('[data-pr]') : null; if (!b) return;
     var a = b.getAttribute('data-pr'), n = b.getAttribute('data-n');
@@ -145,7 +145,8 @@ function prMontarTela(){
     else if (a === 'reabrir') prReabrir(n);
     else if (a === 'mais'){ prS.mais++; prRenderLista(); }
     else if (a === 'painel'){ prS.fAberto = !prS.fAberto; prPainel(); }
-    else if (a === 'rel') rptProcessos();
+    else if (a === 'menu'){ prS.mAberto = !prS.mAberto; prMenuPainel(); }
+    else if (a === 'rel'){ prS.mAberto = false; prMenuPainel(); rptProcessos(); }
     else if (a === 'sub'){ prS.sub = b.getAttribute('data-v'); prRender(); }
     else if (a === 'limpar'){ prS.f = { cli: '', orgao: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
   });
@@ -173,7 +174,11 @@ function prRender(){
   rsResumo('prResumo', { rot: 'Processos em andamento', valor: String(ativos.length), chip: rsChip(linhas.length + (linhas.length === 1 ? ' processo no total' : ' processos no total'), ''),
     tiles: [{ k: 'alert', cor: comPrazo ? '#D93B3B' : '#8A93AD', rot: 'Com prazo aberto', v: String(comPrazo), cls: comPrazo ? 'neg' : '' }, { k: 'clip', cor: '#B7791E', rot: 'Sem andamento há 60 dias', v: String(parados) }] });
   qs('prSeg').innerHTML = [['andamento', 'Em andamento'], ['prazo', 'Com prazo'], ['todos', 'Todos']].map(function(f){ return '<button type="button" class="seg-btn' + (prS.filtro === f[0] ? ' active' : '') + '" data-pr="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('');
-  prAvisoVinc(); prPainel(); prRenderLista();
+  prAvisoVinc(); prPainel(); prMenuPainel(); prRenderLista();
+}
+function prMenuPainel(){
+  var el = qs('prMenu'), b = qs('prMenuBtn'); if (b) b.classList.toggle('ativo', !!prS.mAberto); if (!el) return;
+  el.innerHTML = prS.mAberto ? '<div class="pb-painel pb-menu"><button type="button" class="pb-mi" data-pr="rel"><span class="pb-mi-i">🖨</span>Relatório da lista<small>imprimir ou salvar em PDF</small></button></div>' : '';
 }
 /* filtros: por cliente (ou sem cliente vinculado) e por vara/órgão */
 function prOrgaoDe(r){

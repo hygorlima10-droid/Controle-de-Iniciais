@@ -105,7 +105,7 @@ function panHtml(D, op){
   var aud = D.semanas.reduce(function(s, x){ return s + x.aud; }, 0);
   h += panCard('Carga de prazos nas próximas 8 semanas', panColunas(D.semanas, function(s){ return fmtData(s.ini).slice(0, 5); }), 'Prazos em aberto por semana (a semana começa na segunda)' + (aud ? '; mais ' + aud + (aud === 1 ? ' audiência' : ' audiências') + ' no período' : '') + '.');
   h += panCard('Quem pede atenção', '<div class="pb-lin"><span>Processos parados há mais de 60 dias</span><b>' + a.parado + '</b></div><div class="pb-lin"><span>Prazos protocolados fora do prazo</span><b>' + D.protFora + '</b></div><div class="pb-lin"><span>Processos sem cliente vinculado</span><b>' + D.semProcCliente + '</b></div>');
-  h += '<div style="text-align:right"><button type="button" class="btn-text" data-pan="rel">🖨 Relatório das análises</button></div>';
+  h += '<button type="button" class="btn btn-ghost" data-pan="rel" style="width:100%;justify-content:center;margin-top:4px">🖨 Relatório das análises</button>';
   return h;
 }
 function panRender(){

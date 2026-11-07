@@ -61,7 +61,7 @@ check(recons && recons.ativa === false && recons.trocas >= 3, 'depois de 3 troca
 check(!/✦ Pedido de reconsideração/.test(await cartao(nomes[6])) && /✦ Agravo de instrumento/.test(await cartao(nomes[6])), 'e o cartão volta a sugerir o agravo');
 
 // 5) tela “Peças e prazos”
-await page.click('[data-pb="pecas"]'); await page.waitForTimeout(500);
+await page.click('[data-pb="menu"]'); await page.click('[data-pb="pecas"]'); await page.waitForTimeout(500);
 let tela = await t('#pcsCorpo');
 check(/Aprendido com você/i.test(tela) && /Pedido de reconsideração/.test(tela) && /desativada/.test(tela) && /Regras do sistema/i.test(tela), 'a tela mostra o que foi aprendido (com o estado) e as regras do sistema');
 await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#pcsCorpo .pb-oab')).find(x => /Pedido de reconsideração/.test(x.innerText)); b.querySelector('[data-pcs="toggle"]').click(); }); await page.waitForTimeout(900);
@@ -75,7 +75,7 @@ await page.click('#pcsX'); await page.waitForTimeout(300);
 const c7 = await cartao(nomes[7]);
 check(!/Agravo de instrumento/.test(c7) || /Pedido de reconsideração/.test(c7), 'com a regra desativada, o agravo da lei deixa de ser sugerido');
 // desfazer tudo
-await page.click('[data-pb="pecas"]'); await page.waitForTimeout(400);
+await page.click('[data-pb="menu"]'); await page.click('[data-pb="pecas"]'); await page.waitForTimeout(400);
 await page.click('[data-pcs="zerar"]'); await page.click('[data-pcs="zerar"]'); await page.waitForTimeout(1500);
 check((await aprend()).length === 0 && (await docs('pecasAprendidas')).some(e => e.tipo === 'regra'), '“Desfazer tudo o que aprendeu” apaga o aprendido e mantém as regras que você desativou');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));

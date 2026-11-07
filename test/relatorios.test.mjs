@@ -66,7 +66,12 @@ check(!(await aberto()) && !(await page.evaluate(() => document.body.classList.c
 
 // Publicações
 await page.evaluate(() => document.querySelector('#drawer [data-tab="publicacoes"]').click()); await page.waitForTimeout(1500);
+check(await page.evaluate(() => !document.querySelector('.pb-menu') && !!document.querySelector('[data-pb="menu"]')), 'em Publicações os botões miúdos ficam escondidos atrás do botão ☰');
+await page.click('[data-pb="menu"]'); await page.waitForTimeout(300);
+if (SHOT) await page.screenshot({ path: SHOT + 'menu-pub.png' });
+check(await page.evaluate(() => { const m = document.querySelector('.pb-menu'); return !!m && /Peças e prazos/.test(m.innerText) && /Relatório das publicações/.test(m.innerText) && /Marcar .* como lidas/.test(m.innerText); }), 'o menu ☰ tem Peças e prazos, Relatório das publicações e Marcar como lidas');
 await page.click('[data-pb="rel"]'); await page.waitForTimeout(400);
+check(await page.evaluate(() => !document.querySelector('.pb-menu')), 'ao escolher uma opção o menu se fecha');
 fo = await t('#rptFolha');
 await foto('r-pub');
 check(/Relatório de publicações/.test(fo) && /Maquele Viana Pacheco/.test(fo) && /perícia contábil/.test(fo) && /não lida/.test(fo), 'o relatório de publicações traz partes, trecho e se foi lida');
@@ -74,9 +79,15 @@ check(/Prazo sugerido \(não confirmado\): 15 dias úteis/.test(fo), 'e o prazo 
 check(/\d+ publicaç(ão|ões) \(\d+ não lidas\)/.test(fo), 'com o total e as não lidas no resumo');
 await page.check('#rptop_naolidas'); await page.waitForTimeout(300); check(/Maquele/.test(await t('#rptFolha')), 'filtro “só as não lidas” funciona');
 await page.click('#rptX'); await page.waitForTimeout(300);
+await page.click('[data-pb="menu"]'); await page.waitForTimeout(300);
+await page.click('[data-pb="todas-lidas"]'); await page.waitForTimeout(800);
+check((await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.id === '920001').every(p => p.lida === true), '“Marcar todas como lidas” pelo menu marca as publicações da lista como lidas');
 
 // Processos: lista e ficha
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(900);
+check(await page.evaluate(() => !!document.querySelector('[data-pr="menu"]') && !document.querySelector('[data-pr="rel"]')), 'em Processos o relatório da lista fica atrás do botão ☰');
+await page.click('[data-pr="menu"]'); await page.waitForTimeout(300);
+if (SHOT) await page.screenshot({ path: SHOT + 'menu-proc.png' });
 await page.click('[data-pr="rel"]'); await page.waitForTimeout(400);
 fo = await t('#rptFolha');
 await foto('r-proc');
