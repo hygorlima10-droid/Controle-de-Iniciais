@@ -188,6 +188,8 @@ function prMontarFicha(){
     var a = b.getAttribute('data-prf'), v = b.getAttribute('data-v');
     if (a === 'cli-rm'){ prEd.ids = prEd.ids.filter(function(x){ return x !== v; }); prChips(); }
     else if (a === 'cli-add'){ if (prEd.ids.indexOf(v) < 0) prEd.ids.push(v); qs('pr_cli').value = ''; prSug(); prChips(); }
+    else if (a === 'sug-add'){ var nm = prEd.pre.nomes[Number(b.getAttribute('data-i'))]; if (prEd.ids.indexOf(v) < 0) prEd.ids.push(v); prAprenderApelido(v, nm); prChips(); toast('Vinculado. Da próxima vez “' + cliTitulo(nm).slice(0, 40) + '” já é reconhecido.'); }
+    else if (a === 'sug-new'){ var nm2 = prEd.pre.nomes[Number(b.getAttribute('data-i'))]; abrirClienteEdit({ nome: cliTitulo(nm2), pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } }); }
     else if (a === 'cli-new'){
       var nome = qs('pr_cli').value.trim(); qs('pr_cli').value = ''; prSug();
       abrirClienteEdit({ nome: nome, pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } });
@@ -217,6 +219,7 @@ function prInfoNumero(){
 }
 function prChips(){
   var el = qs('pr_chips'); if (!el) return;
+  prRefazPartesPub();
   el.innerHTML = prEd.ids.map(function(id){ return '<span class="cli-chip">' + escapeHtml(nomeCliente(id)) + '<button type="button" data-prf="cli-rm" data-v="' + escapeHtml(id) + '" title="Remover">×</button></span>'; }).join('');
 }
 function prSug(){
@@ -245,7 +248,7 @@ function prDesenhar(){
     '<div class="field"><label class="field-label" for="pr_partes">Partes / descrição</label><input type="text" id="pr_partes" maxlength="120" value="' + escapeHtml(novo ? (pre.partes || '') : (doc ? (doc.partes || '') : prPartes(r))) + '" placeholder="Ex.: Fulano de Tal x Banco Exemplo"></div>' +
     '<div class="field"><label class="field-label" for="pr_orgao">Tribunal / órgão</label><input type="text" id="pr_orgao" maxlength="120" value="' + escapeHtml(novo ? (pre.orgao || '') : (doc ? (doc.orgao || '') : '')) + '" placeholder="Ex.: TJGO · Morrinhos 1ª Vara Cível"></div>' +
     '<div class="field"><label class="field-label" for="pr_classe">Classe / assunto</label><input type="text" id="pr_classe" maxlength="120" value="' + escapeHtml(novo ? (pre.classe || '') : (doc ? (doc.classe || '') : '')) + '" placeholder="Ex.: Cumprimento de sentença"></div>' +
-    '<div class="field"><label class="field-label">Clientes vinculados</label><div class="cli-picker"><div class="cli-chips" id="pr_chips"></div><input type="text" id="pr_cli" class="cli-pick-input" placeholder="Buscar ou cadastrar cliente…" autocomplete="off"><div class="cli-sug" id="pr_sug" style="display:none;"></div></div></div>';
+    '<div class="field"><label class="field-label">Clientes vinculados</label><div class="cli-picker"><div class="cli-chips" id="pr_chips"></div><input type="text" id="pr_cli" class="cli-pick-input" placeholder="Buscar ou cadastrar cliente…" autocomplete="off"><div class="cli-sug" id="pr_sug" style="display:none;"></div></div></div>' + (novo && pre.nomes && pre.nomes.length ? '<div id="pr_partesPub"></div>' : '');
   if (!novo){
     h += '<div class="pb-sec"><div class="pb-sec-t">Honorários que vou receber</div>';
     if (r.links.length){
@@ -385,11 +388,69 @@ function prReabrir(num){
 }
 function prArquivadosSet(){ var s = {}; prDocs.forEach(function(d){ if (d.arquivado){ var n = prNum(d.numero); if (n) s[n] = 1; } }); return s; }
 
+/* ---------- reconhecer o cliente pelo nome que vem na publicação (nome completo x abreviação) ---------- */
+var CLI_STOP = { de: 1, da: 1, do: 1, dos: 1, das: 1, e: 1, a: 1, o: 1, ltda: 1, me: 1, epp: 1, sa: 1, eireli: 1, s: 1, em: 1, para: 1 };
+function cliTokens(s){ return normNome(s).split(' ').filter(function(t){ return t && !CLI_STOP[t]; }); }
+/* 3 = mesmo nome (ou apelido igual); 2 = um nome é abreviação do outro; 1 = muito parecido; 0 = outro nome */
+function cliNivel(nomePub, nomeCli){
+  var a = cliTokens(nomePub), b = cliTokens(nomeCli); if (!a.length || !b.length) return 0;
+  var sa = {}, sb = {}; a.forEach(function(t){ sa[t] = 1; }); b.forEach(function(t){ sb[t] = 1; });
+  var ua = Object.keys(sa), ub = Object.keys(sb), comum = ua.filter(function(t){ return sb[t]; }).length, menor = Math.min(ua.length, ub.length);
+  if (comum === ua.length && comum === ub.length) return 3;
+  if (comum === ub.length) return (ub.length >= 2 || ub[0].length >= 4) ? 2 : 0;
+  if (comum === ua.length) return (ua.length >= 2 || ua[0].length >= 4) ? 2 : 0;
+  return (comum >= 2 && comum / menor >= 0.6) ? 1 : 0;
+}
+function cliParecidos(nomePub){
+  var out = [];
+  clientes.forEach(function(c){
+    if (c.arquivado) return;
+    var n = cliNivel(nomePub, c.nome); (c.apelidos || []).forEach(function(ap){ var x = cliNivel(nomePub, ap); if (x > n) n = x; });
+    if (n > 0) out.push({ c: c, nivel: n });
+  });
+  out.sort(function(x, y){ return y.nivel - x.nivel || cliTokens(y.c.nome).length - cliTokens(x.c.nome).length || x.c.nome.localeCompare(y.c.nome, 'pt-BR'); });
+  return out;
+}
+function cliProvaveis(nomes){
+  var vistos = {}, out = [];
+  nomes.forEach(function(n){ cliParecidos(n).forEach(function(m){ if (m.nivel >= 2 && !vistos[m.c.id]){ vistos[m.c.id] = 1; out.push(m.c); } }); });
+  return out;
+}
+function cliTitulo(s){
+  return String(s || '').toLowerCase().replace(/(^|[\s\-\/\(])([a-zà-ú])/g, function(m, a, b){ return a + b.toUpperCase(); }).replace(/\b(De|Da|Do|Dos|Das|E)\b/g, function(x){ return x.toLowerCase(); });
+}
+function prAprenderApelido(clienteId, nomePub){
+  var c = clienteById(clienteId); if (!c) return;
+  var obj = JSON.parse(JSON.stringify(c)), ap = obj.apelidos || [];
+  if (normNome(nomePub) === normNome(obj.nome) || ap.some(function(x){ return normNome(x) === normNome(nomePub); })) return;
+  ap.push(cliTitulo(nomePub)); obj.apelidos = ap; persistClienteSet(obj);
+}
+function prPartesPubHtml(){
+  var nomes = (prEd.pre && prEd.pre.nomes) || []; if (!nomes.length) return '';
+  var h = '<div class="pb-sec"><div class="pb-sec-t">Partes que aparecem na publicação</div><div class="saldo-data">Vincule cada parte ao cliente certo, ou cadastre as que ainda não são clientes.</div>';
+  nomes.forEach(function(n, i){
+    var ms = cliParecidos(n), ligado = ms.filter(function(m){ return prEd.ids.indexOf(m.c.id) >= 0; })[0];
+    h += '<div class="pb-lin" style="flex-direction:column;align-items:stretch;gap:6px"><b style="color:var(--ink)">' + escapeHtml(n) + '</b>';
+    if (ligado) h += '<span class="pb-tg ok" style="align-self:flex-start">✓ cliente: ' + escapeHtml(ligado.c.nome) + '</span>';
+    else {
+      h += '<div class="pb-acts" style="margin:0">' + ms.filter(function(m){ return m.nivel >= 1 && prEd.ids.indexOf(m.c.id) < 0; }).slice(0, 2).map(function(m){ return '<button type="button" class="btn btn-primary pb-b" data-prf="sug-add" data-i="' + i + '" data-v="' + escapeHtml(m.c.id) + '">É o cliente ' + escapeHtml(m.c.nome) + '</button>'; }).join('') +
+        '<button type="button" class="btn btn-ghost pb-b" data-prf="sug-new" data-i="' + i + '">+ Cadastrar como cliente</button></div>';
+    }
+    h += '</div>';
+  });
+  return h + '</div>';
+}
+function prRefazPartesPub(){ var el = qs('pr_partesPub'); if (el) el.innerHTML = prPartesPubHtml(); }
+
 /* ---------- cadastrar pela publicação ---------- */
 function prPreDaPub(p){
-  var a = (p.dest || []).filter(function(d){ return d.p === 'A'; })[0], re = (p.dest || []).filter(function(d){ return d.p === 'P'; })[0], ids = [];
-  (p.dest || []).forEach(function(d){ var nq = normNome(d.n); if (!nq) return; var c = clientes.filter(function(x){ return !x.arquivado && normNome(x.nome) === nq; })[0]; if (c && ids.indexOf(c.id) < 0) ids.push(c.id); });
-  return { numero: p.numero || p.processo, partes: a && re ? a.n + ' x ' + re.n : pbNomeParte(p, null), orgao: [p.tribunal, p.orgao].filter(Boolean).join(' · '), classe: pbClasse(p.classe), ids: ids, origem: 'publicacao' };
+  var nomes = pbDestinatarios(p), mem = pbMembros(p), ids = [];
+  var A = [], P = [];
+  mem.forEach(function(x){ (x.dest || []).forEach(function(d){ var n = d.n; if (!n) return; var arr = d.p === 'P' ? P : A; if (arr.indexOf(n) < 0) arr.push(n); }); });
+  function junta(l){ return l.slice(0, 3).join(', ') + (l.length > 3 ? ' e mais ' + (l.length - 3) : ''); }
+  var partes = (A.length && P.length) ? junta(A) + ' x ' + junta(P) : junta(A.concat(P));
+  nomes.forEach(function(n){ var m = cliParecidos(n).filter(function(x){ return x.nivel === 3; })[0]; if (m && ids.indexOf(m.c.id) < 0) ids.push(m.c.id); });
+  return { numero: p.numero || p.processo, partes: partes || pbNomeParte(p, null), orgao: [p.tribunal, p.orgao].filter(Boolean).join(' · '), classe: pbClasse(p.classe), ids: ids, nomes: nomes, origem: 'publicacao' };
 }
 function prEscolherCadastro(pubId){
   var p = pbPub(pubId); if (!p) return;
@@ -407,6 +468,7 @@ function prEscolherCadastro(pubId){
         setTimeout(function(){
           abrirNovo(); qs('processoInput').value = pub.numero || pub.processo || ''; if (pub.classe) qs('nomeAcaoInput').value = pbClasse(pub.classe);
           var au = (pub.dest || []).filter(function(x){ return x.p === 'A'; })[0]; if (au && au.n && qs('clienteInput')) qs('clienteInput').value = au.n;
+          var pre = prPreDaPub(pub); if (pre.ids.length){ pickerDefinir('caso', pre.ids); var c0 = clienteById(pre.ids[0]); if (c0){ formState.origem = c0.pagador === 'murilo' ? 'murilo' : 'proprio'; setSegValue('segOrigem', formState.origem); } }
         }, 40);
       }
     });

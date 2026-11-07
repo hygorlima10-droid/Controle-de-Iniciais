@@ -52,6 +52,10 @@ await page.click('[data-pr="novo"]'); await page.waitForTimeout(300); await page
 check(/já está cadastrado/.test(await t('#pr_erro')), 'não deixa cadastrar o mesmo número duas vezes');
 await page.click('#prX');
 
+// reconhecimento de nomes: nome completo da publicação x nome abreviado do cliente
+const nv = await page.evaluate(() => { const n = window.__horusTeste.cliNivel, P = 'COOPERATIVA MISTA DOS PRODUTORES DE LEITE DE MORRINHOS - COMPLEM'; return { complem: n(P, 'Complem'), completo: n(P, 'Cooperativa Mista dos Produtores de Leite de Morrinhos'), igualCaixa: n('FULANO DE TAL', 'Fulano de Tal'), souza: n('MARIA SOUZA DA SILVA', 'Maria Souza'), curto: n('ANA PAULA LIMA', 'Ana'), outro: n('JOSE SANTOS', 'Maria'), comum: n('COOPERATIVA AGROPECUARIA DE PIRACANJUBA', 'Cooperativa Mista de Morrinhos'), ltda: n('CONSTRUTORA ALFA LTDA', 'Construtora Alfa') }; });
+check(nv.complem === 2 && nv.completo === 2 && nv.igualCaixa === 3 && nv.souza === 2 && nv.ltda === 3, 'o nome abreviado (Complem) é reconhecido como parte do nome completo da publicação; nomes iguais, sem LTDA e sem maiúsculas, valem como iguais: ' + JSON.stringify(nv));
+check(nv.curto === 0 && nv.outro === 0 && nv.comum === 0, 'nomes curtos demais ou diferentes não são confundidos');
 // cadastrar um cliente novo de dentro do cadastro de processo (a janela do cliente tem de abrir por cima)
 await page.click('[data-pr="novo"]'); await page.waitForTimeout(400);
 await page.fill('#pr_numero', '5000333-02.2024.8.09.0107'); await page.fill('#pr_cli', 'Cliente Novo Teste'); await page.waitForTimeout(300);

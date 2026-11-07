@@ -223,6 +223,46 @@ check(/3 publicações idênticas reunidas/i.test(await t('#pbCorpo')) && /AUTOR
 await page.click('#pbFechar'); await page.waitForTimeout(300);
 await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => /idênticas reunidas/.test(c.innerText)); c.querySelector('[data-pb="lida"]').click(); }); await page.waitForTimeout(1000);
 check((await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.processo === numG && !p.lida).length === 4, '"Marcar como não lida" desfaz nas 3');
+// vários autores na mesma publicação, processo ainda não cadastrado: reconhece clientes e cadastra os que faltam
+const NG2 = '5800000-20.2026.8.09.0107', NG3 = '5900000-30.2026.8.09.0107', NOME_COMPL = 'COOPERATIVA MISTA DOS PRODUTORES DE LEITE DE MORRINHOS - COMPLEM';
+await f('PUT', '/api/db/clientes/clc', { nome: 'Complem', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/clientes/clf', { nome: 'Fulano de Tal', pagador: 'cliente', criadoEm: agora });
+[NOME_COMPL, 'FULANO DE TAL', 'CICLANO SANTOS'].forEach((n, i) => feeds['60456'].push(item(900201 + i, hoje, 'TJGO', 'Goiânia - 3ª Vara', 'Decisão', NG2, 'DECISÃO\nIntimem-se.', [{ nome: n, polo: 'A' }])));
+await f('POST', '/api/djen/buscar', {});
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(800);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(400);
+const cartaoNG2 = async () => page.evaluate(n => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => c.innerText.includes(n)); return c ? c.innerText : ''; }, NG2);
+const ct2 = await cartaoNG2();
+check(/3 publicações idênticas reunidas/.test(ct2) && /provável cliente: Complem, Fulano de Tal|provável cliente: Fulano de Tal, Complem/.test(ct2), 'o cartão reunido sugere os clientes prováveis (Complem e Fulano de Tal): ' + ct2.replace(/\n/g, ' | ').slice(0, 150));
+await page.evaluate(n => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => c.innerText.includes(n)); c.querySelector('[data-pb="cadastrar"]').click(); }, NG2); await page.waitForTimeout(500);
+await page.click('[data-pre="processo"]'); await page.waitForTimeout(600);
+check(/Fulano de Tal/.test(await t('#pr_chips')) && !/Complem/.test(await t('#pr_chips')), 'o nome igual (Fulano de Tal) já vem vinculado e o abreviado só como sugestão');
+const partesPub = await t('#pr_partesPub');
+check(/COOPERATIVA MISTA/.test(partesPub) && /FULANO DE TAL/.test(partesPub) && /CICLANO SANTOS/.test(partesPub) && /É o cliente Complem/.test(partesPub) && /✓ cliente: Fulano de Tal/.test(partesPub), 'a ficha lista as 3 partes da publicação com o que fazer em cada uma');
+check(/COOPERATIVA/.test(await page.evaluate(() => document.getElementById('pr_partes').value)) && /CICLANO/.test(await page.evaluate(() => document.getElementById('pr_partes').value)), 'e o campo de partes já traz os 3 nomes');
+await page.click('[data-prf="sug-add"]'); await page.waitForTimeout(700);
+check(/Complem/.test(await t('#pr_chips')), 'um toque em "É o cliente Complem" vincula o cliente cadastrado');
+const clc = (await f('GET', '/api/db/clientes')).j.docs.find(d => d.id === 'clc').data;
+check(Array.isArray(clc.apelidos) && clc.apelidos.some(a => /Complem/.test(a) && /Produtores/.test(a)), 'e o app aprende o nome completo como outro nome do cliente: ' + JSON.stringify(clc.apelidos));
+await page.evaluate(() => { const l = Array.from(document.querySelectorAll('#pr_partesPub .pb-lin')).find(x => /CICLANO SANTOS/.test(x.innerText)); l.querySelector('[data-prf="sug-new"]').click(); }); await page.waitForTimeout(600);
+const ce = await page.evaluate(() => { const el = document.getElementById('cliNomeInput'), r = el.getBoundingClientRect(), x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { nome: el.value, porCima: !!(x && x.closest('#overlayClienteEdit')), apelidos: !!document.getElementById('cliApelidosInput') }; });
+check(ce.nome === 'Ciclano Santos' && ce.porCima && ce.apelidos, 'a parte que ainda não é cliente abre o cadastro por cima, com o nome já preenchido e o campo "Outros nomes"');
+await page.click('#cliSalvarBtn'); await page.waitForTimeout(1000);
+check(/Ciclano Santos/.test(await t('#pr_chips')), 'e o novo cliente já entra no processo');
+await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+const pNG2 = (await f('GET', '/api/db/processos')).j.docs.map(d => d.data).find(d => d.numero === NG2);
+check(pNG2 && pNG2.clienteIds.length === 3 && pNG2.clienteIds.includes('clc') && pNG2.clienteIds.includes('clf'), 'o processo é gravado com os 3 autores como clientes');
+// da próxima vez o nome completo já é reconhecido sozinho
+feeds['60456'].push(item(900301, hoje, 'TJGO', 'Goiânia - 4ª Vara', 'Decisão', NG3, 'DECISÃO\nIntimem-se.', [{ nome: NOME_COMPL, polo: 'A' }]));
+await f('POST', '/api/djen/buscar', {});
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(800);
+await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(400);
+await page.evaluate(n => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => c.innerText.includes(n)); c.querySelector('[data-pb="cadastrar"]').click(); }, NG3); await page.waitForTimeout(500);
+await page.click('[data-pre="processo"]'); await page.waitForTimeout(600);
+check(/Complem/.test(await t('#pr_chips')), 'depois de aprender, o mesmo nome completo vem vinculado ao Complem sozinho');
+await page.click('#prX'); await page.waitForTimeout(300);
 // OABs na tela
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(900);
 await page.click('[data-pb="oabs"]'); await page.waitForTimeout(500);
