@@ -56,7 +56,10 @@ check(/Prazos, audiências e tarefas/.test(await t('#subtitle')) && /Semana/.tes
 await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(400);
 let lista = await t('#agWrap');
 check(/Réplica à contestação/.test(lista) && /da inicial/.test(lista) && /Recolher o sistema/.test(lista) && /via publicação/.test(lista), 'a Lista junta o prazo da inicial e o da publicação, com a origem de cada um');
-await page.click('.ag-it:has-text("Réplica") [data-ag="concluir"]'); await page.waitForTimeout(900);
+await page.click('.ag-it:has-text("Réplica") [data-ag="concluir"]'); await page.waitForTimeout(400);
+check(await page.evaluate(() => document.getElementById('overlayAgProt').classList.contains('show')), 'marcar protocolada pergunta a data do protocolo');
+await page.fill('#agp_data', dia(-1)); await page.fill('#agp_obs', 'protocolo 123'); await page.click('#agpOk'); await page.waitForTimeout(900);
+{ const pz = (await f('GET', '/api/db/casos')).j.docs[0].data.prazo; check(pz.protocoladoEm === dia(-1) && pz.protocoloObs === 'protocolo 123', 'a data e a observação do protocolo ficam gravadas na própria Inicial'); }
 check((await f('GET', '/api/db/casos')).j.docs[0].data.prazo.concluido === true && !/Réplica/.test(await t('#agWrap')), 'marcar o prazo da inicial como protocolado grava na própria ação e some da lista');
 // novo prazo
 await page.click('[data-ag="novo"]'); await page.waitForTimeout(400);
@@ -143,7 +146,7 @@ await page.fill('#aga_data', dia(10)); await page.click('#agaOk'); await page.wa
 check((await dc('alvaras')).find(a => a.id === 'v1').previsaoLevantamento === dia(10), 'adiar o alvará grava a nova previsão no próprio alvará');
 await page.click('[data-ag="filtro"][data-v="tudo"]'); await page.waitForTimeout(300);
 // concluir o prazo da inicial pelo Quadro
-await page.click('.ag-kc.inicial [data-ag="concluir"]'); await page.waitForTimeout(1200);
+await page.click('.ag-kc.inicial [data-ag="concluir"]'); await page.waitForTimeout(400); await page.click('#agpOk'); await page.waitForTimeout(1200);
 check((await dc('casos')).find(c => c.id === 'c2').prazo.concluido === true && /Protocolar inicial/.test(await colTxt('feito')), 'concluir o prazo da Inicial grava nela e o cartão vai para "Concluídos"');
 check((await dc('casos')).find(c => c.id === 'c2').status === 'pendente', 'e a Inicial continua na fase dela');
 // por situação
@@ -152,7 +155,7 @@ check((await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-c
 check(/Recolher o sistema/.test(await colTxt('afazer')) && /Avançar/.test(await colTxt('afazer')), 'prazos da Agenda aparecem em "A fazer" com o botão Avançar');
 await page.click('[data-agcol="afazer"] .ag-kc:has-text("Recolher o sistema") [data-ag="mover"]'); await page.waitForTimeout(1000);
 check((await ag()).find(d => d.titulo === 'Recolher o sistema').situacao === 'elaboracao' && /Recolher o sistema/.test(await colTxt('elaboracao')), 'Avançar passa o prazo para "Em elaboração"');
-await page.click('[data-agcol="elaboracao"] .ag-kc:has-text("Recolher o sistema") [data-ag="concluir"]'); await page.waitForTimeout(1000);
+await page.click('[data-agcol="elaboracao"] .ag-kc:has-text("Recolher o sistema") [data-ag="concluir"]'); await page.waitForTimeout(400); await page.click('#agpOk'); await page.waitForTimeout(1000);
 check((await ag()).find(d => d.titulo === 'Recolher o sistema').concluido === true && /Recolher o sistema/.test(await colTxt('feito')), '"Marcar protocolada" leva para "Concluído"');
 await page.click('[data-ag="vista"][data-v="semana"]'); await page.waitForTimeout(400);
 check(!/Levantamento do alvará/.test(await t('#agWrap')), 'a previsão do alvará aparece só no Quadro (não nas outras visões nem no cartão do Início)');

@@ -1,9 +1,26 @@
 // Testes do que roda sozinho no Node (sem navegador): limpeza do texto, trecho, prazo sugerido e leitura paginada do DJEN.
 //   node test/djen.test.mjs
 import http from 'node:http';
-import { htmlParaTexto, trechoDe, sugerirPrazo, lerCfg, lerDjen, extrairDados } from '../src/djen.js';
+import { htmlParaTexto, trechoDe, sugerirPrazo, sugerirAudiencia, lerCfg, lerDjen, extrairDados } from '../src/djen.js';
 import { montarNotificacoes } from '../src/index.js';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+
+// audiência designada no texto
+{
+  const a1 = sugerirAudiencia('Designo audiência de conciliação para o dia 12/03/2027, às 14:30 horas, a ser realizada por videoconferência. Intimem-se.');
+  check(a1 && a1.data === '2027-03-12' && a1.hora === '14:30' && a1.tipo === 'Conciliação' && a1.modalidade === 'online', 'audiência: data, hora, tipo e modalidade (online): ' + JSON.stringify(a1 && [a1.data, a1.hora, a1.tipo, a1.modalidade]));
+  const a2 = sugerirAudiencia('Fica designada audiência de instrução e julgamento para o dia 15 de abril de 2027, às 09h00min, na sala de audiências do Fórum (presencial).');
+  check(a2 && a2.data === '2027-04-15' && a2.hora === '09:00' && a2.tipo === 'Instrução e julgamento' && a2.modalidade === 'presencial', 'audiência: data por extenso, 09h00min e presencial');
+  const a3 = sugerirAudiencia('Redesigno a audiência para 20/05/2027 às 13h30. Link: https://meet.google.com/abc-defg-hij para acesso.');
+  check(a3 && a3.data === '2027-05-20' && a3.hora === '13:30' && /meet\.google\.com/.test(a3.link) && a3.modalidade === 'online', 'audiência: link da sala virtual reconhecido');
+  const a4 = sugerirAudiencia('Cancelo a audiência anteriormente designada para 12/03/2027, às 14:00.');
+  check(a4 === null, 'audiência cancelada não é sugerida');
+  check(sugerirAudiencia('Intime-se a parte para se manifestar em 15 dias sobre o laudo. Prazo de 05 dias.') === null, 'texto sem audiência: nada');
+  const a5 = sugerirAudiencia('Audiência de mediação designada para 31/02/2027 às 10:00.');
+  check(a5 === null || a5.data !== '2027-02-31', 'data impossível não é aceita como está');
+  const a6 = sugerirAudiencia('Designada audiência de justificação para o dia 10/12/2026.');
+  check(a6 && a6.data === '2026-12-10' && a6.hora === '' && a6.tipo === 'Justificação', 'sem hora no texto: a hora fica em branco para você preencher');
+}
 
 // texto e trecho
 const t = htmlParaTexto('Poder Judici&aacute;rio\nTribunal de Justi&ccedil;a\nComarca de Morrinhos\nAutos n.:&nbsp;5593217-64.2021.8.09.0107\nDECIS&Atilde;O\nDEFIRO o pedido de busca no sistema PrevJUD. Prazo de 5 (cinco) dias.<br>Fim');

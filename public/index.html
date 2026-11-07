@@ -16840,6 +16840,7 @@ function pbMontarTela(){
     else if (a === 'reabrir-proc'){ var pp = pbPub(id), vv = pp && pbVinculo(pp.processo); if (vv) prReabrir(vv.id).then(function(){ pbRender(); }); }
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
+    else if (a === 'aud') pbCriarAudiencia(id);
   });
   var depois = null;
   function aplicar(e){
@@ -16870,6 +16871,21 @@ function pbDestinatarios(p){
   var nomes = [], vistos = {};
   pbMembros(p).forEach(function(x){ (x.dest || []).forEach(function(d){ var k = (d.n || '').toUpperCase(); if (k && !vistos[k]){ vistos[k] = 1; nomes.push(d.n); } }); });
   return nomes;
+}
+/* audiência encontrada no texto da publicação (só se for futura) e se já está na Agenda */
+function pbAudDe(p){
+  var t = pbTextos[p.id], a = (t && t.ok && t.aud) || null;
+  if (!a) pbMembros(p).forEach(function(x){ if (!a && x.aud) a = x.aud; });
+  return a && a.data >= todayISO() ? a : null;
+}
+function pbAudNaAgenda(p, a){
+  var ids = pbMembros(p).map(function(x){ return x.id; }), num = String(p.processo || '');
+  return agDocs.some(function(d){ return d.tipo === 'audiencia' && ((d.audPubId && ids.indexOf(d.audPubId) >= 0) || (num && d.data === a.data && prNum(d.processo) === num && (!a.hora || !d.hora || d.hora === a.hora))); });
+}
+function pbCriarAudiencia(id){
+  var p = pbPub(id), a = p && pbAudDe(p); if (!a) return;
+  var v = pbVinculo(p.processo), presencial = a.modalidade !== 'online';
+  agAbrir(null, { tipo: 'audiencia', titulo: 'Audiência' + (a.tipo ? ' de ' + a.tipo.toLowerCase() : ''), processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: a.data, hora: a.hora, audTipo: a.tipo, modalidade: a.modalidade, local: presencial ? [p.tribunal, p.orgao].filter(Boolean).join(' · ') : '', link: a.link, audPubId: p.id });
 }
 function pbPub(id){ for (var i = 0; i < pbS.pubs.length; i++) if (pbS.pubs[i].id === id) return pbS.pubs[i]; return null; }
 function pbSemAcento(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
@@ -16963,8 +16979,11 @@ function pbCartao(p){
   if (!v){ var prov = cliProvaveis(pbDestinatarios(p)); if (prov.length) tags += '<span class="pb-tg ok">provável cliente: ' + escapeHtml(prov.slice(0, 2).map(function(c){ return c.nome; }).join(', ')) + '</span>'; }
   if (pz) tags += '<span class="pb-tg pz">⏱ prazo ' + escapeHtml(fmtData(pz.data)) + (pz.concluido ? ' (cumprido)' : '') + '</span>';
   else if (p.sug && !semPz) tags += '<span class="pb-tg pz">⏱ sugerido: ' + p.sug.dias + (p.sug.tipo === 'corridos' ? ' dias corridos' : ' dias') + '</span>';
+  var aud = pbAudDe(p), audOk = aud && pbAudNaAgenda(p, aud);
+  if (aud) tags += '<span class="pb-tg ' + (audOk ? 'ok' : 'pz') + '">🗓 audiência ' + escapeHtml(fmtData(aud.data).slice(0, 5) + (aud.hora ? ' ' + aud.hora : '')) + (audOk ? ' · na Agenda' : '') + '</span>';
   p.oabs.forEach(function(id){ var o = pbOabDe(id); if (o) tags += '<span class="pb-tg">via OAB ' + escapeHtml(pbPrimeiroNome(o)) + '</span>'; });
   var btn = '';
+  if (aud && !audOk) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="aud" data-id="' + escapeHtml(p.id) + '">Criar audiência</button>';
   if (!pz && p.sug && !semPz) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Confirmar prazo</button>';
   else if (!pz && !semPz && cls !== 'out') btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Criar prazo</button>';
   if (v && v.arquivado) btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="reabrir-proc" data-id="' + escapeHtml(p.id) + '">Reabrir processo</button>';
@@ -17000,6 +17019,7 @@ function pbMontarDetalhe(){
     if (a === 'confirmar') pbSalvarPrazo(false);
     else if (a === 'naoe'){ pbMarcar(pbMembros(pbPub(pbDetId)).map(function(x){ return x.id; }), { semPrazo: true, lida: true }); d.classList.remove('show'); toast('Marcada como sem prazo.'); }
     else if (a === 'manual'){ var m = qs('pbManualBox'); m.style.display = m.style.display === 'none' ? '' : 'none'; }
+    else if (a === 'aud') pbCriarAudiencia(pbDetId);
     else if (a === 'cadastrar') pbCadastrar(pbDetId);   /* a leitura continua aberta por baixo: depois de cadastrar, dá para marcar prazo ou lida */
     else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); if (vi) prAbrir(vi.id); }
     else if (a === 'reabrirproc'){ var pr2 = pbPub(pbDetId), vr = pr2 && pbVinculo(pr2.processo); if (vr) prReabrir(vr.id).then(function(){ pbDesenharDetalhe(); }); }
@@ -17042,6 +17062,12 @@ function pbDesenharDetalhe(){
       '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="confirmar">Confirmar prazo</button>' + (!p.semPrazo ? '<button type="button" class="btn btn-ghost pb-b" data-pbd="naoe">Não é prazo</button>' : '') + '</div>';
   }
   h += '</div>';
+  var au = pbAudDe(p);
+  if (au){
+    var naAg = pbAudNaAgenda(p, au);
+    h += '<div class="pb-sec pb-ia"><div class="pb-sec-t">🗓 Audiência no texto</div><div class="pb-frase">“…' + escapeHtml(au.frase) + '…”</div><div class="pb-lin"><span>Data e hora</span><b>' + escapeHtml(fmtData(au.data) + (au.hora ? ' às ' + au.hora : ' (hora não encontrada)')) + '</b></div>' + (au.tipo ? '<div class="pb-lin"><span>Tipo</span><b>' + escapeHtml(au.tipo) + '</b></div>' : '') + (au.modalidade ? '<div class="pb-lin"><span>Modalidade</span><b>' + escapeHtml(au.modalidade === 'online' ? 'Online' : 'Presencial') + '</b></div>' : '') + (au.link ? '<div class="pb-lin"><span>Link</span><b style="overflow-wrap:anywhere">' + escapeHtml(au.link) + '</b></div>' : '') +
+      (naAg ? '<div class="saldo-data">✓ Esta audiência já está na Agenda.</div>' : '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="aud">Criar audiência na Agenda</button></div><div class="pb-aviso">O app só sugere. Confira data, hora e local no texto antes de salvar.</div>') + '</div>';
+  }
   c.innerHTML = h;
   var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();
@@ -17171,6 +17197,9 @@ var agDocs = [], agOk = false, agEditKey = null, agEditTipo = 'prazo';
 var agS = { vista: 'semana', quadro: 'urgencia', filtro: 'tudo', ref: '', mes: '', sel: '', feitos: false };
 var AG_PADRAO = [5, 2, 1, 0];
 var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
+var AG_MODAL = { presencial: 'Presencial', online: 'Online', hibrida: 'Híbrida' };
+var AG_AUDS = ['Conciliação', 'Mediação', 'Instrução e julgamento', 'Justificação', 'Saneamento', 'Custódia', 'Admonitória', 'Outra'];
+var agEditPre = null;
 var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em elaboração', feito: 'Concluído' };
 var AG_DOW = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], AG_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 function agHoje(){ return todayISO(); }
@@ -17206,6 +17235,7 @@ function agDepois(){
   agAtualizarBadge();
   if (activeTab === 'agenda') agRender();
   if (activeTab === 'publicacoes') pbRender();
+  try{ if (qs('overlayPb') && qs('overlayPb').classList.contains('show')) pbDesenharDetalhe(); }catch(e){}   /* a leitura aberta mostra a audiência recém-criada */
   try{ ntAgendarEnvio(); }catch(e){}
 }
 function pbPrazoDaPub(pubId){
@@ -17218,11 +17248,11 @@ function agCriar(doc){
 function agItens(op){
   var l = [], quadro = !!(op && op.quadro);
   agDocs.forEach(function(d){
-    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo' });
+    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || d.audPubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo', audTipo: d.audTipo || '', modalidade: d.modalidade || '', local: d.local || '', link: d.link || '', protocoladoEm: d.protocoladoEm || '', protocoloObs: d.protocoloObs || '' });
   });
   casos.forEach(function(c){   /* prazos que já existiam nas Iniciais */
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
-    l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c, cat: 'inicial', faseTxt: STATUS_LABEL[statusDe(c)] || '' });
+    l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c, cat: 'inicial', protocoladoEm: c.prazo.protocoladoEm || '', protocoloObs: c.prazo.protocoloObs || '', faseTxt: STATUS_LABEL[statusDe(c)] || '' });
   });
   if (quadro) alvaras.forEach(function(a){   /* previsão de levantamento dos alvarás: só aparece no Quadro */
     if (a.arquivado || !a.previsaoLevantamento) return;
@@ -17387,7 +17417,7 @@ function agVistaLista(todos){
   return h;
 }
 function agTipoLinha(i){
-  if (i.tipo === 'audiencia') return 'Audiência ' + fmtData(i.data).slice(0, 5) + (i.hora ? ' · ' + i.hora : '');
+  if (i.tipo === 'audiencia') return 'Audiência ' + fmtData(i.data).slice(0, 5) + (i.hora ? ' · ' + i.hora : '') + (i.audTipo ? ' · ' + i.audTipo : '');
   if (i.tipo === 'tarefa') return 'Fazer até ' + fmtData(i.data).slice(0, 5);
   return 'Prazo fatal ' + fmtData(i.data).slice(0, 5) + (!i.concluido && i.trabalhar && i.trabalhar < i.data ? ' · trabalhar até ' + fmtData(i.trabalhar).slice(0, 5) : '');
 }
@@ -17397,13 +17427,16 @@ function agCartao(i){
   if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + '</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
   if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
+  if (i.concluido && i.tipo === 'prazo' && i.protocoladoEm) tags += '<span class="pb-tg ok">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</span>';
+  if (i.tipo === 'audiencia' && i.modalidade) tags += '<span class="pb-tg">' + escapeHtml(AG_MODAL[i.modalidade] || i.modalidade) + '</span>';
   var btn = '';
   if (!i.concluido) btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + escapeHtml(i.key) + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
   else btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + escapeHtml(i.key) + '">Reabrir</button>';
   btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="abrir" data-k="' + escapeHtml(i.key) + '">Editar</button>';
+  if (i.tipo === 'audiencia' && /^https?:\/\//i.test(i.link)) btn += '<a class="btn btn-ghost pb-b" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala ↗</a>';
   if (i.pubId) btn += '<button type="button" class="btn-text pb-b" data-ag="pub" data-k="' + escapeHtml(i.key) + '">Ver publicação</button>';
   if (i.fonte === 'caso') btn += '<button type="button" class="btn-text pb-b" data-ag="acao" data-k="' + escapeHtml(i.key) + '">Abrir ação</button>';
-  return '<div class="ag-it ' + cls + '"><div class="pb-l1"><span>' + escapeHtml(agTipoLinha(i)) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div><div class="pb-tags">' + tags + '</div><div class="pb-acts">' + btn + '</div></div>';
+  return '<div class="ag-it ' + cls + '"><div class="pb-l1"><span>' + escapeHtml(agTipoLinha(i)) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div>' + (i.tipo === 'audiencia' && i.local ? '<div class="pb-proc">📍 ' + escapeHtml(i.local) + '</div>' : '') + '<div class="pb-tags">' + tags + '</div><div class="pb-acts">' + btn + '</div></div>';
 }
 function agCartaoTrabalho(i){
   return '<div class="ag-it pe"><div class="pb-l1"><span>Dia de trabalhar na peça</span><span class="est est-breve">interno</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">Prazo fatal ' + fmtData(i.data).slice(0, 5) + (i.cliente ? ' · ' + escapeHtml(i.cliente) : '') + '</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-ag="abrir" data-k="' + escapeHtml(i.key) + '">Abrir prazo</button></div></div>';
@@ -17451,7 +17484,7 @@ function agCartaoQuadro(i){
     else if (i.fonte === 'agenda') btn += '<button type="button" class="btn-text pb-b" data-ag="abrir" data-k="' + k + '">Editar</button>';
   } else if (i.fonte !== 'alvara') btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + k + '">Reabrir</button>';
   return '<div class="kanban-card ag-kc ' + i.cat + (i.concluido ? ' ok' : '') + '" data-agcard="' + k + '"><div class="kc-top">' + fvIc(ic[0], ic[1]) + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(i.titulo) + '</div><div class="kc-sub">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div></div></div>' +
-    '<div class="kc-sub" style="margin-top:6px">' + escapeHtml(agTipoLinha(i)) + '</div><div class="kc-chips">' + tags + '</div><div class="kc-acoes">' + btn + '</div></div>';
+    '<div class="kc-sub" style="margin-top:6px">' + escapeHtml(agTipoLinha(i)) + '</div>' + (i.tipo === 'audiencia' && i.local ? '<div class="kc-sub">📍 ' + escapeHtml(i.local) + '</div>' : '') + (i.concluido && i.tipo === 'prazo' && i.protocoladoEm ? '<div class="kc-sub">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</div>' : '') + '<div class="kc-chips">' + tags + '</div><div class="kc-acoes">' + btn + (i.tipo === 'audiencia' && /^https?:\/\//i.test(i.link) ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala ↗</a>' : '') + '</div></div>';
 }
 function agVistaQuadro(todos){
   var cols = agColunas(todos), h = '<div class="pb-seg-lin"><div class="segmented" id="agModo">' + [['urgencia', 'Por urgência'], ['situacao', 'Por situação']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.quadro === f[0] ? ' active' : '') + '" data-ag="modo" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
@@ -17494,13 +17527,34 @@ function agAdiarSalvar(){
 }
 
 /* ---------- criar, editar, concluir ---------- */
-function agConcluir(key, feito){
+/* prazo concluído = peça protocolada: pergunta a data do protocolo (pode ser de outro dia) */
+function agPerguntarProtocolo(key){
   var i = agItens().filter(function(x){ return x.key === key; })[0]; if (!i) return;
+  if (!qs('overlayAgProt')){
+    var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayAgProt';
+    d.innerHTML = '<div class="modal"><div class="modal-head"><h2>Peça protocolada</h2><button class="icon-btn" id="agpX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="parcela-sum" id="agpInfo"></div><div class="field"><label class="field-label" for="agp_data">Data do protocolo</label><input type="date" id="agp_data"></div><div class="field"><label class="field-label" for="agp_obs">Observação (opcional)</label><input type="text" id="agp_obs" maxlength="120" placeholder="Ex.: protocolo nº 123, juntado no evento 45"></div><div class="form-error" id="agp_erro"></div><button type="button" class="btn btn-primary" id="agpOk" style="width:100%;justify-content:center;">Confirmar protocolo</button></div></div>';
+    document.body.appendChild(d); adAbrirData(qs('agp_data'));
+    d.addEventListener('click', function(e){ if (e.target === d || (e.target.closest && e.target.closest('#agpX'))) d.classList.remove('show'); });
+    qs('agpOk').addEventListener('click', function(){
+      var data = qs('agp_data').value; if (!data){ qs('agp_erro').textContent = 'Escolha a data do protocolo.'; return; }
+      if (data > agHoje()){ qs('agp_erro').textContent = 'A data do protocolo não pode ser no futuro.'; return; }
+      qs('overlayAgProt').classList.remove('show'); agConcluir(qs('overlayAgProt').getAttribute('data-k'), true, { data: data, obs: qs('agp_obs').value.trim() });
+    });
+  }
+  qs('overlayAgProt').setAttribute('data-k', key);
+  qs('agpInfo').textContent = i.titulo + (i.cliente ? ' · ' + i.cliente : '') + ' — prazo fatal ' + fmtData(i.data);
+  qs('agp_data').value = agHoje(); qs('agp_obs').value = ''; qs('agp_erro').textContent = '';
+  qs('overlayAgProt').classList.add('show');
+}
+function agConcluir(key, feito, prot){
+  var i = agItens().filter(function(x){ return x.key === key; })[0]; if (!i) return;
+  if (feito && i.tipo === 'prazo' && !prot){ agPerguntarProtocolo(key); return; }
+  var extra = (feito && prot) ? { protocoladoEm: prot.data, protocoloObs: prot.obs || '' } : { protocoladoEm: '', protocoloObs: '' };
   if (i.fonte === 'caso'){
-    persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { concluido: feito }) });
+    persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { concluido: feito }, extra) });
     setTimeout(function(){ agDepois(); }, 400); toast(feito ? 'Prazo concluído.' : 'Prazo reaberto.'); return;
   }
-  var doc = Object.assign({}, i.doc, { concluido: feito, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '' }); delete doc.id;
+  var doc = Object.assign({}, i.doc, { concluido: feito, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '' }, i.tipo === 'prazo' ? extra : {}); delete doc.id;
   pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ Object.assign(i.doc, doc); agDepois(); toast(feito ? (i.tipo === 'prazo' ? 'Prazo marcado como protocolado.' : 'Concluído.') : 'Reaberto.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
 function agMontarEd(){
@@ -17516,7 +17570,9 @@ function agMontarEd(){
     else if (a === 'salvar') agSalvarEd();
     else if (a === 'excluir') agExcluirEd(b);
   });
+  d.addEventListener('change', function(e){ if (e.target && e.target.id === 'age_sit') agAjustarCampos(); });
   d.addEventListener('input', function(e){
+    if (e.target && e.target.id === 'age_sit') agAjustarCampos();
     if (e.target && e.target.id === 'age_proc'){
       var v = pbVinculo(e.target.value), dica = qs('age_dica'); if (dica) dica.textContent = v ? '✓ ' + v.cadastro + ' · cliente: ' + v.cliente : '';
       if (v && !qs('age_cli').value.trim()) qs('age_cli').value = v.cliente;
@@ -17528,27 +17584,35 @@ function agAjustarCampos(){
   qs('age_tit_l').textContent = rot[t]; qs('age_data_l').textContent = t === 'prazo' ? 'Prazo fatal' : (t === 'audiencia' ? 'Data da audiência' : 'Fazer até');
   qs('age_hora_box').style.display = t === 'audiencia' ? '' : 'none'; qs('age_trab_box').style.display = t === 'prazo' ? '' : 'none';
   qs('age_sit_box').style.display = t === 'audiencia' ? 'none' : '';
+  qs('age_aud_box').style.display = t === 'audiencia' ? '' : 'none';
+  qs('age_prot_box').style.display = (t === 'prazo' && qs('age_sit').value === 'feito') ? '' : 'none';
   qs('age_data').closest('.pb-dois').style.gridTemplateColumns = t === 'audiencia' ? '1fr 1fr' : '1fr';
 }
 function agPresetAvisos(a){ var s = JSON.stringify(a || AG_PADRAO); return s === '[1,0]' ? 'umdia' : (s === '[0]' ? 'dia' : (s === '[]' ? 'nenhum' : 'padrao')); }
-function agAbrir(key){
+function agAbrir(key, pre){
   agMontarEd();
   var i = key ? agItens().filter(function(x){ return x.key === key; })[0] : null; if (key && !i) return;
-  agEditKey = key || null; agEditTipo = i ? i.tipo : 'prazo';
+  var P = (!i && pre) ? pre : null; agEditPre = P;
+  var V = function(k){ return i ? (i[k] || '') : (P ? (P[k] || '') : ''); };
+  agEditKey = key || null; agEditTipo = i ? i.tipo : (P && P.tipo ? P.tipo : 'prazo');
   var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
   var h = '<div class="segmented" id="age_seg"' + (i ? ' style="display:none"' : '') + '>' + ['prazo', 'audiencia', 'tarefa'].map(function(t){ return '<button type="button" class="seg-btn' + (agEditTipo === t ? ' active' : '') + '" data-age="tipo" data-v="' + t + '">' + AG_TIPOS[t] + '</button>'; }).join('') + '</div>';
   if (caso) h += '<div class="parcela-sum">Este prazo é da inicial <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
-  h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(i ? i.titulo : '') + '" placeholder="Ex.: Contestação"></div>' +
-    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(i ? i.processo : '') + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
-    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(i ? i.cliente : '') + '"></div>' +
-    '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(i ? i.data : '') + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(i ? i.hora : '') + '"></div></div>' +
+  h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(V('titulo')) + '" placeholder="Ex.: Contestação"></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(V('processo')) + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(V('cliente')) + '"></div>' +
+    '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(V('data')) + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(V('hora')) + '"></div></div>' +
+    '<div id="age_aud_box"><div class="pb-dois"><div class="field"><label class="field-label" for="age_audtipo">Tipo da audiência</label><select id="age_audtipo" class="filter-select" style="width:100%"><option value="">Não informado</option>' + AG_AUDS.map(function(t){ return '<option' + (V('audTipo') === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div><div class="field"><label class="field-label" for="age_mod">Modalidade</label><select id="age_mod" class="filter-select" style="width:100%"><option value="">Não informada</option>' + Object.keys(AG_MODAL).map(function(k){ return '<option value="' + k + '"' + (V('modalidade') === k ? ' selected' : '') + '>' + AG_MODAL[k] + '</option>'; }).join('') + '</select></div></div>' +
+    '<div class="field"><label class="field-label" for="age_local">Local</label><input type="text" id="age_local" maxlength="140" value="' + escapeHtml(V('local')) + '" placeholder="Ex.: Fórum de Morrinhos, sala 2"></div>' +
+    '<div class="field"><label class="field-label" for="age_link">Link da sala virtual (opcional)</label><input type="url" id="age_link" maxlength="300" value="' + escapeHtml(V('link')) + '" placeholder="https://…"></div></div>' +
     '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : '') + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
     '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + '>Em elaboração</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
+    '<div class="field" id="age_prot_box" style="display:none"><label class="field-label" for="age_protoc">Data do protocolo</label><input type="date" id="age_protoc" value="' + escapeHtml(V('protocoladoEm') || agHoje()) + '"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
     '<div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
     (i && !caso ? '<button type="button" class="btn-text" data-age="excluir" style="color:var(--urgente)">Excluir este item</button>' : '');
   qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da inicial' : 'Editar item') : 'Novo item da agenda';
-  adAbrirData(qs('age_data')); adAbrirData(qs('age_trab'));
+  adAbrirData(qs('age_data')); adAbrirData(qs('age_trab')); adAbrirData(qs('age_protoc'));
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
   qs('overlayAg').classList.add('show');
 }
@@ -17565,8 +17629,12 @@ function agSalvarEd(){
   var trab = t === 'prazo' ? qs('age_trab').value : '';
   if (t === 'prazo' && !trab){ var auto = agAntesUteis(data, 2); if (auto >= agHoje() && auto < data) trab = auto; }
   var av = { padrao: AG_PADRAO.slice(), umdia: [1, 0], dia: [0], nenhum: [] }[qs('age_av').value] || AG_PADRAO.slice();
-  var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '' }; delete base.id;
-  var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av });
+  var link = t === 'audiencia' ? qs('age_link').value.trim() : '';
+  if (link && !/^https?:\/\/\S+$/i.test(link)){ err.textContent = 'O link da sala virtual deve começar com https://'; return; }
+  var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '', audPubId: (agEditPre && agEditPre.audPubId) || '' }; delete base.id;
+  var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av,
+    audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
+  if (t === 'prazo'){ if (sit === 'feito'){ doc.protocoladoEm = qs('age_protoc').value || agHoje(); if (!doc.concluidoEm) doc.concluidoEm = agHoje(); } else { doc.protocoladoEm = ''; doc.protocoloObs = ''; } }
   var p = i ? pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ doc.id = i.id; agDocs = agDocs.map(function(x){ return x.id === i.id ? doc : x; }); }) : agCriar(doc);
   p.then(function(){ qs('overlayAg').classList.remove('show'); toast('Salvo na agenda.'); agDepois(); }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }

@@ -136,6 +136,7 @@ function pbMontarTela(){
     else if (a === 'reabrir-proc'){ var pp = pbPub(id), vv = pp && pbVinculo(pp.processo); if (vv) prReabrir(vv.id).then(function(){ pbRender(); }); }
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
+    else if (a === 'aud') pbCriarAudiencia(id);
   });
   var depois = null;
   function aplicar(e){
@@ -166,6 +167,21 @@ function pbDestinatarios(p){
   var nomes = [], vistos = {};
   pbMembros(p).forEach(function(x){ (x.dest || []).forEach(function(d){ var k = (d.n || '').toUpperCase(); if (k && !vistos[k]){ vistos[k] = 1; nomes.push(d.n); } }); });
   return nomes;
+}
+/* audiência encontrada no texto da publicação (só se for futura) e se já está na Agenda */
+function pbAudDe(p){
+  var t = pbTextos[p.id], a = (t && t.ok && t.aud) || null;
+  if (!a) pbMembros(p).forEach(function(x){ if (!a && x.aud) a = x.aud; });
+  return a && a.data >= todayISO() ? a : null;
+}
+function pbAudNaAgenda(p, a){
+  var ids = pbMembros(p).map(function(x){ return x.id; }), num = String(p.processo || '');
+  return agDocs.some(function(d){ return d.tipo === 'audiencia' && ((d.audPubId && ids.indexOf(d.audPubId) >= 0) || (num && d.data === a.data && prNum(d.processo) === num && (!a.hora || !d.hora || d.hora === a.hora))); });
+}
+function pbCriarAudiencia(id){
+  var p = pbPub(id), a = p && pbAudDe(p); if (!a) return;
+  var v = pbVinculo(p.processo), presencial = a.modalidade !== 'online';
+  agAbrir(null, { tipo: 'audiencia', titulo: 'Audiência' + (a.tipo ? ' de ' + a.tipo.toLowerCase() : ''), processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: a.data, hora: a.hora, audTipo: a.tipo, modalidade: a.modalidade, local: presencial ? [p.tribunal, p.orgao].filter(Boolean).join(' · ') : '', link: a.link, audPubId: p.id });
 }
 function pbPub(id){ for (var i = 0; i < pbS.pubs.length; i++) if (pbS.pubs[i].id === id) return pbS.pubs[i]; return null; }
 function pbSemAcento(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
@@ -259,8 +275,11 @@ function pbCartao(p){
   if (!v){ var prov = cliProvaveis(pbDestinatarios(p)); if (prov.length) tags += '<span class="pb-tg ok">provável cliente: ' + escapeHtml(prov.slice(0, 2).map(function(c){ return c.nome; }).join(', ')) + '</span>'; }
   if (pz) tags += '<span class="pb-tg pz">⏱ prazo ' + escapeHtml(fmtData(pz.data)) + (pz.concluido ? ' (cumprido)' : '') + '</span>';
   else if (p.sug && !semPz) tags += '<span class="pb-tg pz">⏱ sugerido: ' + p.sug.dias + (p.sug.tipo === 'corridos' ? ' dias corridos' : ' dias') + '</span>';
+  var aud = pbAudDe(p), audOk = aud && pbAudNaAgenda(p, aud);
+  if (aud) tags += '<span class="pb-tg ' + (audOk ? 'ok' : 'pz') + '">🗓 audiência ' + escapeHtml(fmtData(aud.data).slice(0, 5) + (aud.hora ? ' ' + aud.hora : '')) + (audOk ? ' · na Agenda' : '') + '</span>';
   p.oabs.forEach(function(id){ var o = pbOabDe(id); if (o) tags += '<span class="pb-tg">via OAB ' + escapeHtml(pbPrimeiroNome(o)) + '</span>'; });
   var btn = '';
+  if (aud && !audOk) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="aud" data-id="' + escapeHtml(p.id) + '">Criar audiência</button>';
   if (!pz && p.sug && !semPz) btn += '<button type="button" class="btn btn-primary pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Confirmar prazo</button>';
   else if (!pz && !semPz && cls !== 'out') btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="prazo" data-id="' + escapeHtml(p.id) + '">Criar prazo</button>';
   if (v && v.arquivado) btn += '<button type="button" class="btn btn-ghost pb-b" data-pb="reabrir-proc" data-id="' + escapeHtml(p.id) + '">Reabrir processo</button>';
@@ -296,6 +315,7 @@ function pbMontarDetalhe(){
     if (a === 'confirmar') pbSalvarPrazo(false);
     else if (a === 'naoe'){ pbMarcar(pbMembros(pbPub(pbDetId)).map(function(x){ return x.id; }), { semPrazo: true, lida: true }); d.classList.remove('show'); toast('Marcada como sem prazo.'); }
     else if (a === 'manual'){ var m = qs('pbManualBox'); m.style.display = m.style.display === 'none' ? '' : 'none'; }
+    else if (a === 'aud') pbCriarAudiencia(pbDetId);
     else if (a === 'cadastrar') pbCadastrar(pbDetId);   /* a leitura continua aberta por baixo: depois de cadastrar, dá para marcar prazo ou lida */
     else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); if (vi) prAbrir(vi.id); }
     else if (a === 'reabrirproc'){ var pr2 = pbPub(pbDetId), vr = pr2 && pbVinculo(pr2.processo); if (vr) prReabrir(vr.id).then(function(){ pbDesenharDetalhe(); }); }
@@ -338,6 +358,12 @@ function pbDesenharDetalhe(){
       '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="confirmar">Confirmar prazo</button>' + (!p.semPrazo ? '<button type="button" class="btn btn-ghost pb-b" data-pbd="naoe">Não é prazo</button>' : '') + '</div>';
   }
   h += '</div>';
+  var au = pbAudDe(p);
+  if (au){
+    var naAg = pbAudNaAgenda(p, au);
+    h += '<div class="pb-sec pb-ia"><div class="pb-sec-t">🗓 Audiência no texto</div><div class="pb-frase">“…' + escapeHtml(au.frase) + '…”</div><div class="pb-lin"><span>Data e hora</span><b>' + escapeHtml(fmtData(au.data) + (au.hora ? ' às ' + au.hora : ' (hora não encontrada)')) + '</b></div>' + (au.tipo ? '<div class="pb-lin"><span>Tipo</span><b>' + escapeHtml(au.tipo) + '</b></div>' : '') + (au.modalidade ? '<div class="pb-lin"><span>Modalidade</span><b>' + escapeHtml(au.modalidade === 'online' ? 'Online' : 'Presencial') + '</b></div>' : '') + (au.link ? '<div class="pb-lin"><span>Link</span><b style="overflow-wrap:anywhere">' + escapeHtml(au.link) + '</b></div>' : '') +
+      (naAg ? '<div class="saldo-data">✓ Esta audiência já está na Agenda.</div>' : '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="aud">Criar audiência na Agenda</button></div><div class="pb-aviso">O app só sugere. Confira data, hora e local no texto antes de salvar.</div>') + '</div>';
+  }
   c.innerHTML = h;
   var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();

@@ -84,6 +84,34 @@ export function sugerirPrazo(texto) {
   return null;
 }
 
+/* ---------- audiência designada no texto (você sempre confirma antes de entrar na Agenda) ---------- */
+const MESES_EXT = { janeiro: 1, fevereiro: 2, 'março': 3, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
+const TIPOS_AUD = [[/concilia/i, 'Conciliação'], [/media[çc]/i, 'Mediação'], [/instru[çc][ãa]o/i, 'Instrução e julgamento'], [/justifica[çc]/i, 'Justificação'], [/saneamento/i, 'Saneamento'], [/cust[óo]dia/i, 'Custódia'], [/admonit/i, 'Admonitória'], [/preliminar/i, 'Preliminar']];
+const DATA_NUM = /(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/, DATA_EXT = /(\d{1,2})\s*(?:º|°)?\s+de\s+(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})/i;
+const iso = (a, m, d) => { if (!(m >= 1 && m <= 12 && d >= 1 && d <= 31 && a >= 2000 && a <= 2100)) return ''; const x = new Date(Date.UTC(a, m - 1, d)); return x.getUTCMonth() === m - 1 ? x.toISOString().slice(0, 10) : ''; };   // recusa 31/02 e afins
+export function sugerirAudiencia(texto) {
+  const t = String(texto || '').replace(/\s+/g, ' ');
+  if (t.length < 30) return null;
+  const re = /audi[êe]ncias?/gi; let m;
+  while ((m = re.exec(t))) {
+    const antes = t.slice(Math.max(0, m.index - 60), m.index), janela = t.slice(m.index, m.index + 300);
+    if (/(cancel|dispens|retir|prejudicad|desconvoc)\w*\s+(?:a\s+|da\s+|de\s+)?$/i.test(antes) || /^audi[êe]ncias?\s+(?:foi\s+|fica\s+|est[áa]\s+)?(?:cancelad|dispensad|prejudicad)/i.test(janela)) continue;
+    let dt = '', pos = 0, d;
+    if ((d = DATA_NUM.exec(janela))) { dt = iso(+d[3], +d[2], +d[1]); pos = d.index + d[0].length; }
+    else if ((d = DATA_EXT.exec(janela))) { dt = iso(+d[3], MESES_EXT[d[2].toLowerCase()], +d[1]); pos = d.index + d[0].length; }
+    if (!dt) continue;
+    const depois = janela.slice(pos, pos + 60), h = /(?:[àa]s?\s+)?(\d{1,2})\s*(?:h|:|horas?)\s*(\d{2})?/i.exec(depois);
+    let hora = '';
+    if (h && +h[1] <= 23 && (!h[2] || +h[2] <= 59)) hora = String(+h[1]).padStart(2, '0') + ':' + (h[2] || '00');
+    const bloco = t.slice(Math.max(0, m.index - 40), m.index + 300);
+    const tipo = (TIPOS_AUD.find(([r]) => r.test(janela.slice(0, 80))) || [null, ''])[1];
+    const link = (/https?:\/\/[^\s<>")]*(?:zoom\.us|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com|whereby\.com|videoconferencia|audiencia|sala-virtual|cnj\.jus\.br)[^\s<>")]*/i.exec(t) || [''])[0].slice(0, 300);
+    const modalidade = link || /videoconfer|virtual|on-?line|telepresencial/i.test(bloco) ? 'online' : (/presencial/i.test(bloco) ? 'presencial' : '');
+    return { data: dt, hora, tipo, modalidade, link, frase: t.slice(Math.max(0, m.index - 30), Math.min(t.length, m.index + pos + 40)).trim() };
+  }
+  return null;
+}
+
 /* ---------- DJEN ---------- */
 const mascara = (n) => (/^\d{20}$/.test(n) ? n.slice(0, 7) + '-' + n.slice(7, 9) + '.' + n.slice(9, 13) + '.' + n.slice(13, 14) + '.' + n.slice(14, 16) + '.' + n.slice(16) : n);
 async function consultar(params) {
@@ -131,7 +159,7 @@ function paraDoc(i, o) {
   return {
     id: String(i.id), data: String(i.data_disponibilizacao || '').slice(0, 10), tribunal: String(i.siglaTribunal || '').slice(0, 12), orgao: String(i.nomeOrgao || '').slice(0, 100),
     tipo, classe: String(i.nomeClasse || '').slice(0, 80), processo, numero: String(i.numeroprocessocommascara || mascara(processo)).slice(0, 40), trecho: trechoDe(texto),
-    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto),
+    link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto), aud: /ata de distribui/i.test(tipo) ? null : sugerirAudiencia(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
 }
@@ -288,7 +316,7 @@ export async function djenRotas(request, env, partes) {
     const item = res.json && Array.isArray(res.json.items) ? res.json.items.find((i) => String(i.id) === id) : null;
     if (!item) return json({ ok: false, trecho: d.trecho, link: d.link, motivo: res.erro || (res.status !== 200 ? 'O Diário Oficial respondeu ' + res.status : 'O tribunal não mostra mais esta publicação.') });
     const texto = htmlParaTexto(item.texto);
-    return json({ ok: true, texto, link: d.link || item.link || '', sug: sugerirPrazo(texto) });
+    return json({ ok: true, texto, link: d.link || item.link || '', sug: sugerirPrazo(texto), aud: sugerirAudiencia(texto) });
   }
   return erro(404, 'not_found', 'Não encontrado.');
 }

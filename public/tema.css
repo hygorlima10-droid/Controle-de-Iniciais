@@ -38,3 +38,5 @@
 /* Janelas abertas de dentro da leitura de uma publicação (cadastro de processo e de inicial) ficam por cima dela */
 #overlayPrEsc,#overlayPr,#overlay{z-index:150;}
 #overlayPrArq{z-index:160;}
+/* Agenda: o editor (aberto também de dentro da leitura de uma publicação, da ficha do processo ou da pergunta do protocolo) fica por cima */
+#overlayAg,#overlayAgProt,#overlayAgAdiar{z-index:170;}
