@@ -1,7 +1,7 @@
 /* ============================================================
    AGENDA DE PRAZOS PROCESSUAIS, AUDIÊNCIAS E TAREFAS
    - separada da Central de atenção (que fica só com dinheiro)
-   - junta o que você cadastra na Agenda, os prazos confirmados nas Publicações e os prazos que já existiam nas Novas ações
+   - junta o que você cadastra na Agenda, os prazos confirmados nas Publicações e os prazos que já existiam nas Iniciais
    - cartão "Prazos processuais" no Início e avisos no celular (5, 2 e 1 dia antes e no dia, configurável por item)
    ============================================================ */
 var agDocs = [], agOk = false, agEditKey = null, agEditTipo = 'prazo';
@@ -57,7 +57,7 @@ function agItens(){
   agDocs.forEach(function(d){
     l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d });
   });
-  casos.forEach(function(c){   /* prazos que já existiam nas Novas ações */
+  casos.forEach(function(c){   /* prazos que já existiam nas Iniciais */
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
     l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c });
   });
@@ -93,7 +93,7 @@ function agRenderInicio(){
   var h = '<div class="ini-card ag-cartao"><div class="ag-cab"><span class="ag-tit">' + fvIc('scale', '#D93B3B') + '<b>Prazos processuais</b></span><span class="saldo-data">próximos 7 dias</span></div>' + (chips ? '<div class="ag-chips">' + chips + '</div>' : '');
   if (!l.length) h += '<div class="saldo-data" style="margin:8px 0;">Nenhum prazo nos próximos 7 dias.</div>';
   else h += l.slice(0, 5).map(function(i){ return agLinha(i); }).join('') + (l.length > 5 ? '<div class="saldo-data" style="margin-top:6px;">e mais ' + (l.length - 5) + '</div>' : '');
-  h += '<div class="ag-rod"><button type="button" class="btn-text" data-ag-ir="agenda">Ver agenda completa ›</button>' + (npub ? '<button type="button" class="btn-text" data-ag-ir="publicacoes">● ' + npub + (npub === 1 ? ' publicação nova' : ' publicações novas') + ' ›</button>' : '') + '</div></div>';
+  h += '<div class="ag-rod"><button type="button" class="btn-text" data-ag-ir="agenda">Ver agenda completa ›</button>' + (npub ? '<button type="button" class="btn-text" data-ag-ir="publicacoes">● ' + npub + (npub === 1 ? ' publicinicial' : ' publicações novas') + ' ›</button>' : '') + '</div></div>';
   el.innerHTML = h;
 }
 function agLinha(i){
@@ -139,7 +139,7 @@ function agRender(){
   agMontarTela();
   var w = qs('agWrap'); if (!w) return;
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
-  var h = '<div class="ag-topo"><div class="segmented" id="agSeg">' + [['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.vista === f[0] ? ' active' : '') + '" data-ag="vista" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div><button type="button" class="btn btn-primary" data-ag="novo">+ Novo</button></div>';
+  var h = '<div class="ini-acoes ag-acoes" id="agSeg">' + [['semana', 'Semana', 'ic-agenda'], ['mes', 'Mês', 'ic-mes'], ['lista', 'Lista', 'ic-lista']].map(function(f){ return '<button type="button" class="acao' + (agS.vista === f[0] ? ' on' : '') + '" data-ag="vista" data-v="' + f[0] + '"><svg><use href="#' + f[2] + '"/></svg><span>' + f[1] + '</span></button>'; }).join('') + '<button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo</span></button></div>';
   h += '<div class="ag-filtros">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas']].map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '<button type="button" class="ag-f' + (agS.feitos ? ' on' : '') + '" data-ag="feitos">Concluídos</button></div>';
   var todos = agFiltrados(agItens()).sort(agOrdem);
   if (agS.vista === 'semana') h += agVistaSemana(todos);
@@ -216,7 +216,7 @@ function agCartao(i){
   tags += '<span class="pb-tg ' + (i.situacao === 'feito' ? 'ok' : (i.situacao === 'elaboracao' ? 'pz' : '')) + '">' + (i.tipo === 'audiencia' && i.situacao === 'feito' ? 'Realizada' : AG_SITUACAO[i.situacao]) + '</span>';
   if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ' cadastrada</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
-  if (i.fonte === 'caso') tags += '<span class="pb-tg">da nova ação</span>';
+  if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
   var btn = '';
   if (!i.concluido) btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + escapeHtml(i.key) + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
   else btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + escapeHtml(i.key) + '">Reabrir</button>';
@@ -273,7 +273,7 @@ function agAbrir(key){
   agEditKey = key || null; agEditTipo = i ? i.tipo : 'prazo';
   var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
   var h = '<div class="segmented" id="age_seg"' + (i ? ' style="display:none"' : '') + '>' + ['prazo', 'audiencia', 'tarefa'].map(function(t){ return '<button type="button" class="seg-btn' + (agEditTipo === t ? ' active' : '') + '" data-age="tipo" data-v="' + t + '">' + AG_TIPOS[t] + '</button>'; }).join('') + '</div>';
-  if (caso) h += '<div class="parcela-sum">Este prazo é da ação nova <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
+  if (caso) h += '<div class="parcela-sum">Este prazo é da inicial <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
   h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(i ? i.titulo : '') + '" placeholder="Ex.: Contestação"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(i ? i.processo : '') + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(i ? i.cliente : '') + '"></div>' +
@@ -283,7 +283,7 @@ function agAbrir(key){
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
     '<div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
     (i && !caso ? '<button type="button" class="btn-text" data-age="excluir" style="color:var(--urgente)">Excluir este item</button>' : '');
-  qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da ação nova' : 'Editar item') : 'Novo item da agenda';
+  qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da inicial' : 'Editar item') : 'Novo item da agenda';
   adAbrirData(qs('age_data')); adAbrirData(qs('age_trab'));
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
   qs('overlayAg').classList.add('show');
@@ -318,7 +318,7 @@ function agExcluirEd(b){
   st.textContent = '.ag-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;border-radius:12px;background:var(--surface-2);line-height:1.15}.ag-dt b{font-size:var(--t5)}.ag-dt span{font-size:var(--t1);font-weight:700;color:var(--ink-soft)}.ag-dt.atr{background:rgba(217,59,59,.12)}.ag-dt.atr b,.ag-dt.atr span{color:var(--urgente)}.ag-dt.hoje{background:rgba(183,121,30,.15)}.ag-dt.hoje b,.ag-dt.hoje span{color:var(--tutela)}' +
     '.ag-cartao{padding:14px 16px}.ag-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ag-tit{display:flex;align-items:center;gap:10px;font-size:var(--t4)}.ag-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}' +
     '.ag-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.ag-lin-tx{display:flex;flex-direction:column;min-width:0}.ag-lin-tx b{font-size:var(--t4);overflow-wrap:anywhere}.ag-lin-tx span{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}' +
-    '.ag-rod{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-topo{display:flex;gap:8px;align-items:center}.ag-topo .segmented{flex:1;flex-wrap:nowrap}.ag-topo .seg-btn{flex:1;justify-content:center}.ag-filtros{display:flex;gap:6px;flex-wrap:wrap}' +
+    '.ag-rod{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-filtros{display:flex;gap:6px;flex-wrap:wrap}' +
     '.ag-f{font-family:inherit;font-size:var(--t2);font-weight:600;padding:7px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-f.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}' +
     '.ag-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}.ag-nav b{font-size:var(--t4)}' +
     '.ag-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.ag-d{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 5px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-d span{font-size:var(--t1);text-transform:uppercase;font-weight:600}.ag-d b{font-size:var(--t5);color:var(--ink)}.ag-d.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}.ag-d.on b{color:var(--bg)}.ag-d.hoje:not(.on){border-color:var(--accent)}' +

@@ -1,5 +1,5 @@
 // Testa a Agenda (prazos, audiências, tarefas), o cartão de prazos no Início, a migração dos prazos antigos,
-// o nome "Novas ações" e o menu lateral que não rola de lado.
+// o nome "Iniciais" e o menu lateral que não rola de lado.
 // Suba antes (banco novo):
 //   npx wrangler d1 execute controle-juridico --local --persist-to /tmp/dev-data-pub --file schema.sql
 //   npx wrangler dev --local --persist-to /tmp/dev-data-pub --var SENHA:senha-de-teste-123 --port 8812
@@ -35,11 +35,11 @@ const ag = async () => (await f('GET', '/api/db/agenda')).j.docs.map(d => ({ id:
 let docs = await ag();
 check(docs.length === 1 && docs[0].titulo === 'Recolher o sistema' && docs[0].tipo === 'prazo' && docs[0].pubId === '900002' && (await f('GET', '/api/db/prazosPub')).j.docs.length === 0, 'o prazo da primeira versão foi migrado para a Agenda e a coleção antiga ficou vazia');
 const cartao = await t('#inicioPrazos');
-check(/Prazos processuais/.test(cartao) && /Recolher o sistema/.test(cartao) && /Réplica à contestação/.test(cartao) && /2 prazos/.test(cartao), 'o Início mostra o cartão de prazos com a migração e o prazo da nova ação: ' + cartao.replace(/\n/g, ' ').slice(0, 120));
+check(/Prazos processuais/.test(cartao) && /Recolher o sistema/.test(cartao) && /Réplica à contestação/.test(cartao) && /2 prazos/.test(cartao), 'o Início mostra o cartão de prazos com a migração e o prazo da inicial: ' + cartao.replace(/\n/g, ' ').slice(0, 120));
 check(!/Réplica|Recolher/.test(await t('#atencaoLista')), 'a Central de atenção ficou só com dinheiro');
 // nomes
-check(!/Petições/.test(await t('#drawer')) && /Novas ações/.test(await t('#drawer')) && /Agenda/.test(await t('#drawer')), 'o menu usa "Novas ações" e tem a Agenda');
-check(/Novas ações/.test(await t('#btbar')) && !/Petições/.test(await t('#btbar')), 'a barra de baixo também');
+check(!/Petições/.test(await t('#drawer')) && /Iniciais/.test(await t('#drawer')) && /Agenda/.test(await t('#drawer')), 'o menu usa "Iniciais" e tem a Agenda');
+check(/Iniciais/.test(await t('#btbar')) && !/Petições/.test(await t('#btbar')), 'a barra de baixo também');
 // menu lateral parado e com quebra de linha
 await page.click('#menuBtn'); await page.waitForTimeout(400);
 const dr = await page.evaluate(() => { const d = document.getElementById('drawer'), n = d.querySelector('.dr-nav'), cs = getComputedStyle(n); return { ox: cs.overflowX, sw: n.scrollWidth, cw: n.clientWidth, dsw: d.scrollWidth, dcw: d.clientWidth, ws: getComputedStyle(d.querySelector('.dr-it')).whiteSpace }; });
@@ -48,15 +48,15 @@ await page.evaluate(() => { const n = document.querySelector('#drawer .dr-nav');
 check(await page.evaluate(() => document.querySelector('#drawer .dr-nav').scrollLeft) === 0, 'mesmo arrastando de lado, o menu volta para a posição');
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="peticoes"]').click()); await page.waitForTimeout(600);
-check(/Novas ações/.test(await t('#tituloTela')), 'o título da tela passou a ser "Novas ações"');
+check(/Iniciais/.test(await t('#tituloTela')), 'o título da tela passou a ser "Iniciais"');
 // agenda
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(900);
 check(/Prazos, audiências e tarefas/.test(await t('#subtitle')) && /Semana/.test(await t('#agSeg')), 'abre a Agenda na visão Semana');
 await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(400);
 let lista = await t('#agWrap');
-check(/Réplica à contestação/.test(lista) && /da nova ação/.test(lista) && /Recolher o sistema/.test(lista) && /via publicação/.test(lista), 'a Lista junta o prazo da nova ação e o da publicação, com a origem de cada um');
+check(/Réplica à contestação/.test(lista) && /da inicial/.test(lista) && /Recolher o sistema/.test(lista) && /via publicação/.test(lista), 'a Lista junta o prazo da inicial e o da publicação, com a origem de cada um');
 await page.click('.ag-it:has-text("Réplica") [data-ag="concluir"]'); await page.waitForTimeout(900);
-check((await f('GET', '/api/db/casos')).j.docs[0].data.prazo.concluido === true && !/Réplica/.test(await t('#agWrap')), 'marcar o prazo da nova ação como protocolado grava na própria ação e some da lista');
+check((await f('GET', '/api/db/casos')).j.docs[0].data.prazo.concluido === true && !/Réplica/.test(await t('#agWrap')), 'marcar o prazo da inicial como protocolado grava na própria ação e some da lista');
 // novo prazo
 await page.click('[data-ag="novo"]'); await page.waitForTimeout(400);
 check(await page.evaluate(() => document.getElementById('overlayAg').classList.contains('show')), 'abre o formulário de novo item');

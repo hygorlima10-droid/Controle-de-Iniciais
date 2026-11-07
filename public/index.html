@@ -649,6 +649,8 @@
   .ini-acoes .acao{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:64px;padding:9px 4px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-weight:600;font-size:var(--t2);cursor:pointer;font-family:inherit;}
   .ini-acoes .acao svg{width:23px;height:23px;}
   .ini-acoes .acao.acao-ouro{background:var(--gold-btn);color:var(--gold-ink);border-color:transparent;}
+  .ini-acoes .acao.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .ini-acoes .acao:disabled{opacity:.6;cursor:default;}
   @media (min-width:1000px){ .ini-acoes{max-width:520px;} }
   .novo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   .novo-it{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:84px;border-radius:18px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font-weight:600;font-size:var(--t3);cursor:pointer;font-family:inherit;padding:10px 4px;}
@@ -1449,6 +1451,9 @@
 <symbol id="ic-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></symbol>
 <symbol id="ic-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></symbol>
 <symbol id="ic-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></symbol>
+<symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
+<symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
+<symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
 <symbol id="ic-agenda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/></symbol>
 <symbol id="ic-news" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14a2 2 0 002 2H6a2 2 0 01-2-2z"/><path d="M17 9h3v10a2 2 0 01-2 2"/><path d="M7 9h7M7 13h7M7 17h4"/></symbol>
 <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 20a1.9 1.9 0 003.4 0"/></symbol>
@@ -1469,7 +1474,7 @@
     <div class="dr-brand"><div class="dr-logo"><img src="data:image/webp;base64,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" alt="Horus"></div><div class="dr-name">Horus</div></div>
     <nav class="dr-nav" id="mainTabs">
       <button type="button" class="dr-it" data-tab="inicio" title="Início"><svg><use href="#ic-home"/></svg><span class="lab">Início</span><span class="dr-n red" id="menuBadgeInicio"></span></button>
-      <button type="button" class="dr-it" data-tab="peticoes" title="Novas ações"><svg><use href="#ic-file"/></svg><span class="lab">Novas ações</span><span class="dr-n" id="menuNPeticoes"></span></button>
+      <button type="button" class="dr-it" data-tab="peticoes" title="Iniciais"><svg><use href="#ic-file"/></svg><span class="lab">Iniciais</span><span class="dr-n" id="menuNPeticoes"></span></button>
       <button type="button" class="dr-it" data-tab="acordos" title="Termos de Acordo"><svg><use href="#ic-clip"/></svg><span class="lab">Termos de Acordo</span><span class="dr-n" id="menuNAcordos"></span></button>
       <button type="button" class="dr-it" data-tab="alvaras" title="Alvarás"><svg><use href="#ic-stamp"/></svg><span class="lab">Alvarás</span><span class="dr-n" id="menuNAlvaras"></span></button>
       <button type="button" class="dr-it" data-tab="agenda" title="Agenda de prazos"><svg><use href="#ic-agenda"/></svg><span class="lab">Agenda</span><span class="dr-n red" id="menuNAgenda"></span></button>
@@ -1500,7 +1505,7 @@
   </aside>
   <nav class="btbar" id="btbar" aria-label="Navegação rápida">
     <button type="button" class="bt-it" data-tab="inicio"><svg><use href="#ic-home"/></svg><span>Início</span><span class="bt-n" id="btBadgeInicio"></span></button>
-    <button type="button" class="bt-it" data-tab="peticoes"><svg><use href="#ic-file"/></svg><span>Novas ações</span></button>
+    <button type="button" class="bt-it" data-tab="peticoes"><svg><use href="#ic-file"/></svg><span>Iniciais</span></button>
     <button type="button" class="bt-it" data-tab="acordos"><svg><use href="#ic-clip"/></svg><span>Acordos</span></button>
     <button type="button" class="bt-it" data-tab="alvaras"><svg><use href="#ic-stamp"/></svg><span>Alvarás</span></button>
     <button type="button" class="bt-it" data-tab="financeiro" data-fin="geral"><svg><use href="#ic-pie"/></svg><span>Finanças</span></button>
@@ -1669,7 +1674,7 @@
         <div class="filtros-extra" hidden>
           <select class="filter-select" id="filtroArqTipo">
           <option value="todos">Todos os tipos</option>
-          <option value="caso">Novas ações</option>
+          <option value="caso">Iniciais</option>
           <option value="acordo">Termos de acordo</option>
           <option value="alvara">Alvarás</option>
         </select>
@@ -1688,7 +1693,7 @@
     <div class="ini-grid sem-extr">
       <div class="ini-busca">
     <div class="busca-global" id="buscaGlobalWrap">
-      <input type="text" id="buscaGlobalInput" placeholder="Buscar em novas ações, acordos, alvarás e clientes…">
+      <input type="text" id="buscaGlobalInput" placeholder="Buscar em iniciais, acordos, alvarás e clientes…">
       <div class="busca-global-resultados" id="buscaGlobalResultados" style="display:none;"></div>
     </div>
 
@@ -1825,6 +1830,30 @@
     <div class="ob-wrap" id="agWrap"></div>
   </div>
 
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
+  <div id="bodyPublicacoes" style="display:none;">
+    <div class="ob-wrap" id="pbWrap"></div>
+  </div>
+
+  <div id="bodyAgenda" style="display:none;">
+    <div class="ob-wrap" id="agWrap"></div>
+  </div>
+
   <div id="bodyAnalises" style="display:none;">
     <div class="an-wrap" id="anWrap"></div>
   </div>
@@ -1889,7 +1918,7 @@
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-head">
-      <h2 id="modalTitle">Nova ação</h2>
+      <h2 id="modalTitle">Nova inicial</h2>
       <button class="icon-btn" id="closeModal">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
@@ -3232,7 +3261,7 @@
   var TIPO_LABEL = { inicial:'Petição inicial', extrajudicial:'Procedimento extrajudicial' };
   var ORIGEM_LABEL = { murilo:'Cliente Murilo', proprio:'Cliente próprio' };
   var ORIGEM_LABEL_PROCESSO = { murilo:'Processo Murilo', proprio:'Processo próprio' };
-  var TAB_LABEL = { peticao:'Nova ação', acordo:'Termo de acordo', alvara:'Alvará', cliente:'Cliente', despesa:'Despesa', receita:'Receita', meta:'Meta', obra:'Obra', extrato:'Extrato' };
+  var TAB_LABEL = { peticao:'Inicial', acordo:'Termo de acordo', alvara:'Alvará', cliente:'Cliente', despesa:'Despesa', receita:'Receita', meta:'Meta', obra:'Obra', extrato:'Extrato' };
   var CATEGORIA_LABEL = { estrutura:'Estrutura', impostos:'Impostos', pessoal:'Pessoal', sistemas:'Sistemas', outros:'Outros' };
 
   function normalizarProcesso(s){
@@ -6180,7 +6209,7 @@
     h += '<div class="fp-proj"><div class="fv-k" style="color:var(--accent)">' + (caixa ? 'Projeção · ainda não é dinheiro na conta' : 'Resultado do mês selecionado') + '</div>' + linhas +
       '<div class="saldo-data" style="margin-top:8px;">' + escapeHtml(legendaResultado(resultado)) + '</div>' +
       '<div class="fp-prev"><span>Já recebido no mês <b>' + fmtMoeda(projecao.recebido) + '</b></span><span>Ainda a receber <b>' + fmtMoeda(projecao.previsto) + '</b></span></div>' +
-      '<div class="saldo-data">O que ainda vai entrar (Novas ações, Termos de Acordo e Alvarás com previsão neste mês, total ' + fmtMoeda(projecao.total) + ') não entra no "Vai sobrar" até ser recebido.</div></div>';
+      '<div class="saldo-data">O que ainda vai entrar (Iniciais, Termos de Acordo e Alvarás com previsão neste mês, total ' + fmtMoeda(projecao.total) + ') não entra no "Vai sobrar" até ser recebido.</div></div>';
     h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>' +
       '<div class="financeiro-totais">Total no mês: <span class="v">' + fmtMoeda(recebidas) + '</span> <small class="saldo-data">(automático das 3 abas + lançamentos manuais)</small></div>' + htmlReceitas + '</div>';
     h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">+ Nova despesa</button></div>' +
@@ -6382,7 +6411,7 @@
           '<div class="resultado-mes-item"><div class="lbl">Já recebido</div><div class="val">'+fmtMoeda(projecao.recebido)+'</div></div>' +
           '<div class="resultado-mes-item"><div class="lbl">Previsto a receber</div><div class="val">'+fmtMoeda(projecao.previsto)+'</div></div>' +
         '</div>' +
-        '<div class="saldo-data" style="margin-top:8px;">Projeção total do mês: '+fmtMoeda(projecao.total)+'. Considera as entradas previstas em Novas ações, Termos de Acordo e Alvarás (com previsão informada) ainda pendentes com vencimento neste mês (não entra em "Vai sobrar ao final").</div></div>'
+        '<div class="saldo-data" style="margin-top:8px;">Projeção total do mês: '+fmtMoeda(projecao.total)+'. Considera as entradas previstas em Iniciais, Termos de Acordo e Alvarás (com previsão informada) ainda pendentes com vencimento neste mês (não entra em "Vai sobrar ao final").</div></div>'
       ) : '') +
       '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="'+coluna+'">+ Nova despesa</button></div>' +
         '<div class="financeiro-totais">Pago: <span class="v">'+fmtMoeda(despesasResumo.pago)+'</span> · Pendente: <span class="v">'+fmtMoeda(despesasResumo.pendente)+'</span></div>' +
@@ -7103,7 +7132,7 @@
 
   function abrirNovo(){
     editingId = null;
-    qs('modalTitle').textContent = 'Nova ação';
+    qs('modalTitle').textContent = 'Nova inicial';
     formState = { tipo:'inicial', origem:'murilo', prioridade:'normal', status:STATUS_ORDEM[0], modalidade:'fixo', pagamento:'avista' };
     setSegValue('segTipo', formState.tipo);
     setSegValue('segOrigem', formState.origem);
@@ -7138,7 +7167,7 @@
     var c = casos.find(function(x){ return x.id === id; });
     if (!c) return;
     editingId = id;
-    qs('modalTitle').textContent = 'Editar ação';
+    qs('modalTitle').textContent = 'Editar inicial';
     formState = { tipo:c.tipo, origem:c.origem, prioridade:c.prioridade, status:statusDe(c), modalidade:c.modalidadeHonorario||'fixo', pagamento:c.formaPagamento||'avista' };
     setSegValue('segTipo', formState.tipo);
     setSegValue('segOrigem', formState.origem);
@@ -7173,7 +7202,7 @@
     if (!c) return;
     abrirEdicao(id);
     editingId = null;
-    qs('modalTitle').textContent = 'Nova ação (duplicada)';
+    qs('modalTitle').textContent = 'Nova inicial (duplicada)';
     qs('processoInput').value = '';
     qs('prazoDataInput').value = '';
     qs('prazoDescInput').value = '';
@@ -7761,13 +7790,13 @@
       ['FECHAMENTO — ' + mes, ''],
       ['', ''],
       ['RECEBIDO NO MÊS', fmtMoeda(recTotal)],
-      ['  Novas ações', fmtMoeda(sp.recebido)],
+      ['  Iniciais', fmtMoeda(sp.recebido)],
       ['  Termos de Acordo', fmtMoeda(sa.recebido)],
       ['  Alvarás', fmtMoeda(sv.recebido)]
     ].concat(outrasRec > 0.004 ? [['  Outras receitas (lançadas no Financeiro)', fmtMoeda(outrasRec)]] : [], [
       ['', ''],
       ['A RECEBER (todos os meses)', fmtMoeda(sp.pendente + sa.pendente + sv.pendente)],
-      ['  Novas ações', fmtMoeda(sp.pendente)],
+      ['  Iniciais', fmtMoeda(sp.pendente)],
       ['  Termos de Acordo', fmtMoeda(sa.pendente)],
       ['  Alvarás', fmtMoeda(sv.pendente)],
       ['', ''],
@@ -9512,7 +9541,7 @@
     qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
     qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda') ? 'none' : '';
     if (tab !== 'financeiro') qs('finFabMenu').style.display = 'none';
-    qs('fabNew').title = (tab === 'peticoes') ? 'Nova ação' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
+    qs('fabNew').title = (tab === 'peticoes') ? 'Nova inicial' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
     atualizarMenuAtivo();
     atualizarTituloTela();
     try{ window.scrollTo(0, 0); }catch(e){}
@@ -9533,7 +9562,7 @@
   /* ============================================================
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
-  var TITULOS_TELA = { inicio:'Início', peticoes:'Novas ações', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', financeiro:'Financeiro' };
+  var TITULOS_TELA = { inicio:'Início', peticoes:'Iniciais', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', financeiro:'Financeiro' };
   var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
   var atencaoExpandida = false;
   var menuAberto = false;
@@ -10024,7 +10053,7 @@
   }
 
   qs('exportBtn').addEventListener('click', function(){
-    if (activeTab === 'inicio' || activeTab === 'financeiro'){ toast('Abra Novas ações, Termos de Acordo, Alvarás, Clientes ou Arquivados para exportar a lista.'); return; }
+    if (activeTab === 'inicio' || activeTab === 'financeiro'){ toast('Abra Iniciais, Termos de Acordo, Alvarás, Clientes ou Arquivados para exportar a lista.'); return; }
     comValoresReais(function(){
       if (activeTab === 'acordos') exportarAcordos();
       else if (activeTab === 'alvaras') exportarAlvaras();
@@ -12195,7 +12224,7 @@
   /* editor de lista (colunas das Petições, fases dos Alvarás, categorias de despesa) */
   var ed = { modo: null, itens: [], removidos: [], movimentos: {}, confirmIdx: null, novaCor: PALETA_CATEGORIA[0] };
   var ED_TEXTOS = {
-    peticao: { titulo: 'Colunas do quadro de Novas ações', ph: 'Nome da nova coluna', unidade: 'petição(ões)',
+    peticao: { titulo: 'Colunas do quadro de Iniciais', ph: 'Nome da nova coluna', unidade: 'petição(ões)',
       ajuda: 'Cada item é uma coluna do quadro. A ordem da lista (de cima para baixo) é a ordem das colunas (da esquerda para a direita). Ao excluir uma coluna que tem petições, você escolhe para onde elas vão.' },
     alvara: { titulo: 'Fases do quadro de Alvarás', ph: 'Nome da nova fase', unidade: 'alvará(s)',
       ajuda: 'A última fase marca o alvará como recebido: você pode renomeá-la, mas ela fica sempre por último e não pode ser excluída. Ao excluir uma fase que tem alvarás, você escolhe para onde eles vão.' },
@@ -16822,7 +16851,7 @@ function pbBuscarAgora(dias){
   if (pbS.buscando) return; pbS.buscando = true; pbRender();
   return pbApi('/api/djen/buscar', 'POST', dias ? { dias: dias } : {}).then(function(r){
     var erros = (r.porOab || []).filter(function(o){ return o.erro; });
-    toast(erros.length ? ('Não consegui ler ' + erros.map(function(o){ return o.nome; }).join(', ') + ': ' + erros[0].erro) : (r.novas ? r.novas + (r.novas === 1 ? ' publicação nova.' : ' publicações novas.') : 'Nada novo no Diário Oficial.'));
+    toast(erros.length ? ('Não consegui ler ' + erros.map(function(o){ return o.nome; }).join(', ') + ': ' + erros[0].erro) : (r.novas ? r.novas + (r.novas === 1 ? ' publicinicial.' : ' publicações novas.') : 'Nada novo no Diário Oficial.'));
   }).catch(function(e){ toast('Não consegui buscar: ' + e.message); }).then(function(){ pbS.buscando = false; return pbCarregar(); });
 }
 
@@ -16889,7 +16918,7 @@ function pbRender(){
   var semProc = naoLidas.filter(function(p){ return !pbVinculo(p.processo); }).length;
   var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
-  h += '<div class="pb-barra"><button type="button" class="btn btn-primary" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</button><button type="button" class="btn btn-ghost" data-pb="oabs">OABs monitoradas</button></div>';
+  h += '<div class="ini-acoes pb-barra"><button type="button" class="acao acao-ouro" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '><svg><use href="#ic-sync"/></svg><span>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</span></button><button type="button" class="acao" data-pb="oabs"><svg><use href="#ic-users"/></svg><span>OABs monitoradas</span></button></div>';
   var n = pbFiltrosAtivos();
   h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button></div>';
@@ -16915,7 +16944,7 @@ function pbListaHtml(){
   var lista = pbListaFiltrada(), limite = pbS.mais * 30, ultimoDia = '', h = '', n = pbFiltrosAtivos();
   var naoLidas = lista.filter(function(p){ return !p.lida; });
   if (n) h += '<div class="saldo-data pb-resfiltro">' + lista.length + (lista.length === 1 ? ' publicação' : ' publicações') + ' com os filtros escolhidos. <button type="button" class="btn-text" data-pb="limpar">Limpar</button></div>';
-  if (!lista.length && pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">' + (n ? 'Nenhuma publicação com esses filtros.' : (pbS.filtro === 'naolidas' ? 'Nenhuma publicação nova. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.')) + '</div>';
+  if (!lista.length && pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">' + (n ? 'Nenhuma publicação com esses filtros.' : (pbS.filtro === 'naolidas' ? 'Nenhuma publicinicial. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.')) + '</div>';
   if (naoLidas.length > 1) h += '<div class="pb-todas"><button type="button" class="btn-text" data-pb="todas-lidas">Marcar ' + (n ? 'as ' + naoLidas.length + ' deste filtro' : 'todas') + ' como lidas</button></div>';
   lista.slice(0, limite).forEach(function(p){
     if (p.data !== ultimoDia){ ultimoDia = p.data; h += '<div class="pb-dia">' + escapeHtml(pbQuando(p.data)) + '</div>'; }
@@ -17070,7 +17099,7 @@ function pbDesenharOabs(){
     return '<div class="pb-oab"><div class="pb-oab-top"><div class="field" style="flex:1"><label class="field-label" for="pbo_nm' + i + '">Nome</label><input type="text" id="pbo_nm' + i + '" maxlength="60" value="' + escapeHtml(o.nome) + '"></div><div class="pb-oab-n"><b>OAB ' + escapeHtml(o.numero + '/' + o.uf) + '</b>' + (o.principal ? '<span class="pb-tg ok">principal</span>' : '') + '</div></div>' +
       '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_at' + i + '"' + (o.ativo ? ' checked' : '') + '><span class="ad-t">Ler esta OAB</span></label>' +
       '<div class="field"><label class="field-label" for="pbo_es' + i + '">Mostrar</label><select id="pbo_es' + i + '" class="filter-select"><option value="tudo"' + (o.escopo === 'tudo' ? ' selected' : '') + '>todas as publicações</option><option value="conjunto"' + (o.escopo === 'conjunto' ? ' selected' : '') + '>só processos em conjunto comigo</option></select></div>' +
-      '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av' + i + '"' + (o.avisar ? ' checked' : '') + '><span class="ad-t">Avisar no celular quando chegar publicação nova</span></label>' +
+      '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av' + i + '"' + (o.avisar ? ' checked' : '') + '><span class="ad-t">Avisar no celular quando chegar publicinicial</span></label>' +
       (o.erro ? '<div class="form-error">Última leitura falhou: ' + escapeHtml(o.erro) + '</div>' : '') + (!o.principal ? '<button type="button" class="btn-text" data-pbo="remover" data-i="' + i + '" style="color:var(--urgente)">Remover esta OAB</button>' : '') + '</div>';
   }).join('');
   h += '<div class="pb-oab pb-novo"><div class="pb-sec-t">+ Adicionar advogado</div><div class="field"><label class="field-label" for="pbo_nome">Nome (para você identificar)</label><input type="text" id="pbo_nome" maxlength="60" placeholder="Ex.: Murilo, sócio"></div>' +
@@ -17093,7 +17122,7 @@ window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado:
 /* ---------- estilo e partida ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '.pb-hero{margin-top:0}.pb-barra{display:flex;gap:8px}.pb-barra .btn{flex:1;justify-content:center}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}.pb-lista{display:flex;flex-direction:column;gap:14px}' +
+  st.textContent = '.pb-hero{margin-top:0}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}.pb-lista{display:flex;flex-direction:column;gap:14px}' +
     '.pb-seg-lin{display:flex;gap:8px;align-items:center}.pb-seg-lin .segmented{flex:1;min-width:0;flex-wrap:nowrap}.pb-seg-lin .seg-btn{flex:1;justify-content:center;white-space:nowrap;padding-left:6px;padding-right:6px}.pb-funil{position:relative;width:46px;height:46px;padding:0;justify-content:center;flex:none}.pb-funil.ativo{border-color:var(--accent);color:var(--accent)}.pb-n{position:absolute;top:-6px;right:-6px;background:var(--urgente);color:#fff;font-style:normal;font-size:var(--t1);font-weight:700;min-width:18px;height:18px;border-radius:99px;display:grid;place-items:center;padding:0 5px}' +
     '.pb-painel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}.pb-resfiltro{padding:0 4px}' +
     '.pb-dia{font-size:var(--t2);font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;margin:6px 4px 0}.pb-todas{text-align:right}' +
@@ -17124,7 +17153,7 @@ window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado:
 /* ============================================================
    AGENDA DE PRAZOS PROCESSUAIS, AUDIÊNCIAS E TAREFAS
    - separada da Central de atenção (que fica só com dinheiro)
-   - junta o que você cadastra na Agenda, os prazos confirmados nas Publicações e os prazos que já existiam nas Novas ações
+   - junta o que você cadastra na Agenda, os prazos confirmados nas Publicações e os prazos que já existiam nas Iniciais
    - cartão "Prazos processuais" no Início e avisos no celular (5, 2 e 1 dia antes e no dia, configurável por item)
    ============================================================ */
 var agDocs = [], agOk = false, agEditKey = null, agEditTipo = 'prazo';
@@ -17180,7 +17209,7 @@ function agItens(){
   agDocs.forEach(function(d){
     l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d });
   });
-  casos.forEach(function(c){   /* prazos que já existiam nas Novas ações */
+  casos.forEach(function(c){   /* prazos que já existiam nas Iniciais */
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
     l.push({ key: 'c:' + c.id, fonte: 'caso', id: c.id, tipo: 'prazo', titulo: c.prazo.descricao || 'Prazo processual', cliente: c.cliente || '', processo: c.numeroProcesso || '', data: c.prazo.data, hora: '', trabalhar: '', situacao: c.prazo.concluido ? 'feito' : 'afazer', concluido: !!c.prazo.concluido, pubId: '', avisos: AG_PADRAO.slice(), caso: c });
   });
@@ -17216,7 +17245,7 @@ function agRenderInicio(){
   var h = '<div class="ini-card ag-cartao"><div class="ag-cab"><span class="ag-tit">' + fvIc('scale', '#D93B3B') + '<b>Prazos processuais</b></span><span class="saldo-data">próximos 7 dias</span></div>' + (chips ? '<div class="ag-chips">' + chips + '</div>' : '');
   if (!l.length) h += '<div class="saldo-data" style="margin:8px 0;">Nenhum prazo nos próximos 7 dias.</div>';
   else h += l.slice(0, 5).map(function(i){ return agLinha(i); }).join('') + (l.length > 5 ? '<div class="saldo-data" style="margin-top:6px;">e mais ' + (l.length - 5) + '</div>' : '');
-  h += '<div class="ag-rod"><button type="button" class="btn-text" data-ag-ir="agenda">Ver agenda completa ›</button>' + (npub ? '<button type="button" class="btn-text" data-ag-ir="publicacoes">● ' + npub + (npub === 1 ? ' publicação nova' : ' publicações novas') + ' ›</button>' : '') + '</div></div>';
+  h += '<div class="ag-rod"><button type="button" class="btn-text" data-ag-ir="agenda">Ver agenda completa ›</button>' + (npub ? '<button type="button" class="btn-text" data-ag-ir="publicacoes">● ' + npub + (npub === 1 ? ' publicinicial' : ' publicações novas') + ' ›</button>' : '') + '</div></div>';
   el.innerHTML = h;
 }
 function agLinha(i){
@@ -17262,7 +17291,7 @@ function agRender(){
   agMontarTela();
   var w = qs('agWrap'); if (!w) return;
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
-  var h = '<div class="ag-topo"><div class="segmented" id="agSeg">' + [['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.vista === f[0] ? ' active' : '') + '" data-ag="vista" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div><button type="button" class="btn btn-primary" data-ag="novo">+ Novo</button></div>';
+  var h = '<div class="ini-acoes ag-acoes" id="agSeg">' + [['semana', 'Semana', 'ic-agenda'], ['mes', 'Mês', 'ic-mes'], ['lista', 'Lista', 'ic-lista']].map(function(f){ return '<button type="button" class="acao' + (agS.vista === f[0] ? ' on' : '') + '" data-ag="vista" data-v="' + f[0] + '"><svg><use href="#' + f[2] + '"/></svg><span>' + f[1] + '</span></button>'; }).join('') + '<button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo</span></button></div>';
   h += '<div class="ag-filtros">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas']].map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '<button type="button" class="ag-f' + (agS.feitos ? ' on' : '') + '" data-ag="feitos">Concluídos</button></div>';
   var todos = agFiltrados(agItens()).sort(agOrdem);
   if (agS.vista === 'semana') h += agVistaSemana(todos);
@@ -17339,7 +17368,7 @@ function agCartao(i){
   tags += '<span class="pb-tg ' + (i.situacao === 'feito' ? 'ok' : (i.situacao === 'elaboracao' ? 'pz' : '')) + '">' + (i.tipo === 'audiencia' && i.situacao === 'feito' ? 'Realizada' : AG_SITUACAO[i.situacao]) + '</span>';
   if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.rotulo.toLowerCase()) + ' cadastrada</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
-  if (i.fonte === 'caso') tags += '<span class="pb-tg">da nova ação</span>';
+  if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
   var btn = '';
   if (!i.concluido) btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + escapeHtml(i.key) + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
   else btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + escapeHtml(i.key) + '">Reabrir</button>';
@@ -17396,7 +17425,7 @@ function agAbrir(key){
   agEditKey = key || null; agEditTipo = i ? i.tipo : 'prazo';
   var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
   var h = '<div class="segmented" id="age_seg"' + (i ? ' style="display:none"' : '') + '>' + ['prazo', 'audiencia', 'tarefa'].map(function(t){ return '<button type="button" class="seg-btn' + (agEditTipo === t ? ' active' : '') + '" data-age="tipo" data-v="' + t + '">' + AG_TIPOS[t] + '</button>'; }).join('') + '</div>';
-  if (caso) h += '<div class="parcela-sum">Este prazo é da ação nova <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
+  if (caso) h += '<div class="parcela-sum">Este prazo é da inicial <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
   h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(i ? i.titulo : '') + '" placeholder="Ex.: Contestação"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(i ? i.processo : '') + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(i ? i.cliente : '') + '"></div>' +
@@ -17406,7 +17435,7 @@ function agAbrir(key){
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
     '<div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
     (i && !caso ? '<button type="button" class="btn-text" data-age="excluir" style="color:var(--urgente)">Excluir este item</button>' : '');
-  qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da ação nova' : 'Editar item') : 'Novo item da agenda';
+  qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da inicial' : 'Editar item') : 'Novo item da agenda';
   adAbrirData(qs('age_data')); adAbrirData(qs('age_trab'));
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
   qs('overlayAg').classList.add('show');
@@ -17441,7 +17470,7 @@ function agExcluirEd(b){
   st.textContent = '.ag-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;border-radius:12px;background:var(--surface-2);line-height:1.15}.ag-dt b{font-size:var(--t5)}.ag-dt span{font-size:var(--t1);font-weight:700;color:var(--ink-soft)}.ag-dt.atr{background:rgba(217,59,59,.12)}.ag-dt.atr b,.ag-dt.atr span{color:var(--urgente)}.ag-dt.hoje{background:rgba(183,121,30,.15)}.ag-dt.hoje b,.ag-dt.hoje span{color:var(--tutela)}' +
     '.ag-cartao{padding:14px 16px}.ag-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ag-tit{display:flex;align-items:center;gap:10px;font-size:var(--t4)}.ag-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}' +
     '.ag-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.ag-lin-tx{display:flex;flex-direction:column;min-width:0}.ag-lin-tx b{font-size:var(--t4);overflow-wrap:anywhere}.ag-lin-tx span{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}' +
-    '.ag-rod{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-topo{display:flex;gap:8px;align-items:center}.ag-topo .segmented{flex:1;flex-wrap:nowrap}.ag-topo .seg-btn{flex:1;justify-content:center}.ag-filtros{display:flex;gap:6px;flex-wrap:wrap}' +
+    '.ag-rod{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-filtros{display:flex;gap:6px;flex-wrap:wrap}' +
     '.ag-f{font-family:inherit;font-size:var(--t2);font-weight:600;padding:7px 12px;border-radius:99px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-f.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}' +
     '.ag-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}.ag-nav b{font-size:var(--t4)}' +
     '.ag-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.ag-d{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 5px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-d span{font-size:var(--t1);text-transform:uppercase;font-weight:600}.ag-d b{font-size:var(--t5);color:var(--ink)}.ag-d.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}.ag-d.on b{color:var(--bg)}.ag-d.hoje:not(.on){border-color:var(--accent)}' +

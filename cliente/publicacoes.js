@@ -118,7 +118,7 @@ function pbBuscarAgora(dias){
   if (pbS.buscando) return; pbS.buscando = true; pbRender();
   return pbApi('/api/djen/buscar', 'POST', dias ? { dias: dias } : {}).then(function(r){
     var erros = (r.porOab || []).filter(function(o){ return o.erro; });
-    toast(erros.length ? ('Não consegui ler ' + erros.map(function(o){ return o.nome; }).join(', ') + ': ' + erros[0].erro) : (r.novas ? r.novas + (r.novas === 1 ? ' publicação nova.' : ' publicações novas.') : 'Nada novo no Diário Oficial.'));
+    toast(erros.length ? ('Não consegui ler ' + erros.map(function(o){ return o.nome; }).join(', ') + ': ' + erros[0].erro) : (r.novas ? r.novas + (r.novas === 1 ? ' publicinicial.' : ' publicações novas.') : 'Nada novo no Diário Oficial.'));
   }).catch(function(e){ toast('Não consegui buscar: ' + e.message); }).then(function(){ pbS.buscando = false; return pbCarregar(); });
 }
 
@@ -185,7 +185,7 @@ function pbRender(){
   var semProc = naoLidas.filter(function(p){ return !pbVinculo(p.processo); }).length;
   var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
     '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
-  h += '<div class="pb-barra"><button type="button" class="btn btn-primary" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</button><button type="button" class="btn btn-ghost" data-pb="oabs">OABs monitoradas</button></div>';
+  h += '<div class="ini-acoes pb-barra"><button type="button" class="acao acao-ouro" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '><svg><use href="#ic-sync"/></svg><span>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</span></button><button type="button" class="acao" data-pb="oabs"><svg><use href="#ic-users"/></svg><span>OABs monitoradas</span></button></div>';
   var n = pbFiltrosAtivos();
   h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button></div>';
@@ -211,7 +211,7 @@ function pbListaHtml(){
   var lista = pbListaFiltrada(), limite = pbS.mais * 30, ultimoDia = '', h = '', n = pbFiltrosAtivos();
   var naoLidas = lista.filter(function(p){ return !p.lida; });
   if (n) h += '<div class="saldo-data pb-resfiltro">' + lista.length + (lista.length === 1 ? ' publicação' : ' publicações') + ' com os filtros escolhidos. <button type="button" class="btn-text" data-pb="limpar">Limpar</button></div>';
-  if (!lista.length && pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">' + (n ? 'Nenhuma publicação com esses filtros.' : (pbS.filtro === 'naolidas' ? 'Nenhuma publicação nova. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.')) + '</div>';
+  if (!lista.length && pbS.oabs.some(function(o){ return o.ativo; })) h += '<div class="financeiro-vazio">' + (n ? 'Nenhuma publicação com esses filtros.' : (pbS.filtro === 'naolidas' ? 'Nenhuma publicinicial. Tudo lido.' : 'Nenhuma publicação nos últimos 90 dias para este filtro.')) + '</div>';
   if (naoLidas.length > 1) h += '<div class="pb-todas"><button type="button" class="btn-text" data-pb="todas-lidas">Marcar ' + (n ? 'as ' + naoLidas.length + ' deste filtro' : 'todas') + ' como lidas</button></div>';
   lista.slice(0, limite).forEach(function(p){
     if (p.data !== ultimoDia){ ultimoDia = p.data; h += '<div class="pb-dia">' + escapeHtml(pbQuando(p.data)) + '</div>'; }
@@ -366,7 +366,7 @@ function pbDesenharOabs(){
     return '<div class="pb-oab"><div class="pb-oab-top"><div class="field" style="flex:1"><label class="field-label" for="pbo_nm' + i + '">Nome</label><input type="text" id="pbo_nm' + i + '" maxlength="60" value="' + escapeHtml(o.nome) + '"></div><div class="pb-oab-n"><b>OAB ' + escapeHtml(o.numero + '/' + o.uf) + '</b>' + (o.principal ? '<span class="pb-tg ok">principal</span>' : '') + '</div></div>' +
       '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_at' + i + '"' + (o.ativo ? ' checked' : '') + '><span class="ad-t">Ler esta OAB</span></label>' +
       '<div class="field"><label class="field-label" for="pbo_es' + i + '">Mostrar</label><select id="pbo_es' + i + '" class="filter-select"><option value="tudo"' + (o.escopo === 'tudo' ? ' selected' : '') + '>todas as publicações</option><option value="conjunto"' + (o.escopo === 'conjunto' ? ' selected' : '') + '>só processos em conjunto comigo</option></select></div>' +
-      '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av' + i + '"' + (o.avisar ? ' checked' : '') + '><span class="ad-t">Avisar no celular quando chegar publicação nova</span></label>' +
+      '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av' + i + '"' + (o.avisar ? ' checked' : '') + '><span class="ad-t">Avisar no celular quando chegar publicinicial</span></label>' +
       (o.erro ? '<div class="form-error">Última leitura falhou: ' + escapeHtml(o.erro) + '</div>' : '') + (!o.principal ? '<button type="button" class="btn-text" data-pbo="remover" data-i="' + i + '" style="color:var(--urgente)">Remover esta OAB</button>' : '') + '</div>';
   }).join('');
   h += '<div class="pb-oab pb-novo"><div class="pb-sec-t">+ Adicionar advogado</div><div class="field"><label class="field-label" for="pbo_nome">Nome (para você identificar)</label><input type="text" id="pbo_nome" maxlength="60" placeholder="Ex.: Murilo, sócio"></div>' +
@@ -389,7 +389,7 @@ window.__horusTeste = { agItens: function(){ return agItens(); }, agNomeFeriado:
 /* ---------- estilo e partida ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '.pb-hero{margin-top:0}.pb-barra{display:flex;gap:8px}.pb-barra .btn{flex:1;justify-content:center}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}.pb-lista{display:flex;flex-direction:column;gap:14px}' +
+  st.textContent = '.pb-hero{margin-top:0}.pb-filtros{display:flex;flex-direction:column;gap:8px}.pb-filtros select,.pb-oab select,.pb-sec select{width:100%}.pb-lista{display:flex;flex-direction:column;gap:14px}' +
     '.pb-seg-lin{display:flex;gap:8px;align-items:center}.pb-seg-lin .segmented{flex:1;min-width:0;flex-wrap:nowrap}.pb-seg-lin .seg-btn{flex:1;justify-content:center;white-space:nowrap;padding-left:6px;padding-right:6px}.pb-funil{position:relative;width:46px;height:46px;padding:0;justify-content:center;flex:none}.pb-funil.ativo{border-color:var(--accent);color:var(--accent)}.pb-n{position:absolute;top:-6px;right:-6px;background:var(--urgente);color:#fff;font-style:normal;font-size:var(--t1);font-weight:700;min-width:18px;height:18px;border-radius:99px;display:grid;place-items:center;padding:0 5px}' +
     '.pb-painel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}.pb-resfiltro{padding:0 4px}' +
     '.pb-dia{font-size:var(--t2);font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;margin:6px 4px 0}.pb-todas{text-align:right}' +

@@ -142,13 +142,13 @@ No contrato de mão de obra, "Abater valor do contrato" registra um pagamento de
 - **Prazos:** o texto é lido para sugerir "prazo de N dias" (dias úteis, ou corridos se o texto disser). Você confere, ajusta e confirma; o prazo confirmado fica em `prazosPub` (entra no backup), aparece na Central de atenção quando faltam até 10 dias e nas notificações das 10:00. A contagem (`pbCalcular`): disponibilização → publicação no 1º dia útil seguinte → começa a contar no 1º dia útil seguinte à publicação; dias úteis pulam fim de semana, feriados do TJGO (lista oficial 2026 e regra geral para outros anos: nacionais, estaduais de Goiás, Carnaval, Semana Santa e Corpus Christi) e o recesso de 20/12 a 20/01 (CPC art. 220). Pontos facultativos de 2026 não são pulados; o cálculo avisa quando caem no período. O app só sugere: a conferência final é do advogado. Em janeiro, atualizar `PB_FERIADOS_2026` e `PB_FACULTATIVOS` com a lista do novo ano.
 - **Testes:** `node test/djen.test.mjs` (sem servidor) e `test/publicacoes.test.mjs` (Diário de mentira na porta 8890; as instruções de como subir o servidor estão no topo do arquivo).
 
-## Agenda, cartão de prazos no Início e "Novas ações"
+## Agenda, cartão de prazos no Início e "Iniciais"
 
 - **Central de atenção só com dinheiro.** Prazos processuais saíram dela: ganharam o cartão **"Prazos processuais · próximos 7 dias"** no Início (logo abaixo do resumo; atrasados, prazos da semana e audiências) e a aba **Agenda**.
 - **Agenda** (`cliente/agenda.js`, coleção `agenda`, entra no backup): visões **Semana**, **Mês** e **Lista**, filtros (Tudo, Prazos, Audiências, Tarefas e Concluídos) e três tipos de item. **Prazo** (data fatal + "trabalhar até", que o app sugere 2 dias úteis antes), **Audiência** (data e hora) e **Tarefa**. Situação: a fazer, em elaboração, concluído (protocolado). O calendário marca prazo, tarefa/trabalhar até, audiência e feriado do TJGO; domingos e feriados em vermelho.
-- **De onde vêm os itens:** os que você cadastra na Agenda; os prazos confirmados nas Publicações (ligados à publicação); e os prazos que já existiam nas Novas ações (campo `prazo` da ação, mostrados como "da nova ação"; concluir ou mudar a data grava na própria ação). A coleção antiga `prazosPub` é migrada sozinha para a `agenda`.
+- **De onde vêm os itens:** os que você cadastra na Agenda; os prazos confirmados nas Publicações (ligados à publicação); e os prazos que já existiam nas Iniciais (campo `prazo` da ação, mostrados como "da inicial"; concluir ou mudar a data grava na própria ação). A coleção antiga `prazosPub` é migrada sozinha para a `agenda`.
 - **Avisos no celular (10:00):** mensagem própria "Prazos: N vencem hoje, M nos próximos dias", separada de "publicações novas" e de "vencem hoje" (dinheiro). Cada item avisa no dia e nos dias de antecedência escolhidos (padrão 5, 2 e 1 dia antes; opções: 1 dia antes, só no dia, não avisar). O servidor guarda `prazos` no resumo (`/api/notif/resumo`); a regra está em `prazosDoDia` (`src/index.js`).
-- **Nome:** a aba "Petições" agora é **Novas ações** (menu, barra de baixo, títulos, busca e relatórios). Os dados e o campo `casos` não mudaram.
+- **Nome:** a aba "Petições" agora é **Iniciais** (menu, barra de baixo, títulos, busca e relatórios). Os dados e o campo `casos` não mudaram.
 - **Menu lateral no celular:** não rola mais de lado (o item arrastava o menu para a esquerda) e os nomes longos quebram de linha (`public/tema.css`).
 - **Testes:** `test/agenda.test.mjs` (o topo do arquivo diz como subir o servidor).
 
@@ -156,3 +156,7 @@ No contrato de mão de obra, "Abater valor do contrato" registra um pagamento de
 - O botão com símbolo de funil, ao lado de "Não lidas / Meus processos / Todas", abre o painel de filtros: **cliente, partes ou processo** (texto), **data de/até**, **OAB monitorada**, **advogado** (nome ou número da OAB, inclusive o da parte contrária) e **tribunal**. O botão mostra quantos filtros estão ativos; "Limpar filtros" volta tudo. Os filtros valem sobre os últimos 90 dias.
 - Cada publicação passa a guardar os advogados citados (`advs`, nome e OAB). Na primeira leitura depois desta atualização o servidor refaz os últimos 30 dias uma vez só (`advsOk` na configuração) para completar as publicações já guardadas, sem mexer em "lida" nem gerar avisos.
 - O botão de ler passou a se chamar "Marcar como lida" (e "Marcar como não lida"), com o mesmo estilo dos outros botões do cartão.
+
+### Nome "Iniciais" e botões no padrão do Início
+- A aba que era "Petições" chama-se **Iniciais** (menu, barra de baixo, títulos, busca e relatórios; os formulários viram "Nova inicial" e "Editar inicial"). O nome curto mantém a barra de baixo em uma linha só.
+- "Buscar agora" e "OABs monitoradas" (Publicações) e "Semana", "Mês", "Lista" e "Novo" (Agenda) usam os mesmos botões da tela inicial (`.ini-acoes .acao`: ícone em cima e texto embaixo; o principal em dourado e a visão escolhida em escuro).
