@@ -34,3 +34,7 @@
 
 /* O cadastro de cliente pode ser aberto de dentro de outras janelas (ficha do processo): fica por cima */
 #overlayClienteEdit{z-index:300;}
+
+/* Janelas abertas de dentro da leitura de uma publicação (cadastro de processo e de inicial) ficam por cima dela */
+#overlayPrEsc,#overlayPr,#overlay{z-index:150;}
+#overlayPrArq{z-index:160;}

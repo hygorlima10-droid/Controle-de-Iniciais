@@ -208,12 +208,15 @@ await page.click('#pbCorpo [data-pbd="naolida"]'); await page.waitForTimeout(100
 check((await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900005').lida === false && !(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show'))), '"Manter como não lida" desfaz e fecha, e a publicação continua em "Não lidas"');
 await page.click('.pb-b[data-pb="abrir"][data-id="900005"]'); await page.waitForTimeout(1200);
 await page.click('#pbCorpo [data-pbd="cadastrar"]'); await page.waitForTimeout(500);
-check(!(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show'))) && await page.evaluate(() => document.getElementById('overlayPrEsc').classList.contains('show')) && /Processo já em andamento/.test(await t('#preCorpo')), '"Cadastrar processo" no texto fecha a leitura e abre a escolha (processo em andamento ou nova inicial)');
+const sobre = await page.evaluate(() => { const el = document.getElementById('preCorpo'), r = el.getBoundingClientRect(), x = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!(x && x.closest('#overlayPrEsc')); });
+check(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show') && document.getElementById('overlayPrEsc').classList.contains('show')) && sobre && /Processo já em andamento/.test(await t('#preCorpo')), '"Cadastrar processo" no texto abre a escolha POR CIMA e a leitura continua aberta por baixo');
 await page.click('[data-pre="processo"]'); await page.waitForTimeout(500);
 check((await page.evaluate(() => document.getElementById('pr_numero').value)) === '5706736-75.2025.8.09.0107', 'e o cadastro já vem com o número da publicação');
 await page.click('[data-prf="salvar"]'); await page.waitForTimeout(1200);
+check(await page.evaluate(() => document.getElementById('overlayPb').classList.contains('show') && !!document.querySelector('#pbCorpo [data-pbd="irproc"]') && !document.querySelector('#pbCorpo [data-pbd="cadastrar"]') && !!document.getElementById('pbPrazoBox')), 'depois de cadastrar, a leitura continua aberta e já mostra "Abrir o processo", o prazo e as opções de lida / não lida');
+await page.click('#pbCorpo [data-pbd="naolida"]'); await page.waitForTimeout(800);
+check((await f('GET', '/api/djen/lista')).j.pubs.find(p => p.id === '900005').lida === false, 'e dá para escolher depois se fica lida ou não lida');
 await page.click('.pb-b[data-pb="abrir"][data-id="900005"]'); await page.waitForTimeout(1200);
-check(await page.evaluate(() => !!document.querySelector('#pbCorpo [data-pbd="irproc"]') && !document.querySelector('#pbCorpo [data-pbd="cadastrar"]')), 'com o processo cadastrado, o texto passa a ter "Abrir o processo" no lugar');
 await page.click('#pbFechar'); await page.waitForTimeout(300);
 // publicações idênticas (um autor em cada uma) viram um cartão só
 const NG = '5700000-10.2026.8.09.0107', numG = NG.replace(/\D/g, '');

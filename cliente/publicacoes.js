@@ -287,8 +287,8 @@ function pbMontarDetalhe(){
     if (a === 'confirmar') pbSalvarPrazo(false);
     else if (a === 'naoe'){ pbMarcar(pbMembros(pbPub(pbDetId)).map(function(x){ return x.id; }), { semPrazo: true, lida: true }); d.classList.remove('show'); toast('Marcada como sem prazo.'); }
     else if (a === 'manual'){ var m = qs('pbManualBox'); m.style.display = m.style.display === 'none' ? '' : 'none'; }
-    else if (a === 'cadastrar'){ var idc = pbDetId; d.classList.remove('show'); pbCadastrar(idc); }
-    else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); d.classList.remove('show'); if (vi) prAbrir(vi.id); }
+    else if (a === 'cadastrar') pbCadastrar(pbDetId);   /* a leitura continua aberta por baixo: depois de cadastrar, dá para marcar prazo ou lida */
+    else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); if (vi) prAbrir(vi.id); }
     else if (a === 'reabrirproc'){ var pr2 = pbPub(pbDetId), vr = pr2 && pbVinculo(pr2.processo); if (vr) prReabrir(vr.id).then(function(){ pbDesenharDetalhe(); }); }
     else if (a === 'naolida'){ var pn = pbPub(pbDetId); if (pn) pbMarcar(pbMembros(pn).map(function(x){ return x.id; }), { lida: false }); d.classList.remove('show'); toast('Continua em “Não lidas”.'); }
     else if (a === 'copiar'){ var t = (pbTextos[pbDetId] || {}).texto || (pbPub(pbDetId) || {}).trecho || ''; try{ navigator.clipboard.writeText(t); toast('Texto copiado.'); }catch(x){ toast('Não consegui copiar.'); } }

@@ -21,6 +21,7 @@ function prDepois(){
   try{ if (activeTab === 'processos') prRender(); }catch(e){ console.error('processos', e); }
   try{ agDepois(); }catch(e){}
   try{ if (activeTab === 'publicacoes') pbRender(); }catch(e){}
+  try{ if (qs('overlayPb') && qs('overlayPb').classList.contains('show')) pbDesenharDetalhe(); }catch(e){}   /* a leitura da publicação aberta mostra o processo recém-cadastrado */
   try{ if (qs('overlayClientePerfil') && qs('overlayClientePerfil').classList.contains('show')) renderPerfil(); }catch(e){}
   try{ if (activeTab === 'arquivados') renderArquivados(); }catch(e){}
 }
