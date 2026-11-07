@@ -369,6 +369,7 @@ function pbAvisoLeitura(){
   var comErro = ativas.filter(function(o){ return o.erro; }), parada = !pbS.ultima || (Date.now() - Date.parse(pbS.ultima)) > 30 * 3600e3, msg = '';
   if (comErro.length) msg = 'A última leitura falhou para ' + comErro.map(function(o){ return o.nome; }).join(', ') + ' (' + comErro[0].erro + '). Pode haver publicação que você ainda não viu.';
   else if (parada) msg = pbS.ultima ? 'A leitura automática não roda desde ' + pbQuandoAtualizou() + '. Pode haver publicação que você ainda não viu.' : 'A leitura automática do Diário Oficial ainda não rodou.';
+  if (comErro.length && /\b(403|429|5\d\d)\b/.test(comErro[0].erro)) msg += ' O app tenta de novo sozinho de 2 em 2 horas, até as 18h.';
   return msg ? '<div class="aviso-sis" id="pbAvisoLeitura"><span class="as-txt">' + escapeHtml(msg) + ' Toque em “Buscar agora”.</span></div>' : '';
 }
 function pbPainelHtml(){

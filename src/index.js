@@ -3,7 +3,7 @@
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
 import { gerarChavesVapid, enviarPush } from './push.js';
-import { djenRotas, lerDjen, pubsParaAvisar, marcarAvisadas } from './djen.js';
+import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
@@ -462,7 +462,7 @@ const gravar = (env, colecao, id, dados) =>
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } await enviarResumoDiario(env); })() : fazerBackup(env));
+    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : fazerBackup(env)));
   },
   async fetch(request, env) {
     return comSeguranca(await tratar(request, env));

@@ -1,7 +1,7 @@
 // Testes do que roda sozinho no Node (sem navegador): limpeza do texto, trecho, prazo sugerido e leitura paginada do DJEN.
 //   node test/djen.test.mjs
 import http from 'node:http';
-import { htmlParaTexto, trechoDe, sugerirPrazo, sugerirAudiencia, lerCfg, lerDjen, extrairDados } from '../src/djen.js';
+import { htmlParaTexto, trechoDe, sugerirPrazo, sugerirAudiencia, lerCfg, lerDjen, relerSePreciso, extrairDados } from '../src/djen.js';
 import { montarNotificacoes } from '../src/index.js';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 
@@ -105,4 +105,32 @@ check(cfg2.advsOk === true, 'a atualização é registrada para não repetir');
 await lerDjen(env2);
 check(vistos[1] === somar(hojeBR, -2), 'as leituras seguintes voltam só 2 dias (pedido: ' + vistos[1] + ')');
 srv2.close();
+
+// DJEN respondendo 403/5xx: repete com pausa, continua se identificando como Horus, mostra o motivo e relê mais tarde
+{
+  let pedidos = 0, uas = [], modo403 = 'sempre';
+  const srv3 = http.createServer((req, res) => {
+    pedidos++; uas.push(req.headers['user-agent'] + '|' + (req.headers.origin || '') + '|' + (req.headers.referer || ''));
+    if (modo403 === 'sempre' || (modo403 === 'uma' && pedidos === 1)) { res.writeHead(403, { 'content-type': 'text/html' }); res.end('<html><body><h1>Access denied</h1> bloqueado pelo firewall</body></html>'); return; }
+    res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ count: 1, items: [{ id: 700, data_disponibilizacao: hojeBR, siglaTribunal: 'TJGO', nomeOrgao: 'Vara', tipoDocumento: 'Decisão', numero_processo: '55932176420218090107', texto: 'DECISÃO\nDEFIRO.', destinatarios: [], destinatarioadvogados: [] }] }));
+  }).listen(0);
+  await new Promise(r => srv3.once('listening', r));
+  const url3 = 'http://127.0.0.1:' + srv3.address().port + '/x';
+  mem.clear(); mem.set('_djen|config', JSON.stringify({ oabs: [{ id: 'o1', nome: 'Hygor', numero: '60456', uf: 'GO', ativo: true, escopo: 'tudo', avisar: true }], ultimaLeitura: null, advsOk: true }));
+  const e3 = { DJEN_URL: url3, DB: db2, DJEN_ESPERA_MS: '0' };
+  let r3 = await lerDjen(e3);
+  check(pedidos === 3 && r3.porOab[0].erro.includes('403') && r3.porOab[0].erro.includes('Access denied') && /3 tentativas/.test(r3.porOab[0].erro), 'DJEN recusando (403): tenta 3 vezes e guarda o motivo, com o que o DJEN respondeu: ' + r3.porOab[0].erro);
+  check(uas.every(u => u === 'Horus/1.0||'), 'o app continua se identificando como Horus em todas as tentativas (não finge ser navegador)');
+  check(JSON.parse(mem.get('_djen|config')).oabs[0].erro.includes('403'), 'o erro fica guardado na OAB (aparece no aviso da tela)');
+  pedidos = 0; modo403 = 'uma';
+  r3 = await lerDjen(e3);
+  check(pedidos >= 2 && !r3.porOab[0].erro && r3.novas === 1, 'um 403 passageiro é superado na segunda tentativa');
+  // releitura das 12h/14h/16h/18h
+  pedidos = 0; modo403 = 'nunca'; mem.set('_djen|config', JSON.stringify({ oabs: [{ id: 'o1', nome: 'Hygor', numero: '60456', uf: 'GO', ativo: true, escopo: 'tudo', avisar: true, ultima: hojeBR }], ultimaLeitura: null, advsOk: true }));
+  check(await relerSePreciso(e3) === null && pedidos === 0, 'releitura: se a leitura das 10h deu certo, não consulta de novo');
+  mem.set('_djen|config', JSON.stringify({ oabs: [{ id: 'o1', nome: 'Hygor', numero: '60456', uf: 'GO', ativo: true, escopo: 'tudo', avisar: true, ultima: somar(hojeBR, -1), erro: 'O DJEN respondeu 403' }], ultimaLeitura: null, advsOk: true }));
+  const rr = await relerSePreciso(e3);
+  check(rr && pedidos >= 1 && !rr.porOab[0].erro && JSON.parse(mem.get('_djen|config')).oabs[0].ultima === hojeBR, 'releitura: se a leitura das 10h falhou, lê de novo e marca como lida hoje');
+  srv3.close();
+}
 console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

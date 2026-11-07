@@ -7,7 +7,8 @@
 import { sugerirPecas } from './pecas.js';
 export const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
 let BASE = DJEN;   // os testes apontam DJEN_URL para um servidor de mentira
-const usar = (env) => { BASE = (env && env.DJEN_URL) || DJEN; };
+let ESPERA = 1500;   // pausa entre as tentativas (os testes zeram com DJEN_ESPERA_MS)
+const usar = (env) => { BASE = (env && env.DJEN_URL) || DJEN; ESPERA = env && env.DJEN_ESPERA_MS != null ? Number(env.DJEN_ESPERA_MS) || 0 : 1500; };
 const FUSO_MS = -3 * 3600e3, DIA = 864e5;
 const hojeBR = () => new Date(Date.now() + FUSO_MS).toISOString().slice(0, 10);
 const somarDiasISO = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * DIA).toISOString().slice(0, 10);
@@ -115,13 +116,27 @@ export function sugerirAudiencia(texto) {
 
 /* ---------- DJEN ---------- */
 const mascara = (n) => (/^\d{20}$/.test(n) ? n.slice(0, 7) + '-' + n.slice(7, 9) + '.' + n.slice(9, 13) + '.' + n.slice(13, 14) + '.' + n.slice(14, 16) + '.' + n.slice(16) : n);
-async function consultar(params) {
-  const url = BASE + '?' + params.toString(), t0 = Date.now();
+/* O DJEN às vezes responde 403, 429 ou 5xx. O app continua se identificando como "Horus" (não finge ser navegador), tenta até 3 vezes com pausa
+   e, se não der, guarda o motivo (o que o DJEN respondeu) para aparecer na tela; a releitura automática tenta de novo mais tarde. */
+const CAB = { accept: 'application/json', 'user-agent': 'Horus/1.0' };
+const trechoResposta = (txt, j) => String((j && (j.message || j.mensagem || j.error)) || String(txt || '').replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim().slice(0, 110);
+async function umaConsulta(url) {
+  const t0 = Date.now();
   try {
-    const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'Horus/1.0' }, signal: AbortSignal.timeout(20000) });
+    const r = await fetch(url, { headers: CAB, signal: AbortSignal.timeout(20000) });
     const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { /* resposta que não é JSON */ }
-    return { status: r.status, json: j, ms: Date.now() - t0 };
+    return { status: r.status, json: j, ms: Date.now() - t0, trecho: r.status === 200 ? '' : trechoResposta(txt, j), server: r.headers.get('server') || '', cfRay: r.headers.get('cf-ray') || '' };
   } catch (e) { return { status: 0, erro: String((e && e.message) || e), ms: Date.now() - t0 }; }
+}
+async function consultar(params) {
+  const url = BASE + '?' + params.toString(); let r = null;
+  for (let i = 0; i < 3; i++) {
+    if (i && ESPERA) await new Promise((ok) => setTimeout(ok, ESPERA * i));
+    r = await umaConsulta(url); r.tentativas = i + 1;
+    if (r.status === 200 || r.status === 400 || r.status === 404 || r.status === 422) break;   // erro do pedido: repetir não adianta
+  }
+  if (r.status !== 200 && !r.erro) r.erro = 'O DJEN respondeu ' + r.status + (r.status === 403 ? ' (recusou o acesso; costuma ser bloqueio temporário contra o servidor)' : '') + (r.trecho ? ': ' + r.trecho : '') + (r.tentativas > 1 ? ' [' + r.tentativas + ' tentativas]' : '');
+  return r;
 }
 /* tenta 100 por página e, se a fonte recusar, cai para 5 */
 async function consultarFlex(p) {
@@ -227,6 +242,13 @@ export async function lerDjen(env, opcoes = {}) {
   return resumo;
 }
 
+/* releitura das 12h, 14h, 16h e 18h: só lê de novo se a leitura das 10h falhou (alguma OAB ativa não leu hoje) */
+export async function relerSePreciso(env) {
+  usar(env);
+  const cfg = await lerCfg(env), ativas = cfg.oabs.filter((o) => o.ativo), hoje = hojeBR();
+  if (!ativas.length || ativas.every((o) => !o.erro && o.ultima === hoje)) return null;
+  return lerDjen(env);
+}
 /* publicações novas que ainda não viraram notificação (o resumo das 10h manda e marca) */
 export async function pubsParaAvisar(env) {
   const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.notificada') = 0 LIMIT 200").bind(COL_PUB).all();
@@ -247,7 +269,8 @@ async function djenTeste(request) {
   const medir = async (p) => { const r = await consultar(p), j = r.json; return { status: r.status, ms: r.ms, erro: r.erro, total: j && j.count, itens: j && Array.isArray(j.items) ? j.items.length : undefined }; };
   const base = (n) => paramsOab({ numero: oab, uf }, somarDiasISO(hoje, -n), hoje, 1, 5);
   const grande = paramsOab({ numero: oab, uf }, somarDiasISO(hoje, -3), hoje, 1, 100);
-  return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, tres_dias_tam5: await medir(base(3)), tres_dias_tam100: await medir(grande), trinta_dias: await medir(base(30)) });
+  const cru = async () => { const r = await umaConsulta(BASE + '?' + base(3).toString()); return { status: r.status, ms: r.ms, erro: r.erro, resposta_do_djen: r.trecho, servidor: r.server, cf_ray: r.cfRay }; };
+  return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, tres_dias_tam5: await medir(base(3)), tres_dias_tam100: await medir(grande), trinta_dias: await medir(base(30)), detalhe_de_uma_tentativa: await cru() });
 }
 export async function djenRotas(request, env, partes) {
   usar(env);
