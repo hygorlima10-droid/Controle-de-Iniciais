@@ -22,6 +22,10 @@ Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUT
 Ordem: 1 restauração segura (**feito**: `src/restauracao.js`, `cliente/backup.js`, testes `restauracao-segura` e `restauracao-tela`; removida a rota insegura `/api/restaurar`); 2 aba Configurações e menu enxuto (**esboço antes**) com lixeira e registro de ações; 3 lixeira de 30 dias e registro de ações no ponto central do servidor; 4 login individual do proprietário, sessões encerráveis e bloqueio de login por origem; 5 transferência PJ/PF atômica; 6 carregar coleções em lotes e contagem por coleção; 7 separar “Recebido no mês” e o `config`; 8 gravar advogados participantes; 9 cópia fora do banco (precisa de um bucket R2 criado pelo proprietário) e script único de testes no repositório.
 Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (portas na primeira linha de cada teste); `extratos-arquivo` precisa de `ENVIO_TOKEN`.
 
+## Conector do Cloudflare (08/11/2026)
+Autorizado para colher informações; ver `docs/CLOUDFLARE.md` (volume real do banco, Workers, limites, Time Travel). Efeito no plano: carregar em lotes sem urgência; cópia fora do banco rebaixada (Time Travel cobre); R2 não ativado.
+Perguntar ao proprietário: (1) o Worker `controle-de-iniciais` ainda é usado? (2) o plano da conta é Free ou Paid?
+
 ## Pendências de decisão
 - Nenhuma aberta (decididas em 08/11: cobrança separada do relatório do Murilo; recebimentos e “marcar como paga” só do proprietário; honorários visíveis a advogados participantes e a estagiários por permissão).
 - Próximo esboço antes de implementar: menu lateral enxuto + aba Configurações (lembretes/notificações, backup, exportar CSV, lixeira, registro de ações; depois Usuários e Perfis e permissões).
