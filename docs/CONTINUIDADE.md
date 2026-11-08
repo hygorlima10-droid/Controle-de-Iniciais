@@ -22,7 +22,7 @@ Somente análise, sem mudar o sistema:
 3. Login individual do proprietário e sessões que se podem encerrar; tabela única de política de rotas.
 4. Transferência PJ/PF atômica; carregar coleções em lotes.
 
-## Pendências de decisão (resolver na Fase 0 / esboço seguinte)
-- Cobrança de clientes: separar da ferramenta “Relatório do Murilo” para o estagiário poder cobrar? E quem registra que o cliente pagou (“Recebi R$” é do proprietário; o estagiário marca a parcela paga dentro da Inicial/Acordo/Alvará?). Conferir se marcar parcela paga gera lançamento nas finanças.
-- Totais e indicadores de honorários: seguem a permissão de “ver honorários” (proposta) ou ficam só do proprietário?
-- Próximo esboço antes de implementar: menu lateral enxuto + aba Configurações (com lembretes/notificações, backup, exportar CSV, lixeira e registro de ações).
+## Pendências de decisão
+- Nenhuma aberta (decididas em 08/11: cobrança separada do relatório do Murilo; recebimentos e “marcar como paga” só do proprietário; honorários visíveis a advogados participantes e a estagiários por permissão).
+- Próximo esboço antes de implementar: menu lateral enxuto + aba Configurações (lembretes/notificações, backup, exportar CSV, lixeira, registro de ações; depois Usuários e Perfis e permissões).
+- Lembrar na Fase 0: mapear onde marcar parcela como paga e “Recebi R$” aparecem (para travar só ao proprietário), e onde guardar “advogados participantes” em processos, iniciais, acordos e alvarás.
