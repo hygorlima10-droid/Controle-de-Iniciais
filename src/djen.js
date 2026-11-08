@@ -182,6 +182,9 @@ export function hashTexto(t) {
   let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36) + s.length.toString(36);
 }
+/* a publicação diz que o processo acabou? (só um palpite pelo texto: arquivamento, baixa, extinção, trânsito em julgado) */
+const ENCERRA = [[/arquiv(?:e|em)(?:-se)?\b|arquivamento|arquivad[oa]s?\b/i, 'arquivamento'], [/baixa\s+definitiva/i, 'baixa definitiva'], [/\bextin(?:to|ta|g[ou]|[çc][ãa]o)\b|julgo\s+extint/i, 'extinção'], [/tr[aâ]nsito\s+em\s+julgado|transitou\s+em\s+julgado/i, 'trânsito em julgado'], [/\bencerrad[oa]\b/i, 'encerramento']];
+export function motivoEncerra(texto) { const t = String(texto || ''); for (const [re, m] of ENCERRA) if (re.test(t)) return m; return ''; }
 /* peça sugerida (src/pecas.js): natureza do ato, regras do CPC, Juizado e prazo do texto */
 const pcDe = (d, texto, sug) => { if (/ata de distribui/i.test(d.tipo || '')) return null; try { return sugerirPecas({ tipo: d.tipo, comunic: d.comunic, classe: d.classe, orgao: d.orgao, tribunal: d.tribunal, texto, dest: d.dest, diasTexto: sug }); } catch (e) { return null; } };
 function paraDoc(i, o) {
@@ -195,6 +198,7 @@ function paraDoc(i, o) {
     link: /^https:\/\//.test(i.link || '') ? String(i.link).slice(0, 300) : '', dest, advs, ...(({ ativo, passivo, natureza }) => ({ ativo, passivo, natureza }))(extrairDados(texto)), sug: /ata de distribui/i.test(tipo) ? null : sugerirPrazo(texto), aud: /ata de distribui/i.test(tipo) ? null : sugerirAudiencia(texto),
     oabs: [o.id], lida: false, notificada: true, em: new Date().toISOString(),
   };
+  { const x = extrairDados(texto); if (x.valorCausa) doc.valor = x.valorCausa; const e = /ata de distribui/i.test(tipo) ? '' : motivoEncerra(texto); if (e) doc.enc = e; }
   doc.pc = pcDe(doc, texto, doc.sug); doc.th = hashTexto(texto);
   return doc;
 }
@@ -276,6 +280,29 @@ export async function marcarAvisadas(env, ids) {
   for (let k = 0; k < cmds.length; k += 50) await env.DB.batch(cmds.slice(k, k + 50));
 }
 
+/* ---------- importar processos: o que as publicações de um período dizem de cada processo ---------- */
+function agruparParaImportar(itens) {
+  const g = new Map();
+  for (const i of itens) {
+    const proc = String((i && i.numero_processo) || '').replace(/\D/g, ''); if (proc.length < 15) continue;
+    const texto = htmlParaTexto(i.texto), tipo = String(i.tipoDocumento || i.tipoComunicacao || '').slice(0, 60), data = String(i.data_disponibilizacao || '').slice(0, 10), ata = /ata de distribui/i.test(tipo);
+    const x = extrairDados(texto);
+    let a = g.get(proc);
+    if (!a) { a = { p: proc, numero: String(i.numeroprocessocommascara || mascara(proc)).slice(0, 40), trib: '', orgao: '', classe: '', natureza: '', ativo: '', passivo: '', valor: 0, dest: [], n: 0, ult: null }; g.set(proc, a); }
+    a.n++;
+    for (const k of ['ativo', 'passivo', 'natureza']) if (!a[k] && x[k]) a[k] = x[k];
+    if (!a.valor && x.valorCausa) a.valor = x.valorCausa;
+    for (const d of (Array.isArray(i.destinatarios) ? i.destinatarios : [])) {
+      const n = String(d.nome || '').replace(/^\d+\.\s*/, '').slice(0, 90); if (n && a.dest.length < 6 && !a.dest.some((y) => y.n === n)) a.dest.push({ n, p: d.polo === 'A' ? 'A' : (d.polo === 'P' ? 'P' : '') });
+    }
+    if (!a.ult || data >= a.ult.data) {
+      a.ult = { data, tipo, enc: ata ? '' : motivoEncerra(texto) };
+      a.trib = String(i.siglaTribunal || '').slice(0, 12); a.orgao = String(i.nomeOrgao || '').slice(0, 100); a.classe = String(i.nomeClasse || '').slice(0, 80);
+    }
+  }
+  return [...g.values()];
+}
+
 /* ---------- rotas /api/djen/... ---------- */
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
@@ -296,7 +323,21 @@ export async function djenRotas(request, env, partes) {
     const cfg = await lerCfg(env);
     const t = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN json_extract(dados, '$.lida') = 0 THEN 1 ELSE 0 END) AS nl FROM docs WHERE colecao = ?").bind(COL_PUB).first();
     const av = await env.DB.prepare("SELECT COUNT(*) AS n FROM docs WHERE colecao = ? AND json_extract(dados, '$.notificada') = 0").bind(COL_PUB).first();
-    return json({ oabs: cfg.oabs, ultimaLeitura: cfg.ultimaLeitura || null, total: t.n || 0, naoLidas: t.nl || 0, aAvisar: av.n || 0, hora: '10:00' });
+    return json({ oabs: cfg.oabs, ultimaLeitura: cfg.ultimaLeitura || null, total: t.n || 0, naoLidas: t.nl || 0, aAvisar: av.n || 0, hora: '10:00', importarAuto: !(env && env.IMPORTAR_AUTO === '0') });
+  }
+  if (acao === 'importar' && m === 'POST') {
+    /* uma página das publicações de uma OAB num período, já agrupada por processo; o app pede página por página e junta (cada pedido é uma consulta ao DJEN) */
+    const b = (await request.json().catch(() => null)) || {}, cfg = await lerCfg(env), o = cfg.oabs.find((x) => x.id === b.oab);
+    const dataOk = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
+    if (!o || !dataOk(b.ini) || !dataOk(b.fim) || b.ini > b.fim) return erro(400, 'invalid', 'Pedido inválido.');
+    if ((Date.parse(b.fim) - Date.parse(b.ini)) / DIA > 800) return erro(400, 'invalid', 'Período grande demais.');
+    const pagina = Math.min(Math.max(parseInt(b.pagina, 10) || 1, 1), 60); let tam = b.tam === 5 ? 5 : 100;
+    let r = await consultar(paramsOab(o, b.ini, b.fim, pagina, tam));
+    if (pagina === 1 && tam === 100 && (r.status === 400 || r.status === 422)) { tam = 5; r = await consultar(paramsOab(o, b.ini, b.fim, pagina, tam)); }
+    if (r.status !== 200 || !r.json) return json({ ok: false, motivo: r.erro || ('O Diário Oficial respondeu ' + r.status) });
+    const lote = Array.isArray(r.json.items) ? r.json.items : [], total = Number(r.json.count) || 0;
+    if (pagina === 1 && lote.length && lote.length < tam && lote.length < total) tam = lote.length;   // a fonte limitou o tamanho da página: segue no tamanho dela
+    return json({ ok: true, total, tam, pagina, lidas: lote.length, mais: !!lote.length && pagina * tam < total && pagina < 60, grupos: agruparParaImportar(lote) });
   }
   if (acao === 'lista' && m === 'GET') {
     const dias = Math.min(Math.max(parseInt(u.searchParams.get('dias') || '60', 10) || 60, 1), MAX_DIAS_LISTA);

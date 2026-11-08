@@ -441,6 +441,11 @@ async function api(request, env, partes) {
   }
   if (id && metodo === 'PUT') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
+    if (new URL(request.url).searchParams.get('soNovo') === '1') {
+      /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
+      const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
+      return json({ ok: true, criado: !!(r && r.meta && r.meta.changes > 0) });
+    }
     await gravar(env, colecao, id, dados);
     return json({ ok: true });
   }

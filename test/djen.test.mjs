@@ -1,7 +1,7 @@
 // Testes do que roda sozinho no Node (sem navegador): limpeza do texto, trecho, prazo sugerido e leitura paginada do DJEN.
 //   node test/djen.test.mjs
 import http from 'node:http';
-import { htmlParaTexto, trechoDe, sugerirPrazo, sugerirAudiencia, lerCfg, lerDjen, relerSePreciso, extrairDados } from '../src/djen.js';
+import { htmlParaTexto, trechoDe, sugerirPrazo, sugerirAudiencia, motivoEncerra, lerCfg, lerDjen, relerSePreciso, extrairDados } from '../src/djen.js';
 import { montarNotificacoes } from '../src/index.js';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 
@@ -132,5 +132,13 @@ srv2.close();
   const rr = await relerSePreciso(e3);
   check(rr && pedidos >= 1 && !rr.porOab[0].erro && JSON.parse(mem.get('_djen|config')).oabs[0].ultima === hojeBR, 'releitura: se a leitura das 10h falhou, lê de novo e marca como lida hoje');
   srv3.close();
+}
+// "possivelmente encerrado": o que a publicação diz sobre o fim do processo
+{
+  const m = (t) => motivoEncerra(t);
+  check(m('Determino o arquivamento definitivo dos autos.') === 'arquivamento' && m('Cumpridas as formalidades, arquivem-se.') === 'arquivamento', 'encerrado: arquivamento / arquivem-se');
+  check(m('Certifique-se o trânsito em julgado e dê-se baixa definitiva.') === 'baixa definitiva' || m('Certifique-se o trânsito em julgado.') === 'trânsito em julgado', 'encerrado: baixa definitiva e trânsito em julgado');
+  check(m('Julgo extinto o processo, nos termos do art. 485.') === 'extinção' && m('Declaro extinta a execução.') === 'extinção', 'encerrado: extinção');
+  check(m('ARQUIVOS DIGITAIS INDISPONÍVEIS (NÃO SÃO DO TIPO PÚBLICO)') === '' && m('Intime-se a parte para se manifestar em 15 dias sobre os cálculos.') === '', 'não confunde “arquivos” nem uma intimação comum com encerramento');
 }
 console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

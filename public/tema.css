@@ -40,3 +40,5 @@
 #overlayPrArq{z-index:160;}
 /* Agenda: o editor (aberto também de dentro da leitura de uma publicação, da ficha do processo ou da pergunta do protocolo) fica por cima */
 #overlayAg,#overlayAgProt,#overlayAgAdiar{z-index:170;}
+#overlayImp{z-index:150;}
+#overlayImpPerg{z-index:170;}

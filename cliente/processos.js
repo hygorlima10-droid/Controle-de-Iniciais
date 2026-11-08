@@ -94,6 +94,7 @@ function prReceberTotal(r, pm){ var t = 0; r.links.forEach(function(l){ var p = 
 function prUltAtividade(r){
   var pubs = prPubsDe(r.num), d = pubs.length ? pubs[0].data : '';
   var c = r.doc && r.doc.criadoEm ? String(r.doc.criadoEm).slice(0, 10) : '';
+  if (r.doc && r.doc.origem === 'diario' && r.doc.ultimaPublicacao){ if (!d) d = r.doc.ultimaPublicacao; c = String(r.doc.ultimaPublicacao).slice(0, 10); }   /* importado: conta a última publicação, não o dia da importação */
   r.links.forEach(function(l){ [l.doc.criadoEm, l.doc.atualizadoEm].forEach(function(x){ x = String(x || '').slice(0, 10); if (x > c) c = x; }); });   /* processo que vem de Inicial, Acordo ou Alvará: conta o cadastro e as mudanças deles */
   return d > c ? d : c;
 }
@@ -147,6 +148,12 @@ function prMontarTela(){
     else if (a === 'painel'){ prS.fAberto = !prS.fAberto; prPainel(); }
     else if (a === 'menu'){ prS.mAberto = !prS.mAberto; prMenuPainel(); }
     else if (a === 'rel'){ prS.mAberto = false; prMenuPainel(); rptProcessos(); }
+    else if (a === 'imp'){ prS.mAberto = false; prMenuPainel(); impAbrir(); }
+    else if (a === 'rev-ir'){ prS.filtro = 'revisar'; prS.mais = 1; prRender(); }
+    else if (a === 'rev-vinc') impVincularSugerido(n);
+    else if (a === 'rev-esc') impEscolherCliente(n);
+    else if (a === 'rev-novo') impNovoCliente(n);
+    else if (a === 'rev-del') impPerguntarExcluir(n);
     else if (a === 'sub'){ prS.sub = b.getAttribute('data-v'); prRender(); }
     else if (a === 'limpar'){ prS.f = { cli: '', orgao: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
   });
@@ -173,12 +180,13 @@ function prRender(){
   var comPrazo = ativos.filter(function(r){ return prPrazosAbertos(r).length > 0; }).length, parados = ativos.filter(function(r){ return prParado(r, pm); }).length;
   rsResumo('prResumo', { rot: 'Processos em andamento', valor: String(ativos.length), chip: rsChip(linhas.length + (linhas.length === 1 ? ' processo no total' : ' processos no total'), ''),
     tiles: [{ k: 'alert', cor: comPrazo ? '#D93B3B' : '#8A93AD', rot: 'Com prazo aberto', v: String(comPrazo), cls: comPrazo ? 'neg' : '' }, { k: 'clip', cor: '#B7791E', rot: 'Sem andamento há 60 dias', v: String(parados) }] });
+  var nRev = impContaRev(); if (!nRev && prS.filtro === 'revisar') prS.filtro = 'andamento';
   qs('prSeg').innerHTML = [['andamento', 'Em andamento'], ['prazo', 'Com prazo'], ['todos', 'Todos']].map(function(f){ return '<button type="button" class="seg-btn' + (prS.filtro === f[0] ? ' active' : '') + '" data-pr="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('');
   prAvisoVinc(); prPainel(); prMenuPainel(); prRenderLista();
 }
 function prMenuPainel(){
   var el = qs('prMenu'), b = qs('prMenuBtn'); if (b) b.classList.toggle('ativo', !!prS.mAberto); if (!el) return;
-  el.innerHTML = prS.mAberto ? '<div class="pb-painel pb-menu"><button type="button" class="pb-mi" data-pr="rel"><span class="pb-mi-i">🖨</span>Relatório da lista<small>imprimir ou salvar em PDF</small></button></div>' : '';
+  el.innerHTML = prS.mAberto ? '<div class="pb-painel pb-menu"><button type="button" class="pb-mi" data-pr="imp"><span class="pb-mi-i">⬇</span>Importar do Diário Oficial<small>traz os processos das suas OABs de uma vez</small></button><button type="button" class="pb-mi" data-pr="rel"><span class="pb-mi-i">🖨</span>Relatório da lista<small>imprimir ou salvar em PDF</small></button></div>' : '';
 }
 /* filtros: por cliente (ou sem cliente vinculado) e por vara/órgão */
 function prOrgaoDe(r){
@@ -207,6 +215,7 @@ function prFiltrar(filtro){
     var arq = prArquivado(r);
     if (filtro === 'andamento' && arq) return false;
     if (filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
+    if (filtro === 'revisar' && (arq || !(r.doc && r.doc.revisar))) return false;
     if (prS.f.cli === '__sem'){ if (prClienteIds(r).length) return false; }
     else if (prS.f.cli && prClienteIds(r).indexOf(prS.f.cli) < 0) return false;
     if (prS.f.orgao && prOrgaoDe(r) !== prS.f.orgao) return false;
@@ -216,6 +225,13 @@ function prFiltrar(filtro){
     }
     return true;
   });
+}
+/* cartão em revisão: vincular ao cliente sugerido, escolher outro, cadastrar um novo ou excluir o processo do sistema */
+function prAcoesRevisao(r){
+  var n = escapeHtml(r.num), sug = r.doc.sugestaoClienteId ? clienteById(r.doc.sugestaoClienteId) : null, b = function(a, cls, t){ return '<button type="button" class="btn ' + cls + ' pb-b" data-pr="' + a + '" data-n="' + n + '">' + t + '</button>'; };
+  return '<div class="pb-aviso" style="margin-top:8px">' + (sug ? 'Cliente parecido: <b>' + escapeHtml(sug.nome) + '</b>' : 'Nenhum cliente parecido. Escolha um cliente ou cadastre um novo.') + '</div>' +
+    '<div class="pb-acts">' + (sug ? b('rev-vinc', 'btn-primary', 'Vincular a ' + escapeHtml(sug.nome.length > 22 ? sug.nome.slice(0, 22) + '…' : sug.nome)) : '') + b('rev-esc', sug ? 'btn-ghost' : 'btn-primary', 'Escolher outro cliente') + b('rev-novo', 'btn-ghost', 'Cadastrar cliente novo') + '</div>' +
+    '<div class="pb-acts">' + b('abrir', 'btn-ghost', 'Abrir') + b('rev-del', 'btn-ghost', 'Excluir processo') + '</div>';
 }
 function prRenderLista(){
   var box = qs('prLista'); if (!box) return;
@@ -229,16 +245,18 @@ function prRenderLista(){
     var orgao = r.doc ? [r.doc.orgao, r.doc.classe].filter(Boolean).join(' · ') : (pubs[0] ? [pubs[0].tribunal, pubs[0].orgao].filter(Boolean).join(' · ') : '');
     if (i.pz.length) tags += '<span class="pb-tg" style="background:rgba(217,59,59,.12);color:var(--urgente)">' + i.pz.length + (i.pz.length === 1 ? ' prazo aberto' : ' prazos abertos') + '</span>';
     if (pubs.length) tags += '<span class="pb-tg">última publicação ' + fmtData(pubs[0].data).slice(0, 5) + '</span>';
+    else if (r.doc && r.doc.ultimaPublicacao) tags += '<span class="pb-tg">última publicação ' + fmtData(r.doc.ultimaPublicacao).slice(0, 5) + '</span>';
     prHonChips(r, pm).forEach(function(c){ tags += '<span class="pb-tg ' + (c[1] === 'ok' ? 'ok' : (c[1] === 'neg' ? '' : (c[1] === 'pend' ? 'nv' : ''))) + '"' + (c[1] === 'neg' ? ' style="background:rgba(217,59,59,.12);color:var(--urgente)"' : '') + '>' + escapeHtml(c[0]) + '</span>'; });
     var px = prProximaInfo(r);
     if (px && !arq) tags += '<span class="pb-tg ' + (px.feito ? 'ok' : 'pz') + '">' + (px.feito ? '✓ ' : 'Próxima: ') + escapeHtml(px.txt.slice(0, 40)) + (px.data ? ' · ' + escapeHtml(fmtData(px.data).slice(0, 5)) : '') + '</span>';
     if (!prClienteIds(r).length) tags += '<span class="pb-tg nv">sem cliente vinculado</span>';
+    if (r.doc && r.doc.origem === 'diario'){ tags += '<span class="pb-tg">importado do Diário Oficial</span>'; if (r.doc.vinculoAuto && !r.doc.revisar) tags += '<span class="pb-tg ok">vinculado automaticamente</span>'; if (r.doc.possivelEncerrado) tags += '<span class="pb-tg pz">⚠ cita ' + escapeHtml(r.doc.possivelEncerrado) + '</span>'; }
     if (prParado(r, pm)) tags += '<span class="pb-tg pz">sem andamento há 60 dias · arquivar?</span>';
     if (arq) tags += '<span class="pb-tg">arquivado' + (r.doc.motivoArquivo ? ' · ' + escapeHtml(r.doc.motivoArquivo) : '') + '</span>';
     var emb = origens.map(function(o){ return o === 'so' ? 'Só processo' : PR_LBL[o]; }).join(' · ');
     return '<div class="pb-card pr-card' + (arq ? ' lida' : '') + '" style="--pb-bar:' + PR_COR[origens[0]] + '" data-pr-card="' + escapeHtml(r.num) + '"><div class="pb-l1"><span>' + escapeHtml(orgao || 'Processo') + '</span><span class="pb-tipo">' + escapeHtml(emb) + '</span></div>' +
       '<div class="pb-cli">' + escapeHtml(prTitulo(r)) + '</div><div class="pb-proc">' + escapeHtml(r.numero) + '</div>' + prLinhaReu(r) + '<div class="pb-tags">' + tags + '</div>' +
-      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="abrir" data-n="' + escapeHtml(r.num) + '">Abrir</button>' + (arq ? '<button type="button" class="btn btn-ghost pb-b" data-pr="reabrir" data-n="' + escapeHtml(r.num) + '">Reabrir</button>' : '<button type="button" class="btn btn-ghost pb-b" data-pr="arquivar" data-n="' + escapeHtml(r.num) + '">Concluir e arquivar</button>') + '</div></div>';
+      (r.doc && r.doc.revisar && !arq ? prAcoesRevisao(r) : '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="abrir" data-n="' + escapeHtml(r.num) + '">Abrir</button>' + (arq ? '<button type="button" class="btn btn-ghost pb-b" data-pr="reabrir" data-n="' + escapeHtml(r.num) + '">Reabrir</button>' : '<button type="button" class="btn btn-ghost pb-b" data-pr="arquivar" data-n="' + escapeHtml(r.num) + '">Concluir e arquivar</button>') + '</div>') + '</div>';
   }).join('') + (linhas.length > lim ? '<button type="button" class="btn btn-ghost" data-pr="mais" style="width:100%;justify-content:center;">Mostrar mais (' + (linhas.length - lim) + ')</button>' : '');
 }
 
@@ -253,6 +271,7 @@ function prMontarFicha(){
     var b = e.target.closest ? e.target.closest('[data-prf]') : null; if (!b) return;
     var a = b.getAttribute('data-prf'), v = b.getAttribute('data-v');
     if (a === 'cli-rm'){ prEd.ids = prEd.ids.filter(function(x){ return x !== v; }); prChips(); }
+    else if (a === 'rev-sug'){ if (prEd.ids.indexOf(v) < 0) prEd.ids.push(v); prChips(); toast('Cliente escolhido. Toque em Salvar para tirar da revisão.'); }
     else if (a === 'cli-add'){ if (prEd.ids.indexOf(v) < 0) prEd.ids.push(v); qs('pr_cli').value = ''; prSug(); prChips(); }
     else if (a === 'sug-add'){ var nm = prEd.pre.nomes[Number(b.getAttribute('data-i'))]; if (prEd.ids.indexOf(v) < 0) prEd.ids.push(v); prAprenderApelido(v, nm); prChips(); toast('Vinculado. Da próxima vez “' + cliTitulo(nm).slice(0, 40) + '” já é reconhecido.'); }
     else if (a === 'sug-new'){ var nm2 = prEd.pre.nomes[Number(b.getAttribute('data-i'))]; abrirClienteEdit({ nome: cliTitulo(nm2), pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } }); }
@@ -454,6 +473,11 @@ function prDesenhar(){
   var pm = pendentesPorDoc(), arq = r && prArquivado(r);
   qs('prTit').textContent = novo ? 'Cadastrar processo' : 'Processo';
   var h = '';
+  if (doc && doc.revisar){
+    var sg = doc.sugestaoClienteId ? clienteById(doc.sugestaoClienteId) : null;
+    h += '<div class="pb-sec"><div class="pb-sec-t">Importado do Diário Oficial · falta o cliente</div><div class="pb-aviso">' + (sg ? 'Cliente parecido: <b>' + escapeHtml(sg.nome) + '</b>.' : 'Nenhum cliente parecido. Escolha um cliente abaixo ou cadastre um novo.') + ' Ao salvar com um cliente vinculado, o processo sai da revisão.</div>' +
+      (sg ? '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-prf="rev-sug" data-v="' + escapeHtml(sg.id) + '">Vincular a ' + escapeHtml(sg.nome.length > 24 ? sg.nome.slice(0, 24) + '…' : sg.nome) + '</button></div>' : '') + '</div>';
+  }
   if (novo) h += '<div class="parcela-sum">Digite o número do processo: o app busca sozinho no Diário Oficial (partes, valor da causa) e no DataJud do CNJ (vara, classe, assunto, data de ajuizamento). O que não vier você preenche. Honorários a receber ficam em Iniciais, Termos de Acordo ou Alvarás.</div><div id="pr_vinc"></div>';
   h += '<div class="field"><label class="field-label" for="pr_numero">Número do processo</label><input type="text" id="pr_numero" maxlength="40" value="' + escapeHtml(novo ? (pre.numero || '') : r.numero) + '"' + (novo ? ' placeholder="0000000-00.0000.0.00.0000"' : ' readonly') + '><div class="saldo-data" id="pr_numinfo"></div><div class="saldo-data" id="pr_dados"></div><div class="saldo-data" id="pr_dj"></div><div class="pb-acts" style="margin-top:4px">' + (novo ? '' : '<button type="button" class="btn-text" data-prf="buscar-dados">Buscar dados no Diário Oficial</button>') + '<button type="button" class="btn-text" data-prf="buscar-dj">Buscar dados no DataJud</button></div></div>' +
     '<div class="field"><label class="field-label" for="pr_partes">Partes (autor x réu)</label><input type="text" id="pr_partes" maxlength="120" value="' + escapeHtml(novo ? (pre.partes || '') : (doc ? (doc.partes || '') : prPartes(r))) + '" placeholder="Ex.: Fulano de Tal x Banco Exemplo">' +
@@ -511,6 +535,8 @@ function prSalvar(){
   var hon = qs('pr_hon'), querHon = hon && hon.value === 'receber'; if (hon) campos.honorarios = querHon ? ((ex && ex.doc && PR_HON[ex.doc.honorarios]) ? ex.doc.honorarios : 'sem') : hon.value;
   var ho = qs('pr_honobs'); if (ho) campos.honObs = ho.value.trim();
   var doc = ex && ex.doc, p, vincId = novo && prEd.vinc ? prEd.vinc : null, vincAnt = '';
+  var pedirAuto = null;
+  if (doc && doc.revisar && campos.clienteIds.length){ pedirAuto = { cli: campos.clienteIds[0], nome: doc.parteNome || '' }; campos.revisar = ''; campos.revisadoEm = new Date().toISOString(); campos.sugestaoClienteId = ''; }
   if (vincId){ var cv0 = casos.filter(function(x){ return x.id === vincId; })[0]; if (cv0) vincAnt = cv0.numeroProcesso || ''; else vincId = null; }
   var provP = prSincProvidencia({ prox: campos.proxima, data: campos.proximaData, antId: doc && doc.proximaAgId, numero: numero, cliente: campos.partes || campos.clienteIds.map(nomeCliente).join(', ') });
   if (doc){ p = provP.then(function(agId){ campos.proximaAgId = agId; var novoDoc = Object.assign({}, doc, campos); delete novoDoc.id; return pbApi('/api/db/processos/' + encodeURIComponent(doc.id), 'PUT', novoDoc).then(function(){ Object.assign(doc, campos); }); }); }
@@ -527,12 +553,13 @@ function prSalvar(){
     qs('overlayPr').classList.remove('show');
     if (vincId) toast('Processo cadastrado e ligado à Inicial.', 'Desfazer', function(){ var cv = casos.filter(function(x){ return x.id === vincId; })[0]; if (cv) persistPatchDoc('caso', cv, { numeroProcesso: vincAnt }).then(function(){ prDepois(); }); });
     else toast(novo ? 'Processo cadastrado.' : 'Salvo.');
+    if (pedirAuto){ try{ prAprenderApelido(pedirAuto.cli, pedirAuto.nome); }catch(e){} setTimeout(function(){ impPerguntarAuto(pedirAuto.cli, pedirAuto.nome); }, 250); }
     prDepois(); if (querHon){ prEd = { num: n, novo: false, ids: [] }; setTimeout(function(){ prNovoHonorario('caso'); }, 80); } }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }
 function prExcluir(b){
   var r = prMapa().m[prEd.num]; if (!r || !r.doc) return;
   if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para excluir'; return; }
-  (r.doc.proximaAgId ? prSincProvidencia({ prox: '', data: '', antId: r.doc.proximaAgId }) : Promise.resolve()).then(function(){ return pbApi('/api/db/processos/' + encodeURIComponent(r.doc.id), 'DELETE'); }).then(function(){ prDocs = prDocs.filter(function(x){ return x.id !== r.doc.id; }); qs('overlayPr').classList.remove('show'); toast('Processo excluído.'); prDepois(); }).catch(function(e){ qs('pr_erro').textContent = e.message; });
+  (r.doc.proximaAgId ? prSincProvidencia({ prox: '', data: '', antId: r.doc.proximaAgId }) : Promise.resolve()).then(function(){ return pbApi('/api/db/processos/' + encodeURIComponent(r.doc.id), 'DELETE'); }).then(function(){ prDocs = prDocs.filter(function(x){ return x.id !== r.doc.id; }); try{ impIgnorar(r.num); }catch(e){} qs('overlayPr').classList.remove('show'); toast('Processo excluído.'); prDepois(); }).catch(function(e){ qs('pr_erro').textContent = e.message; });
 }
 function prNovoHonorario(tipo){
   var r = prMapa().m[prEd.num]; if (!r) return;
@@ -749,8 +776,10 @@ function prIniciaisPend(){
 }
 function prAvisoVinc(){
   var el = qs('prAvisoVinc'); if (!el) return;
-  var n = prIniciaisPend().length;
-  el.innerHTML = n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial antiga ainda não está ligada a um processo' : ' Iniciais antigas ainda não estão ligadas a um processo') + '. Ao cadastrar o processo pelas Publicações, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '';
+  var n = prIniciaisPend().length, nr = impContaRev(), rev = '';
+  if (nr && prS.filtro === 'revisar') rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Revisão dos importados</div><div class="pb-aviso">Mostrando só os <b>' + nr + '</b> ' + (nr === 1 ? 'processo' : 'processos') + ' que faltam vincular a um cliente: vincule, escolha outro cliente, cadastre um novo ou exclua o que não quiser no sistema.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pr="filtro" data-v="andamento">Voltar à lista completa</button></div></div>';
+  else if (nr) rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Importados do Diário Oficial</div><div class="pb-aviso"><b>' + nr + '</b> ' + (nr === 1 ? 'processo espera' : 'processos esperam') + ' a revisão do cliente.</div><div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="rev-ir">Revisar agora</button></div></div>';
+  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial antiga ainda não está ligada a um processo' : ' Iniciais antigas ainda não estão ligadas a um processo') + '. Ao cadastrar o processo pelas Publicações, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
 }
 function prVincNivel(c){
   var pre = (prEd && prEd.pre) || {}, nomes = (pre.nomes || []).concat([pre.autor, pre.reu]).filter(Boolean);

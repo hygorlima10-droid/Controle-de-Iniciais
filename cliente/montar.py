@@ -72,6 +72,13 @@ if '/*PC-INICIO*/' in s:
 else:
     assert s.count('/*RL-FIM*/\n') == 1
     s = s.replace('/*RL-FIM*/\n', '/*RL-FIM*/\n' + bloco_pc)
+imp = open(R + 'cliente/importacao.js', encoding='utf-8').read()
+bloco_im = '/*IM-INICIO*/\n' + imp + '\n/*IM-FIM*/\n'
+if '/*IM-INICIO*/' in s:
+    s = re.sub(r'/\*IM-INICIO\*/.*?/\*IM-FIM\*/\n', lambda m: bloco_im, s, flags=re.S)
+else:
+    assert s.count('/*PC-FIM*/\n') == 1
+    s = s.replace('/*PC-FIM*/\n', '/*PC-FIM*/\n' + bloco_im)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
@@ -202,6 +209,10 @@ repm('id="ic-quadro"', '<symbol id="ic-proc" ', '<symbol id="ic-quadro" viewBox=
 repm('id="cliApelidosInput"', '        <textarea id="cliObsInput" rows="3" placeholder="Ex.: prefere contato à tarde; combinado pagar todo dia 10…"></textarea>\n      </div>\n', '        <textarea id="cliObsInput" rows="3" placeholder="Ex.: prefere contato à tarde; combinado pagar todo dia 10…"></textarea>\n      </div>\n      <div class="field">\n        <label class="field-label" for="cliApelidosInput">Outros nomes (como aparece nas publicações)</label>\n        <input type="text" id="cliApelidosInput" maxlength="300" placeholder="Ex.: Cooperativa Mista dos Produtores de Leite de Morrinhos - Complem">\n        <div class="saldo-data">Separe por ponto e vírgula. O app usa para reconhecer o cliente nas publicações do Diário Oficial.</div>\n      </div>\n')
 repm("cliApelidosInput').value", "    qs('cliObsInput').value = c ? (c.obs || '') : '';\n", "    qs('cliObsInput').value = c ? (c.obs || '') : '';\n    qs('cliApelidosInput').value = c ? (c.apelidos || []).join('; ') : '';\n")
 repm("obj.apelidos = qs", "    obj.obs = qs('cliObsInput').value.trim();\n", "    obj.obs = qs('cliObsInput').value.trim();\n    obj.apelidos = qs('cliApelidosInput').value.split(';').map(function(x){ return x.trim(); }).filter(Boolean);\n")
+# ---- cliente: vincular automaticamente os processos importados / novos das publicações ----
+repm('id="cliVincAutoInput"', '      <label class="chip-toggle" id="cliArquivadoWrap" style="display:none;">', '      <label class="chip-toggle"><input type="checkbox" id="cliVincAutoInput"> Vincular automaticamente os processos novos deste cliente (importação e publicações), sem passar pela revisão</label>\n      <label class="chip-toggle" id="cliArquivadoWrap" style="display:none;">')
+repm("cliVincAutoInput').checked", "    qs('cliArquivadoInput').checked = !!(c && c.arquivado);\n", "    qs('cliArquivadoInput').checked = !!(c && c.arquivado);\n    qs('cliVincAutoInput').checked = !!(c && c.vinculoAuto === true);\n")
+repm("obj.vinculoAuto", "    if (atual) obj.arquivado = qs('cliArquivadoInput').checked;\n", "    if (atual) obj.arquivado = qs('cliArquivadoInput').checked;\n    if (qs('cliVincAutoInput').checked) obj.vinculoAuto = true; else if (obj.vinculoAuto === true) obj.vinculoAuto = false;\n")
 rep("h += secPerfil('atos', 'Atos e processos', docs.length, atos);", "h += secPerfil('atos', 'Processos e atos', docs.length, atos);")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
