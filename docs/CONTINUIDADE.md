@@ -22,5 +22,7 @@ Somente análise, sem mudar o sistema:
 3. Login individual do proprietário e sessões que se podem encerrar; tabela única de política de rotas.
 4. Transferência PJ/PF atômica; carregar coleções em lotes.
 
-## Pendências de decisão
-- Confirmar, olhando o esboço, o que o estagiário vê de honorários: proposta = vê as parcelas e valores devidos por cada cliente (precisa para cobrar), mas não vê totais, faturamento, análises, relatórios de recebimento nem nada de Finanças. Se aprovado, as restrições de dados ficam só em nível de coleção e de totais (sem recortar campos de cada registro).
+## Pendências de decisão (resolver na Fase 0 / esboço seguinte)
+- Cobrança de clientes: separar da ferramenta “Relatório do Murilo” para o estagiário poder cobrar? E quem registra que o cliente pagou (“Recebi R$” é do proprietário; o estagiário marca a parcela paga dentro da Inicial/Acordo/Alvará?). Conferir se marcar parcela paga gera lançamento nas finanças.
+- Totais e indicadores de honorários: seguem a permissão de “ver honorários” (proposta) ou ficam só do proprietário?
+- Próximo esboço antes de implementar: menu lateral enxuto + aba Configurações (com lembretes/notificações, backup, exportar CSV, lixeira e registro de ações).

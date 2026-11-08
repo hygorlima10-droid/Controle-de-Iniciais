@@ -17,9 +17,12 @@ Registro curto para não repetir conversa. Atualize quando algo for decidido. Fo
 5. Usuários, autenticação e permissões. 6. Configurações, perfis, agendas, OABs por advogado. 7. Segurança multiusuário. 8. Segurança avançada.
 
 ## Decisões do proprietário
-- **Estagiários lançam dados em Acordos e Alvarás** (não bloquear essas abas). Fazem a **cobrança de inadimplentes**, então veem as parcelas e valores devidos pelos clientes.
-- O que o estagiário **não** vê (proposta a confirmar com o esboço de 08/11): Finanças (PJ, PF, Patrimônio, reserva, saldos), Construção, backups, configurações, usuários, e qualquer total, indicador, análise, relatório ou exportação de faturamento/recebimentos.
-- **Finanças e Construção não são opções de permissão**: são exclusivas do proprietário, e **as abas nem aparecem** para os demais usuários (e o servidor também bloqueia).
+- **Estagiários lançam dados em Iniciais, Acordos e Alvarás** (não bloquear essas abas). Fazem a **cobrança de inadimplentes**, então veem as parcelas e os valores devidos pelos clientes.
+- **Dois mundos separados** (decisão de 08/11, 2ª versão): (1) **faturamento dos processos** (honorários: quanto cada processo rende), que é dado jurídico e **pode ser liberado a advogados e estagiários por permissão do proprietário**; (2) **finanças pessoais do proprietário** (PJ, PF, Patrimônio, reserva, saldos, projeções, Construção), que **nunca** aparecem para ninguém além dele.
+- **Finanças e Construção não são opções de permissão**: são exclusivas do proprietário, as abas e ferramentas **nem aparecem** para os demais, e o servidor também bloqueia.
+- **Ferramentas que são do proprietário** e não aparecem para advogados nem estagiários: Divisão do mês, Hygor (PJ), Pessoa física, Patrimônio e metas, Análises e projeção, Construção, Extratos do banco, Ler foto ou PDF, Recebi R$, Fechamento do mês pessoal e Relatório do Murilo. Ponto a decidir na Fase 0: a ferramenta de cobrança de clientes (hoje junto do relatório do Murilo) precisa ficar disponível aos estagiários que cobram; provavelmente separar em duas.
+- **Menu lateral enxuto**: tudo que é de administração vai para a nova aba **Configurações** (só do proprietário): Lembretes do iPhone e notificações, Backup e restauração (com restauração segura), Exportar lista (CSV), Lixeira, Registro de ações; depois Usuários, Perfis, OABs, etc. Permanecem no menu: abas jurídicas, grupo Financeiro (só dele), Sair, Tema e Discreto. A barra de baixo do estagiário não tem o botão Finanças.
+- Custo conhecido: se a permissão de ver honorários puder ficar **desligada** para alguém, o servidor precisa esconder campos dentro de Iniciais, Acordos e Alvarás (e deixar o estagiário gravar sem apagar o que ele não vê). Desenhar isso com esboço na fase de usuários, depois do mapa da Fase 0.
 - Murilo: advogado, com os processos e honorários dos casos dele ou compartilhados; sem acesso geral ao financeiro.
 - Login: e-mail e senha individuais; segundo fator só depois, sem SMS.
 - Homologação em ambiente separado: **descartada** por ora.
