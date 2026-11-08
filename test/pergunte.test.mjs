@@ -97,7 +97,7 @@ await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o =
 for (let i = 0; i < 3; i++) { await page.click('#inicioNovo'); await page.waitForTimeout(150); await page.click('[data-novo-k="despesa"]'); await page.waitForTimeout(250); await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'))); }
 await page.click('#inicioNovo'); await page.waitForTimeout(200);
 const tiles = await page.evaluate(() => Array.from(document.querySelectorAll('#novoGrid [data-novo-k]')).map(b => b.getAttribute('data-novo-k')));
-check(tiles.length === 9 && tiles[0] === 'despesa', 'folha "Novo": 9 ações, a mais usada (Despesa) vem primeiro: ' + tiles.join());
+check(tiles.length === 11 && tiles[0] === 'despesa', 'folha "Novo": 11 ações (com Processo e Prazo), a mais usada (Despesa) vem primeiro: ' + tiles.join());
 await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
 check(!(await page.evaluate(() => !!document.getElementById('inicioAtalhos') || !!document.getElementById('fabRecebi') || !!document.getElementById('fabLerDoc'))), 'não há mais fileira de atalhos no fim nem botões flutuantes de Recebi/câmera');
 check(await page.evaluate(() => getComputedStyle(document.getElementById('fabNew')).display === 'none'), 'no topo do Início o botão + pequeno fica escondido');

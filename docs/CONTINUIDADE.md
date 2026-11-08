@@ -8,13 +8,10 @@ Atualize ao fim de cada sessão (arquivos alterados, o que foi feito, testes, pr
 - Testes: `test/*.test.mjs` (rodam com Playwright e servidores simulados; `extratos-arquivo` precisa de chave e é ignorado). Variável do Worker de teste: `IMPORTAR_AUTO=0`.
 - Estrutura: Worker (`src/index.js`, `src/djen.js`, `src/datajud.js`, `src/pecas.js`), banco D1 com uma tabela `docs(colecao,id,dados,atualizado)`, módulos da tela em `cliente/*.js` injetados em `public/index.html` por `cliente/montar.py`.
 
-## Próximo passo (começa no dia seguinte): Fase 0
-Somente análise, sem mudar o sistema:
-1. Inventário das rotas (`/api/...`), coleções e módulos, com a política de acesso de cada rota.
-2. Inventário das funcionalidades que devem ser preservadas.
-3. Lista de bugs e riscos (já confirmados: transferência PJ/PF em dois registros; restauração sem validação nem cópia de segurança; sem versão de registro; sessão sem revogação).
-4. Mapa de onde os honorários e totais aparecem na tela (para a fase de permissões).
-5. Entregável: relatório curto + backup completo conferido.
+## Fase 0: concluída em 08/11/2026
+Relatório completo em `docs/FASE0-DIAGNOSTICO.md` (rotas, coleções, funcionalidades, mapa de honorários e totais, advogados participantes, bugs e riscos, testes, backup). Nada do app foi alterado; adicionado `test/backup-restauracao.test.mjs` e corrigido `test/pergunte.test.mjs`.
+Resultados que importam: restauração insegura; backups no mesmo banco; transferência PJ/PF em dois registros; limite de 1.000 registros (Agenda); sessão não revogável; `Recebido no mês` mistura honorários e renda da PJ; `config` mistura documentos do proprietário e gerais; DataJud não traz advogados, DJEN traz.
+Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUTH` não definida; baixar um backup para conferência.
 
 ## Depois (Fase 1), cada item com esboço e ok antes
 1. Restauração segura (conferir arquivo, cópia de segurança automática, desfazer).
