@@ -425,7 +425,7 @@ function paBackupsRender(){
   fetch('/api/backups', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
     var it = (j && j.itens) || [];
     box.innerHTML = '<div class="field-label" style="font-weight:700">Backups automáticos do servidor</div><div class="saldo-data">O servidor guarda uma cópia toda segunda-feira (as últimas 8). Baixe uma para restaurar por "Restaurar backup".</div>' +
-      (it.length ? it.map(function(x){ return '<div class="plan-linha"><span>' + escapeHtml(fmtData(x.dia)) + '<em>' + x.docs + ' registros</em></span><button type="button" class="btn-text" data-pa-bk="' + escapeHtml(x.dia) + '">Baixar</button></div>'; }).join('') : '<div class="saldo-data">Ainda não há cópias automáticas.</div>') +
+      (it.length ? it.map(function(x){ return '<div class="plan-linha"><span>' + escapeHtml(fmtData(x.dia)) + '<br><small style="color:var(--ink-soft)">' + x.docs + ' registros</small></span><button type="button" class="btn-text" data-pa-bk="' + escapeHtml(x.dia) + '">Baixar</button></div>'; }).join('') : '<div class="saldo-data">Ainda não há cópias automáticas.</div>') +
       '<div class="ext-acoes"><button type="button" class="btn btn-ghost" id="paBackupAgora">Fazer uma cópia agora</button></div><div class="saldo-data" id="paBackupMsg"></div>';
   }).catch(function(){ box.innerHTML = ''; });
 }

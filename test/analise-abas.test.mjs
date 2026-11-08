@@ -65,7 +65,7 @@ await page.reload(); await page.waitForTimeout(3500);
 fs.writeFileSync('/tmp/bk-teste.json', JSON.stringify(bk));
 await page.evaluate(() => { const m = document.getElementById('exportarBackupBtn'); let el = m; while (el && !(el.classList && el.classList.contains('overlay'))) el = el.parentElement; if (el) el.classList.add('show'); });
 await page.setInputFiles('#importarBackupInput', '/tmp/bk-teste.json'); await page.waitForTimeout(800);
-check(/1 processos? e \d+ itens da agenda/.test(await t('#importarBackupResumo')), 'o resumo da restauração mostra processos e agenda: ' + (await t('#importarBackupResumo')).slice(-60));
+check(/processos\s[^]*?\+1 a trazer/.test(await t('#importarBackupResumo')) && /itens da agenda\s[^]*?\+\d+ a trazer/.test(await t('#importarBackupResumo')), 'a conferência da restauração mostra processos e agenda a trazer de volta: ' + (await t('#importarBackupResumo')).replace(/\n/g, ' ').slice(0, 160));
 const dl2 = page.waitForEvent('download', { timeout: 8000 }).catch(() => null);
 await page.evaluate(() => document.getElementById('confirmarImportarBackup').click()); await page.waitForTimeout(5000);
 console.log('   erro na tela:', await t('#formErrorBackup'), '| progresso:', await t('#backupProgresso'));

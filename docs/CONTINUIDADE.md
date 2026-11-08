@@ -10,7 +10,7 @@ Atualize ao fim de cada sessão (arquivos alterados, o que foi feito, testes, pr
 
 ## Fase 0: concluída em 08/11/2026
 Relatório completo em `docs/FASE0-DIAGNOSTICO.md` (rotas, coleções, funcionalidades, mapa de honorários e totais, advogados participantes, bugs e riscos, testes, backup). Nada do app foi alterado; adicionado `test/backup-restauracao.test.mjs` e corrigido `test/pergunte.test.mjs`.
-Resultados que importam: restauração insegura; backups no mesmo banco; transferência PJ/PF em dois registros; limite de 1.000 registros (Agenda); sessão não revogável; `Recebido no mês` mistura honorários e renda da PJ; `config` mistura documentos do proprietário e gerais; DataJud não traz advogados, DJEN traz.
+Resultados que importam: restauração sem atomicidade nem desfazer (rota `/api/restaurar` insegura e não usada pela tela); backups no mesmo banco; transferência PJ/PF em dois registros; limite de 1.000 registros (Agenda); sessão não revogável; `Recebido no mês` mistura honorários e renda da PJ; `config` mistura documentos do proprietário e gerais; DataJud não traz advogados, DJEN traz.
 Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUTH` não definida; baixar um backup para conferência.
 
 ## Situação atual (08/11/2026, fim do dia)
@@ -18,11 +18,9 @@ Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUT
 - Pendência do proprietário: conferir no painel do Cloudflare se existe a variável `ALLOW_NO_AUTH` (não pode existir em produção) e baixar um backup do app para conferência.
 - Novo item aprovado como ideia: **Banco Central de Ícones** (ver `docs/ICONES.md`), implementação a partir da Fase 2 (base invisível primeiro); logos de bancos e reconhecimento de extratos na Fase 3.
 
-## Depois (Fase 1), cada item com esboço e ok antes
-1. Restauração segura (conferir arquivo, cópia de segurança automática, desfazer).
-2. Lixeira de 30 dias e registro de ações no ponto central do servidor.
-3. Login individual do proprietário e sessões que se podem encerrar; tabela única de política de rotas.
-4. Transferência PJ/PF atômica; carregar coleções em lotes.
+## Fase 1: andamento (iniciada em 08/11/2026)
+Ordem: 1 restauração segura (**feito**: `src/restauracao.js`, `cliente/backup.js`, testes `restauracao-segura` e `restauracao-tela`; removida a rota insegura `/api/restaurar`); 2 aba Configurações e menu enxuto (**esboço antes**) com lixeira e registro de ações; 3 lixeira de 30 dias e registro de ações no ponto central do servidor; 4 login individual do proprietário, sessões encerráveis e bloqueio de login por origem; 5 transferência PJ/PF atômica; 6 carregar coleções em lotes e contagem por coleção; 7 separar “Recebido no mês” e o `config`; 8 gravar advogados participantes; 9 cópia fora do banco (precisa de um bucket R2 criado pelo proprietário) e script único de testes no repositório.
+Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (portas na primeira linha de cada teste); `extratos-arquivo` precisa de `ENVIO_TOKEN`.
 
 ## Pendências de decisão
 - Nenhuma aberta (decididas em 08/11: cobrança separada do relatório do Murilo; recebimentos e “marcar como paga” só do proprietário; honorários visíveis a advogados participantes e a estagiários por permissão).

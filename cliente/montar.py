@@ -79,6 +79,13 @@ if '/*IM-INICIO*/' in s:
 else:
     assert s.count('/*PC-FIM*/\n') == 1
     s = s.replace('/*PC-FIM*/\n', '/*PC-FIM*/\n' + bloco_im)
+bk = open(R + 'cliente/backup.js', encoding='utf-8').read()
+bloco_bk = '/*BK-INICIO*/\n' + bk + '\n/*BK-FIM*/\n'
+if '/*BK-INICIO*/' in s:
+    s = re.sub(r'/\*BK-INICIO\*/.*?/\*BK-FIM\*/\n', lambda m: bloco_bk, s, flags=re.S)
+else:
+    assert s.count('/*IM-FIM*/\n') == 1
+    s = s.replace('/*IM-FIM*/\n', '/*IM-FIM*/\n' + bloco_bk)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
@@ -213,6 +220,9 @@ repm("obj.apelidos = qs", "    obj.obs = qs('cliObsInput').value.trim();\n", "  
 repm('id="cliVincAutoInput"', '      <label class="chip-toggle" id="cliArquivadoWrap" style="display:none;">', '      <label class="chip-toggle"><input type="checkbox" id="cliVincAutoInput"> Vincular automaticamente os processos novos deste cliente (importação e publicações), sem passar pela revisão</label>\n      <label class="chip-toggle" id="cliArquivadoWrap" style="display:none;">')
 repm("cliVincAutoInput').checked", "    qs('cliArquivadoInput').checked = !!(c && c.arquivado);\n", "    qs('cliArquivadoInput').checked = !!(c && c.arquivado);\n    qs('cliVincAutoInput').checked = !!(c && c.vinculoAuto === true);\n")
 repm("obj.vinculoAuto", "    if (atual) obj.arquivado = qs('cliArquivadoInput').checked;\n", "    if (atual) obj.arquivado = qs('cliArquivadoInput').checked;\n    if (qs('cliVincAutoInput').checked) obj.vinculoAuto = true; else if (obj.vinculoAuto === true) obj.vinculoAuto = false;\n")
+# ---- backup: com o servidor, a restauração é conferida e trocada de uma vez pelo servidor (cliente/backup.js) ----
+rep("        backupImportadoPendente = dados;\n        var resumo = (dados.exportadoEm", "        backupImportadoPendente = dados;\n        if (window.__SERVIDOR && typeof bkConferir === 'function'){ bkConferir(dados); return; }\n        var resumo = (dados.exportadoEm")
+rep("    var dados = backupImportadoPendente;\n    var btn = qs('confirmarImportarBackup');\n    btn.disabled = true;", "    var dados = backupImportadoPendente;\n    if (window.__SERVIDOR && typeof bkAplicar === 'function'){ bkAplicar(dados); return; }\n    var btn = qs('confirmarImportarBackup');\n    btn.disabled = true;")
 rep("h += secPerfil('atos', 'Atos e processos', docs.length, atos);", "h += secPerfil('atos', 'Processos e atos', docs.length, atos);")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

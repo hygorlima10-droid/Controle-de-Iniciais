@@ -5,6 +5,7 @@
 import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
+import { restauracaoRotas } from './restauracao.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -412,18 +413,6 @@ async function api(request, env, partes) {
     const { results } = await env.DB.prepare("SELECT colecao, id, dados FROM docs WHERE colecao NOT LIKE '\\_%' ESCAPE '\\' ORDER BY colecao, id").all();
     return json({ versao: 1, exportadoEm: new Date().toISOString(), docs: results.map((r) => ({ colecao: r.colecao, id: r.id, dados: JSON.parse(r.dados) })) });
   }
-  if (partes[0] === 'restaurar' && metodo === 'POST') {
-    const corpo = await request.json().catch(() => null);
-    if (!corpo || !Array.isArray(corpo.docs)) return erro(400, 'invalid', 'Arquivo de backup inválido.');
-    const stmts = [];
-    const agora = Date.now();
-    for (const d of corpo.docs) {
-      if (!NOME.test(d.colecao || '') || !NOME.test(d.id || '') || typeof d.dados !== 'object' || d.dados === null) continue;
-      stmts.push(env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(d.colecao, d.id, JSON.stringify(d.dados), agora));
-    }
-    for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
-    return json({ ok: true, importados: stmts.length });
-  }
   if (partes[0] !== 'db' || !partes[1] || !NOME.test(partes[1])) return erro(404, 'not_found', 'Não encontrado.');
   const colecao = partes[1], id = partes[2];
   if (id !== undefined && !NOME.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
@@ -495,7 +484,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : partes[0] === 'restaurar' ? await restauracaoRotas(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);
