@@ -18134,7 +18134,12 @@ function prMontarFicha(){
 function prFmtValor(v){ return Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function prParseValor(t){ var x = String(t || '').replace(/[^\d,.]/g, ''); if (!x) return null; if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); var n = parseFloat(x); return isFinite(n) && n > 0 ? n : null; }
 /* última publicação conhecida com o réu (para processos que vêm de Inicial, Acordo ou Alvará) */
-function prReu(r){ if (r.doc && r.doc.reu) return r.doc.reu; var ps = prPubsDe(r.num); for (var i = 0; i < ps.length; i++) if (ps[i].passivo) return ps[i].passivo; return ''; }
+/* "Fulano x Banco" → autor e réu (separador: x, vs, versus, cercado de espaços); sem separador devolve null */
+function prDividePartes(t){
+  var m = /^(.+?)\s+(?:x|vs\.?|versus)\s+(.+)$/i.exec(String(t || '').trim());
+  return m ? { autor: m[1].trim().slice(0, 120), reu: m[2].trim().slice(0, 120) } : null;
+}
+function prReu(r){ if (r.doc && r.doc.reu) return r.doc.reu; var dv = r.doc && prDividePartes(r.doc.partes); if (dv) return dv.reu; var ps = prPubsDe(r.num); for (var i = 0; i < ps.length; i++) if (ps[i].passivo) return ps[i].passivo; return ''; }
 /* puxa do Diário Oficial réu, órgão, natureza e valor da causa e completa só o que estiver vazio */
 function prBuscarDados(forcar){
   var el = qs('pr_numero'); if (!el || !window.__SERVIDOR) return;
@@ -18296,8 +18301,9 @@ function prDesenhar(){
   var h = '';
   if (novo) h += '<div class="parcela-sum">Digite o número do processo: o app busca sozinho no Diário Oficial (partes, valor da causa) e no DataJud do CNJ (vara, classe, assunto, data de ajuizamento). O que não vier você preenche. Honorários a receber ficam em Iniciais, Termos de Acordo ou Alvarás.</div><div id="pr_vinc"></div>';
   h += '<div class="field"><label class="field-label" for="pr_numero">Número do processo</label><input type="text" id="pr_numero" maxlength="40" value="' + escapeHtml(novo ? (pre.numero || '') : r.numero) + '"' + (novo ? ' placeholder="0000000-00.0000.0.00.0000"' : ' readonly') + '><div class="saldo-data" id="pr_numinfo"></div><div class="saldo-data" id="pr_dados"></div><div class="saldo-data" id="pr_dj"></div><div class="pb-acts" style="margin-top:4px">' + (novo ? '' : '<button type="button" class="btn-text" data-prf="buscar-dados">Buscar dados no Diário Oficial</button>') + '<button type="button" class="btn-text" data-prf="buscar-dj">Buscar dados no DataJud</button></div></div>' +
-    '<div class="field"><label class="field-label" for="pr_partes">Partes / descrição</label><input type="text" id="pr_partes" maxlength="120" value="' + escapeHtml(novo ? (pre.partes || '') : (doc ? (doc.partes || '') : prPartes(r))) + '" placeholder="Ex.: Fulano de Tal x Banco Exemplo"></div>' +
-    '<div class="pb-dois"><div class="field"><label class="field-label" for="pr_autor">Autor / parte ativa</label><input type="text" id="pr_autor" maxlength="120" value="' + escapeHtml(novo ? (pre.autor || '') : (doc ? (doc.autor || '') : '')) + '"></div><div class="field"><label class="field-label" for="pr_reu">Réu / parte contrária</label><input type="text" id="pr_reu" maxlength="120" value="' + escapeHtml(novo ? (pre.reu || '') : (doc ? (doc.reu || prReu(r)) : prReu(r))) + '"></div></div>' +
+    '<div class="field"><label class="field-label" for="pr_partes">Partes (autor x réu)</label><input type="text" id="pr_partes" maxlength="120" value="' + escapeHtml(novo ? (pre.partes || '') : (doc ? (doc.partes || '') : prPartes(r))) + '" placeholder="Ex.: Fulano de Tal x Banco Exemplo">' +
+    /* autor e réu não aparecem mais como campos: saem do texto das partes (antes do " x " e depois dele) ao salvar */
+    '<input type="hidden" id="pr_autor" value="' + escapeHtml(novo ? (pre.autor || '') : (doc ? (doc.autor || '') : '')) + '"><input type="hidden" id="pr_reu" value="' + escapeHtml(novo ? (pre.reu || '') : (doc ? (doc.reu || prReu(r)) : prReu(r))) + '"></div>' +
     '<div class="field"><label class="field-label" for="pr_orgao">Tribunal / órgão</label><input type="text" id="pr_orgao" maxlength="120" value="' + escapeHtml(novo ? (pre.orgao || '') : (doc ? (doc.orgao || '') : '')) + '" placeholder="Ex.: TJGO · Morrinhos 1ª Vara Cível"></div>' +
     '<div class="field"><label class="field-label" for="pr_classe">Classe / assunto</label><input type="text" id="pr_classe" maxlength="120" value="' + escapeHtml(novo ? (pre.classe || '') : (doc ? (doc.classe || '') : '')) + '" placeholder="Ex.: Cumprimento de sentença"></div>' +
     '<div class="field"><label class="field-label" for="pr_area">Área</label><select id="pr_area" class="filter-select" style="width:100%"><option value="">Automática' + (r ? ' (' + panAreaSug(r) + ')' : '') + '</option>' + PR_AREAS.map(function(a){ return '<option' + ((novo ? '' : (doc && doc.area)) === a ? ' selected' : '') + '>' + a + '</option>'; }).join('') + '</select></div>' +
@@ -18343,7 +18349,8 @@ function prSalvar(){
   var a = cnjAnalisar(numero); if (a && a.completo) numero = a.formatado;
   var n = prNum(numero), mp = prMapa(), ex = mp.m[n];
   if (novo && ex && ex.doc){ err.textContent = 'Este processo já está cadastrado.'; return; }
-  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), autor: qs('pr_autor').value.trim(), reu: qs('pr_reu').value.trim(), area: qs('pr_area').value, valorCausa: prParseValor(qs('pr_valor').value), assunto: qs('pr_assunto').value.trim(), ajuizamento: qs('pr_ajuiz').value || '', clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
+  var dv = prDividePartes(qs('pr_partes').value);
+  var campos = { numero: numero, partes: qs('pr_partes').value.trim(), orgao: qs('pr_orgao').value.trim(), classe: qs('pr_classe').value.trim(), autor: dv ? dv.autor : qs('pr_autor').value.trim(), reu: dv ? dv.reu : qs('pr_reu').value.trim(), area: qs('pr_area').value, valorCausa: prParseValor(qs('pr_valor').value), assunto: qs('pr_assunto').value.trim(), ajuizamento: qs('pr_ajuiz').value || '', clienteIds: prEd.ids.slice(), obs: qs('pr_obs').value.trim() };
   if (qs('pr_res')){ campos.resultado = qs('pr_res').value; campos.resultadoEm = campos.resultado ? ((ex && ex.doc && ex.doc.resultadoEm) || new Date().toISOString()) : ''; }
   campos.proxima = qs('pr_prox').value.trim(); campos.proximaData = campos.proxima ? (qs('pr_proxdata').value || '') : '';
   var hon = qs('pr_hon'), querHon = hon && hon.value === 'receber'; if (hon) campos.honorarios = querHon ? ((ex && ex.doc && PR_HON[ex.doc.honorarios]) ? ex.doc.honorarios : 'sem') : hon.value;
