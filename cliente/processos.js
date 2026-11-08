@@ -150,6 +150,9 @@ function prMontarTela(){
     else if (a === 'rel'){ prS.mAberto = false; prMenuPainel(); rptProcessos(); }
     else if (a === 'imp'){ prS.mAberto = false; prMenuPainel(); impAbrir(); }
     else if (a === 'rev-ir'){ prS.filtro = 'revisar'; prS.mais = 1; prRender(); }
+    else if (a === 'rev-gvinc') impGrupoVincular(n);
+    else if (a === 'rev-gesc') impEscolherParaGrupo(n);
+    else if (a === 'rev-gnovo') impGrupoNovo(n);
     else if (a === 'rev-vinc') impVincularSugerido(n);
     else if (a === 'rev-esc') impEscolherCliente(n);
     else if (a === 'rev-novo') impNovoCliente(n);
@@ -240,7 +243,7 @@ function prRenderLista(){
   linhas.sort(function(a, b){ return info[a.num].prox.localeCompare(info[b.num].prox) || info[b.num].ult.localeCompare(info[a.num].ult) || prTitulo(a).localeCompare(prTitulo(b), 'pt-BR'); });
   if (!linhas.length){ box.innerHTML = '<div class="financeiro-vazio">' + (prS.busca || prFiltrosAtivos() ? 'Nenhum processo com essa busca ou esses filtros.' : (prS.filtro === 'andamento' ? 'Nenhum processo em andamento. Toque em “Novo processo” ou cadastre pela aba Publicações.' : 'Nada aqui.')) + '</div>'; return; }
   var lim = prS.mais * 30;
-  box.innerHTML = linhas.slice(0, lim).map(function(r){
+  box.innerHTML = (prS.filtro === 'revisar' ? impGruposHtml() : '') + linhas.slice(0, lim).map(function(r){
     var i = info[r.num], origens = prOrigens(r), arq = prArquivado(r), pubs = prPubsDe(r.num), tags = '';
     var orgao = r.doc ? [r.doc.orgao, r.doc.classe].filter(Boolean).join(' · ') : (pubs[0] ? [pubs[0].tribunal, pubs[0].orgao].filter(Boolean).join(' · ') : '');
     if (i.pz.length) tags += '<span class="pb-tg" style="background:rgba(217,59,59,.12);color:var(--urgente)">' + i.pz.length + (i.pz.length === 1 ? ' prazo aberto' : ' prazos abertos') + '</span>';

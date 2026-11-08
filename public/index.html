@@ -17998,6 +17998,9 @@ function prMontarTela(){
     else if (a === 'rel'){ prS.mAberto = false; prMenuPainel(); rptProcessos(); }
     else if (a === 'imp'){ prS.mAberto = false; prMenuPainel(); impAbrir(); }
     else if (a === 'rev-ir'){ prS.filtro = 'revisar'; prS.mais = 1; prRender(); }
+    else if (a === 'rev-gvinc') impGrupoVincular(n);
+    else if (a === 'rev-gesc') impEscolherParaGrupo(n);
+    else if (a === 'rev-gnovo') impGrupoNovo(n);
     else if (a === 'rev-vinc') impVincularSugerido(n);
     else if (a === 'rev-esc') impEscolherCliente(n);
     else if (a === 'rev-novo') impNovoCliente(n);
@@ -18088,7 +18091,7 @@ function prRenderLista(){
   linhas.sort(function(a, b){ return info[a.num].prox.localeCompare(info[b.num].prox) || info[b.num].ult.localeCompare(info[a.num].ult) || prTitulo(a).localeCompare(prTitulo(b), 'pt-BR'); });
   if (!linhas.length){ box.innerHTML = '<div class="financeiro-vazio">' + (prS.busca || prFiltrosAtivos() ? 'Nenhum processo com essa busca ou esses filtros.' : (prS.filtro === 'andamento' ? 'Nenhum processo em andamento. Toque em “Novo processo” ou cadastre pela aba Publicações.' : 'Nada aqui.')) + '</div>'; return; }
   var lim = prS.mais * 30;
-  box.innerHTML = linhas.slice(0, lim).map(function(r){
+  box.innerHTML = (prS.filtro === 'revisar' ? impGruposHtml() : '') + linhas.slice(0, lim).map(function(r){
     var i = info[r.num], origens = prOrigens(r), arq = prArquivado(r), pubs = prPubsDe(r.num), tags = '';
     var orgao = r.doc ? [r.doc.orgao, r.doc.classe].filter(Boolean).join(' · ') : (pubs[0] ? [pubs[0].tribunal, pubs[0].orgao].filter(Boolean).join(' · ') : '');
     if (i.pz.length) tags += '<span class="pb-tg" style="background:rgba(217,59,59,.12);color:var(--urgente)">' + i.pz.length + (i.pz.length === 1 ? ' prazo aberto' : ' prazos abertos') + '</span>';
@@ -19658,9 +19661,17 @@ function impHtmlFim(){
 /* ---------- revisão: vincular, cliente novo, excluir ---------- */
 function impContaRev(){ return prDocs.filter(function(d){ return d.revisar && !d.arquivado; }).length; }
 function impDocPorNum(num){ var r = prMapa().m[num]; return r && r.doc ? r.doc : null; }
-function impSalvarDoc(doc, campos){
-  var nd = Object.assign({}, doc, campos); delete nd.id;
-  return pbApi('/api/db/processos/' + encodeURIComponent(doc.id), 'PUT', nd).then(function(){ Object.assign(doc, campos); });
+/* as gravações dos processos da revisão entram numa fila (uma de cada vez, cada uma montada em cima do que a anterior gravou), para um vínculo
+   e uma reavaliação ao mesmo tempo não se atropelarem; "cond" confere o estado no momento de gravar */
+var impFilaSalvar = Promise.resolve();
+function impSalvarDoc(doc, campos, cond){
+  var p = impFilaSalvar.then(function(){
+    if (cond && !cond(doc)) return;
+    var nd = Object.assign({}, doc, campos); delete nd.id;
+    return pbApi('/api/db/processos/' + encodeURIComponent(doc.id), 'PUT', nd).then(function(){ Object.assign(doc, campos); });
+  });
+  impFilaSalvar = p.catch(function(){});
+  return p;
 }
 /* vincula o processo ao cliente, tira da revisão e (na primeira vez) pergunta se os próximos podem ir direto */
 function impVincular(num, clienteId, opc){
@@ -19710,28 +19721,134 @@ function impDialogo(titulo, corpo, botoes){
   qs('impPCorpo').innerHTML = corpo + '<div class="pb-acts">' + botoes.map(function(b, i){ return '<button type="button" class="btn ' + b[1] + ' pb-b" data-impp="' + i + '">' + escapeHtml(b[0]) + '</button>'; }).join('') + '</div>';
   qs('overlayImpPerg').classList.add('show');
 }
-/* depois de confirmar um vínculo: "os próximos processos deste nome já vão direto para este cliente?" (uma vez por cliente) */
+/* na revisão: outros processos da mesma parte (ou sugeridos ao mesmo cliente) */
+function impOutrosDaParte(clienteId, nome){
+  return prDocs.filter(function(d){
+    if (!d.revisar || d.arquivado) return false;
+    if (d.sugestaoClienteId === clienteId) return true;
+    return !!(nome && d.parteNome && (normNome(d.parteNome) === normNome(nome) || cliNivel(nome, d.parteNome) === 3));
+  });
+}
+/* depois de confirmar um vínculo: (1) uma vez por cliente, "os próximos já vão direto?"; (2) se há outros processos da mesma parte na revisão, "vincular todos?" */
 function impPerguntarAuto(clienteId, nome){
-  var c = clienteById(clienteId); if (!c || c.vinculoAuto === true || c.vinculoAuto === false) return;
-  var outros = prDocs.filter(function(d){ return d.revisar && d.sugestaoClienteId === clienteId; });
+  var c = clienteById(clienteId); if (!c) return;
+  var outros = impOutrosDaParte(clienteId, nome), perguntarAuto = c.vinculoAuto !== true && c.vinculoAuto !== false;
+  if (!perguntarAuto && !outros.length) return;
+  if (!perguntarAuto){
+    impDialogo('Vincular os outros também?',
+      '<div class="parcela-sum">Há <b>' + outros.length + '</b> ' + (outros.length === 1 ? 'processo' : 'processos') + (nome ? ' de <b>' + escapeHtml(cliTitulo(nome)) + '</b>' : '') + ' na revisão. Vincular ' + (outros.length === 1 ? 'também ao' : 'todos ao') + ' cliente <b>' + escapeHtml(c.nome) + '</b>?</div>',
+      [['Sim, vincular ' + (outros.length === 1 ? 'o outro' : 'os ' + outros.length), 'btn-primary', function(){ impVincularLote(outros.map(function(d){ return prNum(d.numero); }), clienteId, { semPerguntar: true }); }], ['Não, deixar na revisão', 'btn-ghost', null]]);
+    return;
+  }
   impDialogo('Vincular os próximos automaticamente?',
     '<div class="parcela-sum">Quando aparecer outro processo' + (nome ? ' de <b>' + escapeHtml(cliTitulo(nome)) + '</b>' : '') + ', o app já cadastra e vincula ao cliente <b>' + escapeHtml(c.nome) + '</b>, sem passar pela revisão.</div>' +
-    '<div class="pb-aviso">Vale para a importação e para os processos novos das publicações. Dá para desligar depois na ficha do cliente.</div>' +
-    (outros.length ? '<label class="chip-toggle"><input type="checkbox" id="impPOutros" checked> Vincular também os ' + outros.length + (outros.length === 1 ? ' processo que já está' : ' processos que já estão') + ' na revisão com esse cliente sugerido</label>' : ''),
-    [['Sim, vincular automaticamente', 'btn-primary', function(){ impMarcarAuto(clienteId, true, outros, outros.length && !impS.naoOutros); }], ['Não, sempre revisar', 'btn-ghost', function(){ impMarcarAuto(clienteId, false, [], false); }]]);
-  var ck = qs('impPOutros'); impS.naoOutros = false; if (ck) ck.addEventListener('change', function(){ impS.naoOutros = !ck.checked; });
+    '<div class="pb-aviso">Vale para a importação e para os processos novos das publicações. Dá para desligar depois na ficha do cliente.' + (outros.length ? ' Os <b>' + outros.length + '</b> ' + (outros.length === 1 ? 'processo que já está' : 'processos que já estão') + ' na revisão com esse nome também serão vinculados agora.' : '') + '</div>',
+    [['Sim, vincular automaticamente', 'btn-primary', function(){ impMarcarAuto(clienteId, true); }], ['Não, sempre revisar', 'btn-ghost', function(){ impMarcarAuto(clienteId, false); }]]);
 }
-function impMarcarAuto(clienteId, sim, outros, vincularOutros){
+function impMarcarAuto(clienteId, sim){
   var c = clienteById(clienteId); if (!c) return;
   var o = JSON.parse(JSON.stringify(c)); o.vinculoAuto = !!sim;
   persistClienteSet(o).then(function(){
-    if (!sim){ toast('Certo: os próximos deste cliente continuam indo para a revisão.'); return; }
-    if (vincularOutros && outros.length){
-      return Promise.all(outros.map(function(d){ var ids = (d.clienteIds || []).slice(); if (ids.indexOf(clienteId) < 0) ids.push(clienteId); return impSalvarDoc(d, { clienteIds: ids, revisar: '', revisadoEm: new Date().toISOString(), sugestaoClienteId: '', vinculoAuto: true }); }))
-        .then(function(){ toast('Pronto: ' + (outros.length + 1) + ' processos vinculados e os próximos deste cliente já vão direto.'); prDepois(); });
-    }
-    toast('Pronto: os próximos processos deste cliente já vão direto.');
+    if (!sim){ toast('Certo: os próximos deste cliente continuam indo para a revisão.'); impPerguntarAuto(clienteId, ''); return; }
+    var n = impReavaliar(true);   /* os que já estavam na revisão com esse cliente vão agora */
+    toast('Pronto: os próximos processos deste cliente já vão direto' + (n ? ' e ' + n + (n === 1 ? ' que estava' : ' que estavam') + ' na revisão ' + (n === 1 ? 'foi vinculado' : 'foram vinculados') : '') + '.');
   }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
+}
+
+/* ---------- mesma parte em vários processos: vincular todos de uma vez ---------- */
+function impGrupos(){
+  var gs = [];
+  prDocs.filter(function(d){ return d.revisar && !d.arquivado && d.parteNome; }).forEach(function(d){
+    var g = gs.filter(function(x){ return normNome(x.nome) === normNome(d.parteNome) || cliNivel(x.nome, d.parteNome) === 3; })[0];
+    if (!g){ g = { nome: d.parteNome, docs: [] }; gs.push(g); }
+    g.docs.push(d);
+  });
+  gs = gs.filter(function(g){ return g.docs.length >= 2; });
+  gs.forEach(function(g){
+    var cont = {}, melhor = '';
+    g.docs.forEach(function(d){ if (d.sugestaoClienteId && clienteById(d.sugestaoClienteId)){ cont[d.sugestaoClienteId] = (cont[d.sugestaoClienteId] || 0) + 1; if (!melhor || cont[d.sugestaoClienteId] > cont[melhor]) melhor = d.sugestaoClienteId; } });
+    g.sug = melhor; g.nums = g.docs.map(function(d){ return prNum(d.numero); });
+  });
+  gs.sort(function(a, b){ return b.docs.length - a.docs.length; });
+  return gs;
+}
+/* cartões do topo da revisão: um por parte que aparece em 2 ou mais processos */
+function impGruposHtml(){
+  var gs = impGrupos(); prS.revGrupos = gs;
+  return gs.map(function(g, i){
+    var sug = g.sug ? clienteById(g.sug) : null, b = function(a, cls, t){ return '<button type="button" class="btn ' + cls + ' pb-b" data-pr="' + a + '" data-n="' + i + '">' + t + '</button>'; };
+    return '<div class="pb-card" style="--pb-bar:#C98500"><div class="pb-l1"><span>Mesma parte em ' + g.docs.length + ' processos</span><span class="pb-tipo">vincular de uma vez</span></div>' +
+      '<div class="pb-cli">' + escapeHtml(cliTitulo(g.nome)) + '</div>' +
+      '<div class="pb-aviso" style="margin-top:6px">' + (sug ? 'Cliente parecido: <b>' + escapeHtml(sug.nome) + '</b>' : 'Nenhum cliente parecido ainda. Escolha um cliente ou cadastre um novo.') + '</div>' +
+      '<div class="pb-acts">' + (sug ? b('rev-gvinc', 'btn-primary', 'Vincular os ' + g.docs.length + ' a ' + escapeHtml(sug.nome.length > 18 ? sug.nome.slice(0, 18) + '…' : sug.nome)) : '') + b('rev-gesc', sug ? 'btn-ghost' : 'btn-primary', 'Escolher outro cliente') + b('rev-gnovo', 'btn-ghost', 'Cadastrar cliente novo') + '</div></div>';
+  }).join('');
+}
+function impVincularLote(nums, clienteId, opc){
+  var c = clienteById(clienteId); if (!c) return Promise.resolve();
+  var docs = nums.map(impDocPorNum).filter(function(d){ return d && d.revisar; }), nomes = {};
+  if (!docs.length) return Promise.resolve();
+  return Promise.all(docs.map(function(d){
+    var ids = (d.clienteIds || []).slice(); if (ids.indexOf(clienteId) < 0) ids.push(clienteId);
+    if (d.parteNome) nomes[d.parteNome] = 1;
+    return impSalvarDoc(d, { clienteIds: ids, revisar: '', revisadoEm: new Date().toISOString(), sugestaoClienteId: '' });
+  })).then(function(){
+    Object.keys(nomes).forEach(function(n){ try{ prAprenderApelido(clienteId, n); }catch(e){} });
+    toast(docs.length + (docs.length === 1 ? ' processo vinculado a ' : ' processos vinculados a ') + c.nome + '.'); prDepois();
+    if (!(opc && opc.semPerguntar)) impPerguntarAuto(clienteId, docs[0].parteNome || '');
+  }).catch(function(e){ toast('Não consegui vincular: ' + e.message); });
+}
+function impGrupoVincular(i){ var g = (prS.revGrupos || [])[Number(i)]; if (g && g.sug) impVincularLote(g.nums, g.sug); }
+function impGrupoNovo(i){
+  var g = (prS.revGrupos || [])[Number(i)]; if (!g) return;
+  abrirClienteEdit({ nome: cliTitulo(g.nome), pagador: 'cliente', aoSalvar: function(c){ impVincularLote(g.nums, c.id); } });
+}
+/* escolher um cliente já cadastrado (lista com busca) */
+function impEscolherParaGrupo(i){
+  var g = (prS.revGrupos || [])[Number(i)]; if (!g) return;
+  if (!qs('overlayImpCli')){
+    var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayImpCli';
+    d.innerHTML = '<div class="modal"><div class="modal-head"><h2 id="impCTit">Escolher cliente</h2><button class="icon-btn" id="impCX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body"><div class="pb-aviso" id="impCInfo"></div><div class="field"><input type="text" id="impCBusca" placeholder="Buscar cliente…" autocomplete="off"></div><div class="pb-sec" id="impCLista"></div></div></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function(e){
+      if (e.target === d || (e.target.closest && e.target.closest('#impCX'))){ d.classList.remove('show'); return; }
+      var b = e.target.closest ? e.target.closest('[data-impc]') : null; if (!b) return;
+      d.classList.remove('show'); var f = impS.pick; if (f) f(b.getAttribute('data-impc'));
+    });
+    qs('impCBusca').addEventListener('input', impListaClientes);
+  }
+  impS.pick = function(id){ impVincularLote(g.nums, id); };
+  qs('impCInfo').innerHTML = 'Vincular <b>' + g.docs.length + '</b> processos de <b>' + escapeHtml(cliTitulo(g.nome)) + '</b> a qual cliente?'; qs('impCBusca').value = '';
+  impListaClientes(); qs('overlayImpCli').classList.add('show');
+  setTimeout(function(){ try{ qs('impCBusca').focus(); }catch(e){} }, 50);
+}
+function impListaClientes(){
+  var q = normNome(qs('impCBusca').value), l = clientes.filter(function(c){ return !c.arquivado && (!q || normNome(c.nome + ' ' + (c.apelidos || []).join(' ')).indexOf(q) >= 0); }).sort(function(a, b){ return a.nome.localeCompare(b.nome, 'pt-BR'); }).slice(0, 40);
+  qs('impCLista').innerHTML = l.length ? l.map(function(c){ return '<button type="button" class="pb-mi" data-impc="' + escapeHtml(c.id) + '"><span class="pb-mi-i">👤</span>' + escapeHtml(c.nome) + '</button>'; }).join('') : '<div class="pb-aviso">Nenhum cliente com esse nome. Feche e use “Cadastrar cliente novo”.</div>';
+}
+
+/* ---------- clientes cadastrados depois: a revisão se atualiza sozinha ---------- */
+/* reavalia os processos que estão na revisão com os clientes de agora: se o cliente é automático, vincula; se não, passa a sugerir o cliente.
+   Devolve quantos foram vinculados direto (a gravação continua em segundo plano). */
+function impReavaliar(forcar){
+  if (!window.__SERVIDOR || impS.reavRodando || !impS.cli || !prOk) return 0;
+  var sig = clientes.map(function(c){ return c.id + '|' + c.nome + '|' + (c.apelidos || []).join(',') + '|' + c.vinculoAuto + '|' + (c.arquivado ? 1 : 0); }).join(';');
+  if (!forcar && sig === impS.reavSig) return 0;
+  impS.reavSig = sig;
+  var pend = prDocs.filter(function(d){ return d.revisar && !d.arquivado; }), jobs = [], nAuto = 0, nSug = 0;
+  pend.forEach(function(d){
+    var g = { dest: d.parteNome ? [{ n: d.parteNome, p: '' }] : [], ativo: d.autor || '', passivo: d.reu || '' };
+    var dec = impDecidir(g);
+    if (dec.tipo === 'auto'){ nAuto++; var ids = (d.clienteIds || []).slice(); if (ids.indexOf(dec.cliente.id) < 0) ids.push(dec.cliente.id); jobs.push([d, { clienteIds: ids, revisar: '', vinculoAuto: true, revisadoEm: new Date().toISOString(), sugestaoClienteId: '' }]); }
+    else if (dec.motivo === 'cliente-parecido' && (d.revisar !== 'cliente-parecido' || d.sugestaoClienteId !== dec.sugestao)){ nSug++; jobs.push([d, { revisar: 'cliente-parecido', sugestaoClienteId: dec.sugestao }]); }
+  });
+  if (!jobs.length) return 0;
+  impS.reavRodando = true;
+  jobs.reduce(function(cad, j){ return cad.then(function(){ return impSalvarDoc(j[0], j[1], function(d){ return !!d.revisar; }); }); }, Promise.resolve()).catch(function(e){ console.error('revisão', e); }).then(function(){
+    impS.reavRodando = false;
+    toast((nAuto ? nAuto + (nAuto === 1 ? ' processo da revisão vinculado' : ' processos da revisão vinculados') + ' ao cliente automático' : '') + (nAuto && nSug ? ' · ' : '') + (nSug ? 'cliente reconhecido em ' + nSug + (nSug === 1 ? ' processo da revisão' : ' processos da revisão') : '') + '.');
+    prDepois();
+  });
+  return nAuto;
 }
 
 /* ---------- estilo ---------- */
@@ -19741,11 +19858,11 @@ function impMarcarAuto(clienteId, sim, outros, vincularOutros){
     '.imp-lin input{margin-top:3px;width:18px;height:18px}.imp-tx{display:flex;flex-direction:column;gap:2px;min-width:0}.imp-tx b{font-size:var(--t3);overflow-wrap:anywhere}.imp-tx small{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}';
   document.head.appendChild(st);
   /* a lista só pode cadastrar sozinho depois que os clientes chegaram do servidor */
-  var rc0 = renderClientesTudo; renderClientesTudo = function(){ impS.cli = true; var r = rc0.apply(this, arguments); try{ impTalvezAuto(); }catch(e){} return r; };
+  var rc0 = renderClientesTudo; renderClientesTudo = function(){ impS.cli = true; var r = rc0.apply(this, arguments); try{ impReavaliar(); impTalvezAuto(); }catch(e){} return r; };
   var ab0 = pbAtualizarBadge; pbAtualizarBadge = function(){ var r = ab0.apply(this, arguments); try{ impTalvezAuto(); }catch(e){} return r; };
-  var pd0 = prDepois; prDepois = function(){ var r = pd0.apply(this, arguments); try{ impTalvezAuto(); impFilaDatajud(); }catch(e){} return r; };
+  var pd0 = prDepois; prDepois = function(){ var r = pd0.apply(this, arguments); try{ impReavaliar(); impTalvezAuto(); impFilaDatajud(); }catch(e){} return r; };
   if (window.__SERVIDOR) impCarregarCfg();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { impDecidir: impDecidir, impTalvezAuto: function(){ impS.autoEm = 0; return impTalvezAuto(); }, impS: impS });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { impDecidir: impDecidir, impReavaliar: function(){ return impReavaliar(true); }, impTalvezAuto: function(){ impS.autoEm = 0; return impTalvezAuto(); }, impS: impS });
 })();
 
 /*IM-FIM*/

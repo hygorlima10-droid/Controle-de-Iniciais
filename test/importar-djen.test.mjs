@@ -161,6 +161,45 @@ check(!p(N3), 'publicação que diz “extinto / arquivem-se” não cadastra so
 check(!p(N4), 'processo excluído antes não é cadastrado de novo');
 const antes = (await docs('processos')).length; await page.reload(); await page.waitForTimeout(4000);
 check((await docs('processos')).length === antes, 'abrir o app de novo não duplica o que já foi cadastrado');
+// 5b) cliente cadastrado depois: a revisão se atualiza e dá para vincular a mesma parte de uma vez
+const COAPIL = 'COOPERATIVA AGROPECUARIA MISTA DE PIRACANJUBA - COAPIL', FAZ = 'FAZENDA SÃO JOÃO LTDA', ZETA = 'LOJA ZETA COMÉRCIO LTDA';
+const rev = (id, k, parte) => f('PUT', '/api/db/processos/' + id, { numero: num(k), partes: parte + ' x BANCO X', autor: parte, reu: 'BANCO X', orgao: 'TJGO', clienteIds: [], honorarios: 'sem', arquivado: false, origem: 'diario', revisar: 'sem-cliente', parteNome: parte, ultimaPublicacao: dia(-2), criadoEm: agora, importadoEm: agora });
+await rev('g1', 21, COAPIL); await rev('g2', 22, COAPIL); await rev('g3', 23, COAPIL); await rev('h1', 24, FAZ); await rev('h2', 25, FAZ); await rev('z1', 26, ZETA); await rev('z2', 27, ZETA); await rev('k1', 28, 'AGRO BETA'); await rev('k2', 29, 'AGRO BETA');
+await f('PUT', '/api/db/clientes/cl9', { nome: 'Coapil', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/clientes/cl10', { nome: 'Agro Beta', pagador: 'cliente', vinculoAuto: true, criadoEm: agora });
+await page.reload(); await page.waitForTimeout(4500);
+let Q = await docs('processos'), q = id => Q.find(d => d.id === id);
+check(q('k1').clienteIds[0] === 'cl10' && q('k2').clienteIds[0] === 'cl10' && !q('k1').revisar, 'cliente automático cadastrado depois: os processos que já estavam na revisão são vinculados sozinhos');
+check(['g1', 'g2', 'g3'].every(id => q(id).revisar === 'cliente-parecido' && q(id).sugestaoClienteId === 'cl9') && q('h1').revisar === 'sem-cliente', 'cliente comum cadastrado depois (Coapil): a revisão passa a sugerir o cliente nos 3 processos; os sem cliente continuam iguais');
+await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(600);
+await page.click('[data-pr="rev-ir"]'); await page.waitForTimeout(600);
+const grupos = await page.evaluate(() => Array.from(document.querySelectorAll('#prLista > .pb-card')).filter(c => /Mesma parte em/.test(c.innerText)).map(c => c.innerText));
+check(grupos.length === 3 && /Mesma parte em 3 processos/.test(grupos[0]) && /Vincular os 3 a Coapil/.test(grupos[0]) && /Escolher outro cliente/.test(grupos[0]) && /Cadastrar cliente novo/.test(grupos[0]), 'a revisão mostra um cartão por parte repetida, com “Vincular os 3 a Coapil”, escolher outro cliente e cadastrar cliente novo: ' + grupos.length);
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#prLista > .pb-card:not(.pr-card) button')).every(b => b.closest('.pb-card'))), 'os botões do cartão da parte repetida ficam dentro do cartão');
+await foto('7-grupos');
+await page.click('#prLista > .pb-card:first-child [data-pr="rev-gvinc"]'); await page.waitForTimeout(1200);
+Q = await docs('processos');
+check(['g1', 'g2', 'g3'].every(id => q(id).clienteIds[0] === 'cl9' && !q(id).revisar), 'Vincular os 3: os três processos vão para o cliente de uma vez');
+check(await visivel('#overlayImpPerg.show') && /próximos automaticamente/.test(await t('#overlayImpPerg')), 'depois do vínculo em lote, pergunta se os próximos vão direto');
+await page.click('[data-impp="0"]'); await page.waitForTimeout(800);
+check((await docs('clientes')).find(c => c.id === 'cl9').vinculoAuto === true, 'responder Sim liga o automático do Coapil');
+// escolher outro cliente (lista com busca) para o grupo da Fazenda
+await page.click('#prLista > .pb-card:first-child [data-pr="rev-gesc"]'); await page.waitForTimeout(600);
+check(await visivel('#overlayImpCli.show') && /2 processos de/.test(await t('#impCInfo')), 'Escolher outro cliente abre a lista de clientes com busca');
+await page.fill('#impCBusca', 'beta'); await page.waitForTimeout(300);
+check((await page.$$('#impCLista [data-impc]')).length === 1, 'a busca filtra a lista de clientes');
+await page.click('#impCLista [data-impc="cl10"]'); await page.waitForTimeout(1200);
+Q = await docs('processos');
+check(['h1', 'h2'].every(id => q(id).clienteIds[0] === 'cl10' && !q(id).revisar), 'os dois processos da Fazenda foram vinculados ao cliente escolhido');
+// cadastrar cliente novo para o grupo da Loja Zeta
+await page.click('#prLista > .pb-card:first-child [data-pr="rev-gnovo"]'); await page.waitForTimeout(600);
+check(await visivel('#overlayClienteEdit.show') && /Loja Zeta/i.test(await page.inputValue('#cliNomeInput')), 'Cadastrar cliente novo, no grupo, abre o cadastro com o nome da parte');
+await page.click('#cliSalvarBtn'); await page.waitForTimeout(1300);
+Q = await docs('processos'); const cz = (await docs('clientes')).find(c => /loja zeta/i.test(c.nome));
+check(cz && ['z1', 'z2'].every(id => q(id).clienteIds[0] === cz.id && !q(id).revisar), 'o cliente novo é criado e os dois processos da Loja Zeta vinculados a ele: ' + JSON.stringify([cz && cz.id, q('z1').clienteIds, q('z1').revisar, await t('#overlayImpPerg')]));
+if (await visivel('#overlayImpPerg.show')) await page.click('[data-impp="1"]');
+await page.waitForTimeout(500);
+
 // 6) ligar/desligar na tela de importação e criação atômica
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(600);
 await page.click('#prMenuBtn'); await page.click('[data-pr="imp"]'); await page.waitForTimeout(800); await foto('6-config-depois');
