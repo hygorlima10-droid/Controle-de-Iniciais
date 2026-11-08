@@ -7,7 +7,7 @@ const MAX_OPS = 25;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
 
-export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC }) {
+export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao }) {
   if (request.method !== 'POST') return erro(405, 'method', 'Use POST.');
   const txt = await request.text();
   if (txt.length > MAX_DOC * 4) return erro(413, 'quota_exceeded', 'Lote grande demais.');
@@ -16,6 +16,7 @@ export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, 
   if (!ops || !ops.length || ops.length > MAX_OPS) return erro(400, 'invalid', 'Envie de 1 a ' + MAX_OPS + ' operações.');
   const vistos = new Set();
   for (const o of ops) {
+    if (o && typeof o === 'object' && typeof o.colecao === 'string' && typeof o.id === 'string') { o.colecao = resolverColecao(o.colecao, o.id); const recusa = checarColecao(o.colecao, auth); if (recusa) return recusa; }
     if (!o || typeof o !== 'object' || !['gravar', 'excluir'].includes(o.acao) || !NOME.test(String(o.colecao || '')) || !NOME.test(String(o.id || ''))) return erro(400, 'invalid', 'Operação inválida.');
     if (vistos.has(o.colecao + '|' + o.id)) return erro(400, 'invalid', 'Registro repetido no lote.');
     vistos.add(o.colecao + '|' + o.id);

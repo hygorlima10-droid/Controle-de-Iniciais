@@ -1466,6 +1466,14 @@
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
 <symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -1724,10 +1732,11 @@
         <button type="button" class="acao" id="inicioNovo"><svg><use href="#ic-plus"/></svg><span>Novo</span></button>
       </div>
       <div class="ini-card ini-hero">
-        <div class="lbl" id="resumoRecebidoLbl">Recebido no mês</div>
+        <div class="lbl" id="resumoRecebidoLbl">Honorários recebidos no mês</div>
         <div class="hero-val" id="resumoRecebido">R$ 0,00</div>
         <div class="div-barra" id="inicioBarra"></div>
         <div class="lbl" id="inicioLegenda"></div>
+        <button type="button" class="ini-pj" id="inicioPjCard" style="display:none;"><span class="ini-pj-t">🔒 Só você vê · não soma no total acima</span><span class="ini-pj-l">Renda da PJ no mês</span><span class="ini-pj-v" id="inicioPjValor">R$ 0,00</span><span class="ini-pj-s">lançada no Financeiro · toque para abrir a PJ ›</span></button>
       </div>
       <div class="ini-kpi">
         <div class="kpi-row">
@@ -1748,11 +1757,7 @@
         <div class="resumo-origem-row"><span>Recebido no mês</span><span class="v" id="resumoOrigemProprioRecebido">R$ 0,00</span></div>
         <button type="button" class="btn-text" id="abrirCobrancaProprioBtn" style="margin-top:6px;font-size:var(--t3);">Cobrar clientes próprios</button>
       </div>
-      <div class="resumo-origem-card" id="resumoOrigemOutrasCard" style="display:none;">
-        <h3>Outras receitas da PJ</h3>
-        <div class="resumo-origem-row"><span>Recebido no mês</span><span class="v" id="resumoOrigemOutrasRecebido">R$ 0,00</span></div>
-        <div style="font-size:var(--t2);color:var(--muted,#6b7280);margin-top:4px;">Receitas lançadas direto no Financeiro (não vêm de petição, acordo ou alvará). Entram no total acima.</div>
-      </div>
+      <!-- a renda da PJ fica no quadro do Início (inicioPjCard), fora dos honorários -->
     </div>
 
       </div>
@@ -3559,7 +3564,7 @@
         }
       });
       configRef = db.collection('config');
-      configRef.limit(10).onSnapshot(function(snap){
+      configRef.limit(50).onSnapshot(function(snap){
         snap.docs.forEach(function(d){ config[d.id] = d.data() || {}; });
         configCarregado = true;
         aoMudarConfig();
@@ -4451,23 +4456,28 @@
       var ch = qs('vencidoChip');
       if (ch){ ch.textContent = em ? 'Em dia' : 'Atrasado'; ch.className = 'est ' + (em ? 'est-bom' : 'est-atraso'); }
     })();
-    qs('resumoRecebido').textContent = fmtMoeda(sp.recebido + sa.recebido + sv.recebido + receitaManualPj);
+    qs('resumoRecebido').textContent = fmtMoeda(sp.recebido + sa.recebido + sv.recebido);
     qs('mesAtualLabel').textContent = mesCurto(mesSelecionado);
     qs('mesHoje').style.display = (mesSelecionado === todayISO().slice(0,7)) ? 'none' : '';
-    qs('resumoRecebidoLbl').textContent = (mesSelecionado === todayISO().slice(0,7)) ? 'Recebido no mês' : 'Recebido em ' + mesLabel(mesSelecionado);
+    qs('resumoRecebidoLbl').textContent = (mesSelecionado === todayISO().slice(0,7)) ? 'Honorários recebidos no mês' : 'Honorários recebidos em ' + mesLabel(mesSelecionado);
     var ro = computeResumoOrigem();
     qs('resumoOrigemMuriloPendente').textContent = fmtMoeda(ro.murilo.pendente);
     qs('resumoOrigemMuriloRecebido').textContent = fmtMoeda(ro.murilo.recebido);
     qs('resumoOrigemProprioPendente').textContent = fmtMoeda(ro.proprio.pendente);
     qs('resumoOrigemProprioRecebido').textContent = fmtMoeda(ro.proprio.recebido);
-    qs('resumoOrigemOutrasCard').style.display = receitaManualPj > 0.004 ? '' : 'none';
-    qs('resumoOrigemOutrasRecebido').textContent = fmtMoeda(receitaManualPj);
-    var recTot = ro.proprio.recebido + ro.murilo.recebido + receitaManualPj;
+    /* renda lançada na PJ: quadro à parte, só do proprietário (nesta fase todo acesso é o proprietário); não entra no total de honorários */
+    var pjCard = qs('inicioPjCard');
+    if (pjCard){
+      pjCard.style.display = receitaManualPj > 0.004 ? '' : 'none';
+      qs('inicioPjValor').textContent = fmtMoeda(receitaManualPj);
+      pjCard.onclick = function(){ var b = document.querySelector('[data-tab="financeiro"][data-fin="pj"]'); if (b) b.click(); };
+    }
+    var recTot = ro.proprio.recebido + ro.murilo.recebido;
     if (qs('inicioBarra')){
       if (recTot > 0.004){
-        var pP = ro.proprio.recebido / recTot * 100, pM = ro.murilo.recebido / recTot * 100, pO = receitaManualPj / recTot * 100;
-        qs('inicioBarra').innerHTML = '<span class="seg-prop" style="width:' + pP + '%"></span><span class="seg-mur" style="width:' + pM + '%"></span><span class="seg-out" style="width:' + pO + '%"></span>';
-        qs('inicioLegenda').innerHTML = '<span class="lg"><i class="seg-prop"></i>Próprios ' + Math.round(pP) + '%</span><span class="lg"><i class="seg-mur"></i>Murilo ' + Math.round(pM) + '%</span>' + (receitaManualPj > 0.004 ? '<span class="lg"><i class="seg-out"></i>Outras receitas ' + Math.round(pO) + '%</span>' : '');
+        var pP = ro.proprio.recebido / recTot * 100, pM = ro.murilo.recebido / recTot * 100;
+        qs('inicioBarra').innerHTML = '<span class="seg-prop" style="width:' + pP + '%"></span><span class="seg-mur" style="width:' + pM + '%"></span>'; /* só honorários na barra */
+        qs('inicioLegenda').innerHTML = '<span class="lg"><i class="seg-prop"></i>Próprios ' + Math.round(pP) + '%</span><span class="lg"><i class="seg-mur"></i>Murilo ' + Math.round(pM) + '%</span>'; /* só honorários na legenda */
       } else {
         qs('inicioBarra').innerHTML = '';
         qs('inicioLegenda').textContent = 'Nenhum recebimento neste mês ainda.';

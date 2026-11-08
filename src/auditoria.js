@@ -5,8 +5,8 @@
 export const DIAS_LIXEIRA = 30, DIAS_REGISTRO = 365;
 const COL_AUD = '_auditoria', COL_LIX = '_lixeira';
 export const ROTULOS = { casos: 'Inicial', termosAcordo: 'Acordo', alvaras: 'Alvará', clientes: 'Cliente', processos: 'Processo', agenda: 'Agenda', despesas: 'Despesa', receitasManuais: 'Receita', saldos: 'Saldo', metas: 'Meta', extratos: 'Extrato', obraMov: 'Lançamento da obra', pecasAprendidas: 'Peça aprendida', config: 'Configuração' };
-const SEM_REGISTRO = new Set(['config']);        // configurações mudam sozinhas (data do último backup, vínculo…): só ruído
-const SEM_LIXEIRA = new Set(['config']);
+const SEM_REGISTRO = new Set(['config', 'configDono']);        // configurações mudam sozinhas (data do último backup, vínculo…): só ruído
+const SEM_LIXEIRA = new Set(['config', 'configDono']);
 const IGNORAR = new Set(['atualizadoEm', 'proximaAgId', 'djTent', 'djPendente']);
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });

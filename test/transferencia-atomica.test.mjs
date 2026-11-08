@@ -17,7 +17,7 @@ r = await f('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'receitasMan
 check(r.s === 200 && (await lista('receitasManuais')).some(d => d.id === 'lr1') && (await lista('despesas')).some(d => d.id === 'ld1'), 'lote grava os dois registros juntos');
 r = await f('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'receitasManuais', id: 'lr2', dados: { descricao: 'C' } }, { acao: 'gravar', colecao: 'despesas', id: 'ld2', dados: [1, 2] }] });
 check(r.s === 400 && !(await lista('receitasManuais')).some(d => d.id === 'lr2'), 'uma operação inválida recusa o lote inteiro: a outra não é gravada');
-r = await f('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: '_usuarios', id: 'x', dados: { a: 1 } }] }); check(r.s === 400, 'coleção reservada do sistema é recusada');
+r = await f('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: '_usuarios', id: 'x', dados: { a: 1 } }] }); check(r.s === 404, 'coleção reservada do sistema é recusada');
 r = await f('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'despesas', id: 'ld1', dados: { a: 1 } }, { acao: 'excluir', colecao: 'despesas', id: 'ld1' }] }); check(r.s === 400, 'o mesmo registro duas vezes no lote é recusado');
 r = await f('POST', '/api/lote', { ops: [] }); check(r.s === 400, 'lote vazio é recusado');
 r = await f('POST', '/api/lote', { ops: Array.from({ length: 26 }, (_, i) => ({ acao: 'excluir', colecao: 'despesas', id: 'z' + i })) }); check(r.s === 400, 'mais de 25 operações é recusado');

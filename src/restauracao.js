@@ -5,6 +5,7 @@
    3) desfazer: volta para a cópia de segurança (que também fica guardada, então o próprio "desfazer" se desfaz).
    Só mexe nas coleções que o arquivo traz; o que não está no arquivo (ex.: backup antigo sem Processos) não é tocado. */
 
+import { resolverColecao } from './colecoes.js';
 import { canon, registrar } from './auditoria.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
@@ -17,7 +18,7 @@ export const COLECOES_APP = [
   ['clientes', 'clientes', 'lista', 'clientes'], ['despesas', 'despesas', 'lista', 'despesas'], ['receitasManuais', 'receitasManuais', 'lista', 'receitas'],
   ['saldos', 'saldos', 'mapa', 'saldos'], ['metas', 'metas', 'lista', 'metas'], ['extratos', 'extratos', 'lista', 'extratos do banco'],
   ['obraMov', 'obraMov', 'lista', 'lançamentos da obra'], ['processos', 'processos', 'lista', 'processos'], ['agenda', 'agenda', 'lista', 'itens da agenda'],
-  ['pecasAprendidas', 'pecasAprendidas', 'lista', 'peças aprendidas'], ['config', 'config', 'mapa', 'configurações'],
+  ['pecasAprendidas', 'pecasAprendidas', 'lista', 'peças aprendidas'], ['config', 'config', 'mapa', 'configurações'], ['configDono', 'configDono', 'mapa', 'configurações do proprietário'],
 ];
 const NOME_DA_COLECAO = Object.fromEntries(COLECOES_APP.map((c) => [c[1], c[3]]));
 
@@ -63,6 +64,14 @@ export function lerArquivo(corpo) {
       }
     }
     if (!colecoes.size) prob('Este arquivo não contém nenhuma lista de dados do sistema.');
+  }
+  /* backups feitos antes da separação da configuração trazem os documentos do proprietário dentro de "config": vão para configDono */
+  for (const k of [...docs.keys()]) {
+    const [col, ...r] = k.split('|'), id = r.join('|'), novo = resolverColecao(col, id);
+    if (novo === col) continue;
+    const dados = docs.get(k); docs.delete(k);
+    if (!docs.has(novo + '|' + id)) docs.set(novo + '|' + id, dados);
+    colecoes.add(novo);
   }
   if (!docs.size && !problemas.length) prob('Este backup está vazio. Restaurá-lo apagaria os dados atuais, por isso foi bloqueado.');
   return { docs, colecoes, problemas };

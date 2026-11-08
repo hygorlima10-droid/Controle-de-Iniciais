@@ -6,6 +6,8 @@ import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
 import { loteRotas } from './lote.js';
+import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
+import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
@@ -409,7 +411,7 @@ async function notif(request, env, partes) {
 }
 
 /* ---------- API do banco ---------- */
-async function api(request, env, partes) {
+async function api(request, env, partes, auth) {
   // partes: ['db', colecao, id?]  |  ['backup']
   const metodo = request.method;
   if (partes[0] === 'backup' && metodo === 'GET') {
@@ -417,12 +419,18 @@ async function api(request, env, partes) {
     return json({ versao: 1, exportadoEm: new Date().toISOString(), docs: results.map((r) => ({ colecao: r.colecao, id: r.id, dados: JSON.parse(r.dados) })) });
   }
   if (partes[0] !== 'db' || !partes[1] || !NOME.test(partes[1])) return erro(404, 'not_found', 'Não encontrado.');
-  const colecao = partes[1], id = partes[2];
+  const id = partes[2];
   if (id !== undefined && !NOME.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
+  const colecao = resolverColecao(partes[1], id);   // config/<documento do proprietário> vai para configDono (compatível com o app já aberto)
+  const recusa = checarColecao(colecao, auth); if (recusa) return recusa;
 
   if (!id && metodo === 'GET') {
     const lim = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get('limit') || '1000', 10) || 1000, 1), MAX_LISTA);
-    const { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? ORDER BY id LIMIT ?').bind(colecao, lim).all();
+    let { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? ORDER BY id LIMIT ?').bind(colecao, lim).all();
+    if (colecao === 'config' && ehProprietario(auth)) {   // o proprietário (e o app já aberto antes da separação) continua vendo os seus documentos na lista de config
+      const dono = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? ORDER BY id').bind('configDono').all();
+      results = [...results, ...dono.results].sort((a, b) => (a.id < b.id ? -1 : 1)).slice(0, lim);
+    }
     return json({ docs: results.map((r) => ({ id: r.id, data: JSON.parse(r.dados) })) });
   }
   if (!id && metodo === 'POST') {
@@ -484,9 +492,9 @@ const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png
 const ROTAS = {
   ler: ['sessao', (r, e, p) => ler(r, e, p)], recebidos: ['sessao', (r, e, p) => recebidos(r, e, p)], anexos: ['sessao', (r, e, p) => anexos(r, e, p)],
   notif: ['sessao', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p) => djenRotas(r, e, p)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],
-  db: ['sessao', (r, e, p) => api(r, e, p)],
-  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC })],
-  backup: ['proprietario', (r, e, p) => api(r, e, p)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
+  db: ['sessao', (r, e, p, au) => api(r, e, p, au)],
+  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao })],
+  backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
 };
@@ -534,6 +542,7 @@ async function tratar(request, env, ctx) {
     if (url.pathname.startsWith('/api/')) return erro(401, 'not_granted', 'Entre com a senha.');
     return new Response(null, { status: 303, headers: { location: '/login' } });
   }
+  try { await garantirMigracoes(env); } catch (e) { console.error('migração', e); }
   if (url.pathname.startsWith('/api/')) {
     if (request.method !== 'GET') {   // proteção extra contra pedidos vindos de outros sites
       const o = request.headers.get('origin');
