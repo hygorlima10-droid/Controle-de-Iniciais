@@ -25,6 +25,7 @@ function sgMontar(id, titulo){
     var t = e.target; if (!t || !t.getAttribute) return;
     if (t.getAttribute('data-sgf') === 'lix'){ sgS.filtroLix = t.value; sgLixDesenhar(); }
     if (t.getAttribute('data-sgf') === 'reg'){ sgS.filtroReg = t.value; sgRegCarregar(true); }
+    if (t.getAttribute('data-sgf') === 'alertas') sgSegAlertas(t.checked);
   });
   return d;
 }
@@ -37,6 +38,11 @@ function sgClique(a, k, ov){
   else if (a === 'restaurar') sgRestaurar(k, false);
   else if (a === 'substituir') sgRestaurar(k, true);
   else if (a === 'mais-reg') sgRegCarregar(false);
+  else if (a === 'seg-encerrar') sgSegEncerrar(k);
+  else if (a === 'seg-outras-pede'){ sgS.segConfirma = true; sgSegDesenhar(); }
+  else if (a === 'seg-cancela'){ sgS.segConfirma = false; sgSegDesenhar(); }
+  else if (a === 'seg-outras') sgSegEncerrar('');
+  else if (a === 'seg-senha') sgSegSenha();
 }
 function sgApi(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
@@ -77,7 +83,7 @@ function sgRestaurar(chave, substituir){
 }
 
 /* ---------- Registro de ações ---------- */
-var SG_OP = { criou: ['criou', 'ok'], alterou: ['alterou', 'nv'], excluiu: ['excluiu', ''], restaurou: ['restaurou', 'ok'], leitura: ['leitura', ''], esvaziou: ['esvaziou', ''] };
+var SG_OP = { criou: ['criou', 'ok'], alterou: ['alterou', 'nv'], excluiu: ['excluiu', ''], restaurou: ['restaurou', 'ok'], leitura: ['leitura', ''], esvaziou: ['esvaziou', ''], entrou: ['entrou', 'ok'], saiu: ['saiu', ''], falhou: ['falhou', 'pz'], encerrou: ['encerrou', 'nv'] };
 function sgRegAbrir(){ sgMontar('overlaySgReg', 'Registro de ações'); sgS.filtroReg = ''; sgRegCarregar(true); qs('overlaySgReg').classList.add('show'); }
 function sgRegCarregar(reinicia){
   if (reinicia){ sgS.reg = []; sgS.mais = null; qs('overlaySgRegC').innerHTML = '<div class="saldo-data">Carregando…</div>'; }
@@ -100,4 +106,51 @@ function sgRegDesenhar(){
   h += '<div class="pb-aviso" style="margin:8px 4px">O servidor guarda quem fez, quando e o que mudou. Ninguém consegue apagar nem editar este registro pelo app. Fica guardado por 1 ano.</div>';
   el.innerHTML = h;
 }
-(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { sgLixAbrir: sgLixAbrir, sgRegAbrir: sgRegAbrir }); })();
+/* ---------- Segurança: sessões abertas, trocar a senha, avisos ---------- */
+function sgSegAbrir(){ sgMontar('overlaySgSeg', 'Segurança'); sgS.segConfirma = false; sgS.segMsg = ''; sgSegCarregar(); qs('overlaySgSeg').classList.add('show'); }
+function sgSegCarregar(){
+  qs('overlaySgSegC').innerHTML = '<div class="saldo-data">Carregando…</div>';
+  return sgApi('/api/seguranca/sessoes').then(function(j){ sgS.seg = j; sgSegDesenhar(); }).catch(function(e){
+    qs('overlaySgSegC').innerHTML = '<div class="pb-aviso">' + (/individual|404/.test(e.message) ? 'Esta tela fica disponível quando o acesso individual (e-mail e senha) está ativo.' : 'Não consegui abrir: ' + escapeHtml(e.message)) + '</div>';
+  });
+}
+function sgSegIcone(rotulo){ return /iPhone|iPad|Android/.test(rotulo || '') ? '📱' : '💻'; }
+function sgSegDesenhar(){
+  var el = qs('overlaySgSegC'), j = sgS.seg; if (!el || !j) return;
+  var h = '<div class="pb-sec"><div class="pb-sec-t">Sessões abertas</div><div class="pb-aviso">Cada aparelho em que você entrou. Encerrar faz o aparelho perder o acesso na hora.</div></div>';
+  h += j.sessoes.map(function(s){
+    return '<div class="pb-card" style="--pb-bar:#8A93AD" data-sess="' + escapeHtml(s.id) + '"><div class="pb-l1"><span>' + sgSegIcone(s.rotulo) + ' ' + escapeHtml(s.rotulo) + '</span>' + (s.atual ? '<span class="pb-tg ok">este aparelho</span>' : '') + '</div>' +
+      '<div class="pb-proc">' + (s.lugar ? escapeHtml(s.lugar) + ' · ' : '') + 'último uso ' + escapeHtml(sgDataHora(s.ultimo)) + '</div>' +
+      (s.atual ? '' : '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-sg="seg-encerrar" data-k="' + escapeHtml(s.id) + '">Encerrar</button></div>') + '</div>';
+  }).join('');
+  var outras = j.sessoes.filter(function(s){ return !s.atual; }).length;
+  if (outras) h += sgS.segConfirma ? '<div class="pb-aviso" style="margin:6px 4px"><b>Encerrar as ' + outras + ' outras sessões?</b> Cada aparelho terá de entrar de novo.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-sg="seg-cancela">Cancelar</button><button type="button" class="btn btn-primary pb-b" data-sg="seg-outras">Encerrar todas as outras</button></div>'
+    : '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-sg="seg-outras-pede">Encerrar todas as outras</button></div>';
+  h += '<div class="pb-sec" style="margin-top:14px"><div class="pb-sec-t">Alterar a senha</div></div>' +
+    '<div class="field"><label class="field-label" for="sgSegAtual">Senha atual</label><input type="password" id="sgSegAtual" autocomplete="current-password"></div>' +
+    '<div class="field"><label class="field-label" for="sgSegNova">Nova senha (mínimo 12 caracteres)</label><input type="password" id="sgSegNova" autocomplete="new-password"></div>' +
+    '<div class="field"><label class="field-label" for="sgSegNova2">Repita a nova senha</label><input type="password" id="sgSegNova2" autocomplete="new-password"></div>' +
+    (sgS.segMsg ? '<div class="' + (sgS.segOk ? 'pb-aviso' : 'form-error') + '" id="sgSegMsg">' + escapeHtml(sgS.segMsg) + '</div>' : '') +
+    '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-sg="seg-senha">Salvar nova senha</button></div><div class="pb-aviso" style="margin:6px 4px">Ao trocar, as outras sessões são encerradas.</div>' +
+    '<div class="field" style="margin-top:14px"><label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" data-sgf="alertas" id="sgSegAlertas"' + (j.usuario.alertas ? ' checked' : '') + '><span class="ad-t">Avisar no iPhone: senha errada repetida ou entrada em aparelho novo</span></label></div>' +
+    '<div class="pb-aviso" style="margin:6px 4px">Conectado como ' + escapeHtml(j.usuario.nome) + ' (' + escapeHtml(j.usuario.email) + '). <a href="/sair" style="font-weight:700;color:inherit">Sair deste aparelho</a></div>';
+  el.innerHTML = h;
+}
+function sgSegEncerrar(id){
+  if (sgS.ocupado) return; sgS.ocupado = true;
+  sgApi(id ? '/api/seguranca/sessoes/' + encodeURIComponent(id) : '/api/seguranca/sessoes/encerrar-outras', id ? 'DELETE' : 'POST', id ? undefined : {}).then(function(){
+    sgS.ocupado = false; sgS.segConfirma = false; toast(id ? 'Sessão encerrada.' : 'As outras sessões foram encerradas.'); sgSegCarregar();
+  }).catch(function(e){ sgS.ocupado = false; toast('Não consegui encerrar: ' + e.message); });
+}
+function sgSegSenha(){
+  var a = qs('sgSegAtual').value, n = qs('sgSegNova').value, n2 = qs('sgSegNova2').value;
+  var fim = function(ok, msg){ sgS.segOk = ok; sgS.segMsg = msg; sgSegDesenhar(); };
+  if (!a || !n) return fim(false, 'Preencha a senha atual e a nova.');
+  if (n !== n2) return fim(false, 'As duas senhas novas não são iguais.');
+  if (n.length < 12) return fim(false, 'A senha nova precisa ter pelo menos 12 caracteres.');
+  if (sgS.ocupado) return; sgS.ocupado = true;
+  sgApi('/api/seguranca/senha', 'PUT', { atual: a, nova: n }).then(function(){ sgS.ocupado = false; fim(true, 'Senha trocada. As outras sessões foram encerradas.'); sgSegCarregar().then(function(){ sgS.segMsg = ''; }); })
+    .catch(function(e){ sgS.ocupado = false; fim(false, e.message); });
+}
+function sgSegAlertas(ativo){ sgApi('/api/seguranca/alertas', 'PUT', { ativo: !!ativo }).then(function(){ toast(ativo ? 'Avisos ligados.' : 'Avisos desligados.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); }); }
+(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { sgLixAbrir: sgLixAbrir, sgRegAbrir: sgRegAbrir, sgSegAbrir: sgSegAbrir }); })();

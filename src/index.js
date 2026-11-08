@@ -6,6 +6,7 @@ import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
 import { restauracaoRotas } from './restauracao.js';
+import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
@@ -471,23 +472,63 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : fazerBackup(env)));
   },
-  async fetch(request, env) {
-    return comSeguranca(await tratar(request, env));
+  async fetch(request, env, ctx) {
+    return comSeguranca(await tratar(request, env, ctx));
   },
 };
 const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/favicon-32.png', '/favicon-48.png', '/favicon.ico', '/tema.css', '/manifest.webmanifest', '/sw.js']);
-async function tratar(request, env) {
+
+/* Tabela única de rotas da API: cada raiz declara quem pode usar ("sessao" = qualquer acesso logado; "proprietario" = só o proprietário).
+   Raiz que não está aqui é recusada; /api/enviar é a única pública (tem token próprio). */
+const ROTAS = {
+  ler: ['sessao', (r, e, p) => ler(r, e, p)], recebidos: ['sessao', (r, e, p) => recebidos(r, e, p)], anexos: ['sessao', (r, e, p) => anexos(r, e, p)],
+  notif: ['sessao', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p) => djenRotas(r, e, p)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],
+  db: ['sessao', (r, e, p) => api(r, e, p)],
+  backup: ['proprietario', (r, e, p) => api(r, e, p)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
+  lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
+  seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
+};
+export const RAIZES_API = Object.keys(ROTAS);
+
+/* aviso curto no iPhone (entrada em aparelho novo, senha errada repetida…): usa as inscrições de notificação já cadastradas */
+async function enviarAviso(env, aviso) {
+  const subs = await inscricoes(env); if (!subs.length) return;
+  const v = await vapid(env), config = await lerReservado(env, 'config', {}), origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
+  const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
+  for (const s of subs) {
+    for (const a of assuntos) {
+      const r = await enviarPush(v, a, s, aviso);
+      if (r.ok) break;
+      if (r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
+      if (!(r.status === 403 && /BadJwtToken/i.test(r.motivo || ''))) break;
+    }
+  }
+}
+const MODO_ANTIGO = (env) => env.ALLOW_NO_AUTH === '1' || env.LOGIN_ANTIGO === '1';   // LOGIN_ANTIGO=1: volta ao acesso por uma senha só (chave de retorno)
+
+async function tratar(request, env, ctx) {
   const url = new URL(request.url);
-  const dev = env.ALLOW_NO_AUTH === '1';
+  const dev = env.ALLOW_NO_AUTH === '1', antigo = MODO_ANTIGO(env);
   if (!dev && (!env.SENHA || String(env.SENHA).length < 12)) return new Response('Defina o segredo SENHA (mínimo 12 caracteres) no Cloudflare.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   if (ICONES.has(url.pathname)) return env.ASSETS.fetch(request);   // ícones e manifesto: públicos (o iPhone os busca sem sessão)
-  if (url.pathname === '/login') {
-    if (request.method === 'POST') return dev ? new Response(null, { status: 303, headers: { location: '/' } }) : fazerLogin(request, env);
-    return htmlResp(PAGINA(''));
+  const deps = { legadoValido: (r) => sessaoValida(r, env), criarLegado: () => criarSessao(env), avisar: (e, aviso) => { try { ctx && ctx.waitUntil ? ctx.waitUntil(enviarAviso(e, aviso).catch((x) => console.error('aviso', x))) : enviarAviso(e, aviso).catch(() => {}); } catch (x) { console.error(x); } } };
+  if (!antigo) { const pg = await paginasDeAcesso(request, env, deps); if (pg) return pg; }
+  else {
+    if (url.pathname === '/login') {
+      if (request.method === 'POST') return dev ? new Response(null, { status: 303, headers: { location: '/' } }) : fazerLogin(request, env);
+      return htmlResp(PAGINA(''));
+    }
+    if (url.pathname === '/sair') return new Response(null, { status: 303, headers: { location: '/login', 'set-cookie': 'sessao=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0' } });
   }
-  if (url.pathname === '/sair') return new Response(null, { status: 303, headers: { location: '/login', 'set-cookie': 'sessao=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0' } });
   if (url.pathname === '/api/enviar') return enviar(request, env);   // autenticada por token próprio
-  if (!dev && !(await sessaoValida(request, env))) {
+  let auth = null;
+  if (!antigo) {
+    auth = await autenticar(request, env);
+    if (!auth) {
+      if (url.pathname.startsWith('/api/')) return erro(401, 'not_granted', 'Entre com o seu e-mail e a sua senha.');
+      return new Response(null, { status: 303, headers: { location: (await deps.legadoValido(request)) && !(await temProprietario(env)) ? '/criar-acesso' : '/login' } });   // quem entrou com a senha antiga segue para criar o acesso individual
+    }
+  } else if (!dev && !(await sessaoValida(request, env))) {
     if (url.pathname.startsWith('/api/')) return erro(401, 'not_granted', 'Entre com a senha.');
     return new Response(null, { status: 303, headers: { location: '/login' } });
   }
@@ -496,8 +537,10 @@ async function tratar(request, env) {
       const o = request.headers.get('origin');
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
-    const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : partes[0] === 'restaurar' ? await restauracaoRotas(request, env, partes) : partes[0] === 'lixeira' ? await lixeiraRotas(request, env, partes) : partes[0] === 'auditoria' ? await auditoriaRotas(request, env, partes) : await api(request, env, partes); }
+    const partes = url.pathname.slice(5).split('/').filter(Boolean), rota = ROTAS[partes[0]];
+    if (!rota) return erro(404, 'not_found', 'Não encontrado.');
+    if (rota[0] === 'proprietario' && auth && auth.usuario.papel !== 'proprietario') return erro(403, 'forbidden', 'Só o proprietário pode usar isto.');
+    try { return await rota[1](request, env, partes, auth); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);

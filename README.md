@@ -9,9 +9,13 @@ O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), co
 - `schema.sql` — a tabela do banco.
 
 ## Segurança
-- Login com **senha** própria. A senha fica num segredo do Cloudflare (`SENHA`, mínimo 12 caracteres), nunca no código. Se o segredo não existir, o servidor **bloqueia tudo**.
-- Sessão por cookie assinado (HttpOnly, Secure, SameSite=Strict), válida por 30 dias. Trocar a `SENHA` desconecta todos os aparelhos.
-- Depois de 5 senhas erradas seguidas, o IP fica bloqueado por 15 minutos.
+- **Acesso individual** (`src/acesso.js`, telas em `src/paginas.js`): entrada por **e-mail e senha** (mínimo 12 caracteres). A senha é guardada só como código embaralhado (PBKDF2-SHA256 com sal próprio e o segredo do servidor); no plano gratuito do Cloudflare são 20 mil voltas (limite de 10 ms de processamento por pedido) e o app sobe sozinho para até 100 mil quando a variável `VOLTAS_SENHA` for aumentada.
+- **Primeiro acesso depois da atualização:** entre uma vez com a senha antiga (segredo `SENHA`) e crie o seu acesso em `/criar-acesso`. A partir daí a `SENHA` vira a **chave de emergência**: não entra mais no app, só serve em `/recuperar` (redefine a senha e encerra todas as sessões). Se a `SENHA` for trocada no Cloudflare, redefina a senha por `/recuperar` com a nova.
+- **Sessões no banco** (coleção `_sessoes`, 30 dias): cada entrada registra aparelho, navegador, local aproximado e último uso. **Configurações › Segurança** lista as sessões, encerra uma ou todas as outras, troca a senha (encerra as outras) e liga/desliga os avisos no iPhone (senha errada repetida, entrada em aparelho novo, senha redefinida).
+- Depois de 5 erros seguidos o bloqueio é **só daquele aparelho (IP) por 15 minutos**; não há mais trava geral que tranque todo mundo.
+- **Tabela única de rotas** em `src/index.js` (`ROTAS`): cada raiz da API declara se é de qualquer pessoa logada ou só do proprietário; raiz não declarada é recusada. `/api/enviar` é a única sem sessão (tem token próprio).
+- Entradas, tentativas que falharam, trocas de senha e sessões encerradas aparecem no **Registro de ações**.
+- **Chave de retorno:** a variável `LOGIN_ANTIGO=1` no Worker volta ao acesso por uma senha só (cookie assinado), caso algo dê errado.
 - Pedidos vindos de outros sites são recusados; o botão **Sair** fica no menu do app.
 
 ## Colocar no ar (passo a passo, uma vez só)
@@ -25,7 +29,8 @@ O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), co
 npm install
 npm run banco:local
 npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8788
-node test/login.test.mjs   # testes do login
+node test/login.test.mjs   # login antigo (rode o servidor com --var LOGIN_ANTIGO:1)
+# acesso individual (servidor SEM LOGIN_ANTIGO, banco novo): node test/login-individual.test.mjs  e  node test/login-tela.test.mjs
 node test/e2e-local.mjs    # cadastra, recarrega e confere
 ```
 
