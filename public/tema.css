@@ -43,3 +43,6 @@
 #overlayImp{z-index:150;}
 #overlayImpPerg{z-index:170;}
 #overlayImpCli{z-index:170;}
+/* backup, exportar CSV e lembretes agora ficam em Configurações: os botões originais continuam no menu, escondidos, para a aba clicar neles */
+#backupBtn,#exportBtn,#abrirLembretesBtn{display:none !important;}
+#relModoSeg{display:none;}

@@ -86,6 +86,13 @@ if '/*BK-INICIO*/' in s:
 else:
     assert s.count('/*IM-FIM*/\n') == 1
     s = s.replace('/*IM-FIM*/\n', '/*IM-FIM*/\n' + bloco_bk)
+cf = open(R + 'cliente/configuracoes.js', encoding='utf-8').read()
+bloco_cf = '/*CF-INICIO*/\n' + cf + '\n/*CF-FIM*/\n'
+if '/*CF-INICIO*/' in s:
+    s = re.sub(r'/\*CF-INICIO\*/.*?/\*CF-FIM\*/\n', lambda m: bloco_cf, s, flags=re.S)
+else:
+    assert s.count('/*BK-FIM*/\n') == 1
+    s = s.replace('/*BK-FIM*/\n', '/*BK-FIM*/\n' + bloco_cf)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
@@ -223,6 +230,39 @@ repm("obj.vinculoAuto", "    if (atual) obj.arquivado = qs('cliArquivadoInput').
 # ---- backup: com o servidor, a restauração é conferida e trocada de uma vez pelo servidor (cliente/backup.js) ----
 rep("        backupImportadoPendente = dados;\n        var resumo = (dados.exportadoEm", "        backupImportadoPendente = dados;\n        if (window.__SERVIDOR && typeof bkConferir === 'function'){ bkConferir(dados); return; }\n        var resumo = (dados.exportadoEm")
 rep("    var dados = backupImportadoPendente;\n    var btn = qs('confirmarImportarBackup');\n    btn.disabled = true;", "    var dados = backupImportadoPendente;\n    if (window.__SERVIDOR && typeof bkAplicar === 'function'){ bkAplicar(dados); return; }\n    var btn = qs('confirmarImportarBackup');\n    btn.disabled = true;")
+# ---- menu lateral enxuto e aba Configurações ----
+MENU_NOVO = """      <button type="button" class="dr-it" id="abrirCobrancaMenuBtn" title="Cobrar clientes inadimplentes"><svg><use href="#ic-receipt"/></svg><span class="lab">Cobrança de clientes</span></button>
+      <div class="dr-grp">Financeiro</div>
+      <button type="button" class="dr-it" data-tab="financeiro" data-fin="geral" title="Divisão do mês"><svg><use href="#ic-pie"/></svg><span class="lab">Divisão do mês</span></button>
+      <button type="button" class="dr-it" data-tab="financeiro" data-fin="pj" title="Hygor (PJ)"><svg><use href="#ic-brief"/></svg><span class="lab">Hygor (PJ)</span></button>
+      <button type="button" class="dr-it" data-tab="financeiro" data-fin="pf" title="Pessoa física"><svg><use href="#ic-user"/></svg><span class="lab">Pessoa física</span></button>
+      <button type="button" class="dr-it" data-tab="financeiro" data-fin="patrimonio" title="Patrimônio e metas"><svg><use href="#ic-trend"/></svg><span class="lab">Patrimônio e metas</span></button>
+      <button type="button" class="dr-it" data-tab="analises" title="Análises e projeção"><svg><use href="#ic-chart"/></svg><span class="lab">Análises</span></button>
+      <button type="button" class="dr-it" data-tab="obra" title="Construção da casa"><svg><use href="#ic-house"/></svg><span class="lab">Construção</span></button>
+      <button type="button" class="dr-it" data-tab="extratos" title="Extratos do banco"><svg><use href="#ic-bank"/></svg><span class="lab">Extratos do banco</span><span class="dr-n red" id="menuNExtratos"></span></button>
+      <button type="button" class="dr-it" id="abrirLerDocBtn" style="display:none;" title="Cadastrar por foto ou PDF"><svg><use href="#ic-cam"/></svg><span class="lab">Ler foto ou PDF</span></button>
+      <button type="button" class="dr-it" id="abrirRecebiBtn" title="Recebi R$ (registrar recebimento)"><svg><use href="#ic-coin"/></svg><span class="lab">Recebi R$</span></button>
+      <button type="button" class="dr-it" id="abrirFechamentoBtn" title="Fechamento do mês"><svg><use href="#ic-cal"/></svg><span class="lab">Fechamento do mês</span></button>
+      <button type="button" class="dr-it" id="abrirRelMuriloBtn" title="Relatório do Murilo"><svg><use href="#ic-send"/></svg><span class="lab">Relatório do Murilo</span></button>
+      <div class="dr-grp">Sistema</div>
+      <button type="button" class="dr-it" data-tab="configuracoes" title="Configurações"><svg><use href="#ic-gear"/></svg><span class="lab">Configurações</span></button>
+      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href='/sair'"><svg><use href="#ic-out"/></svg><span class="lab">Sair</span></button>
+      <button type="button" class="dr-it" id="backupBtn" title="Backup e restauração"><svg><use href="#ic-dl"/></svg><span class="lab">Backup e restauração</span></button>
+      <button type="button" class="dr-it" id="exportBtn" title="Exportar lista (CSV)"><svg><use href="#ic-table"/></svg><span class="lab">Exportar lista (CSV)</span></button>"""
+if 'id="abrirCobrancaMenuBtn"' not in s:
+    i = s.index('      <div class="dr-grp">Financeiro</div>'); j = s.index('id="exportBtn"'); j = s.index('</button>', j) + len('</button>')
+    s = s[:i] + MENU_NOVO + s[j:]
+SAIR_L = '      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href=\'/sair\'"><svg><use href="#ic-out"/></svg><span class="lab">Sair</span></button>\n'
+BK_L = '      <button type="button" class="dr-it" id="backupBtn" title="Backup e restauração"><svg><use href="#ic-dl"/></svg><span class="lab">Backup e restauração</span></button>\n'
+EX_L = '      <button type="button" class="dr-it" id="exportBtn" title="Exportar lista (CSV)"><svg><use href="#ic-table"/></svg><span class="lab">Exportar lista (CSV)</span></button>\n'
+rep(SAIR_L + BK_L + EX_L, BK_L + EX_L + SAIR_L)   # Sair por último; "Desfazer última ação" (que entra antes do botão de backup) fica logo depois de Configurações
+repm('id="bodyConfig"', '  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyConfig" style="display:none;">\n    <div class="ob-wrap" id="cfWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
+rep('<symbol id="ic-sync" ', '<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>\n<symbol id="ic-sync" ')
+rep("    qs('bodyProcessos').style.display = (tab === 'processos') ? '' : 'none';\n", "    qs('bodyProcessos').style.display = (tab === 'processos') ? '' : 'none';\n    qs('bodyConfig').style.display = (tab === 'configuracoes') ? '' : 'none';\n")
+s = s.replace("|| tab === 'processos') ? 'none'", "|| tab === 'processos' || tab === 'configuracoes') ? 'none'")
+rep("    else if (tab === 'processos') prRender();\n", "    else if (tab === 'processos') prRender();\n    else if (tab === 'configuracoes') cfRender();\n")
+rep("processos:'Processos', financeiro:'Financeiro' };", "processos:'Processos', configuracoes:'Configurações', financeiro:'Financeiro' };")
+rep("    else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';", "    else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';\n    else if (activeTab === 'configuracoes') qs('subtitle').textContent = 'Notificações, backup e exportações';")
 rep("h += secPerfil('atos', 'Atos e processos', docs.length, atos);", "h += secPerfil('atos', 'Processos e atos', docs.length, atos);")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

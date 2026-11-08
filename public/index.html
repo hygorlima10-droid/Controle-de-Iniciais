@@ -1453,6 +1453,11 @@
 <symbol id="ic-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></symbol>
 <symbol id="ic-quadro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></symbol>
 <symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -1484,6 +1489,7 @@
       <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial"><svg><use href="#ic-news"/></svg><span class="lab">Publicações</span><span class="dr-n red" id="menuNPub"></span></button>
       <button type="button" class="dr-it" data-tab="clientes" title="Clientes"><svg><use href="#ic-users"/></svg><span class="lab">Clientes</span></button>
       <button type="button" class="dr-it" data-tab="arquivados" title="Arquivados"><svg><use href="#ic-arch"/></svg><span class="lab">Arquivados</span></button>
+      <button type="button" class="dr-it" id="abrirCobrancaMenuBtn" title="Cobrar clientes inadimplentes"><svg><use href="#ic-receipt"/></svg><span class="lab">Cobrança de clientes</span></button>
       <div class="dr-grp">Financeiro</div>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="geral" title="Divisão do mês"><svg><use href="#ic-pie"/></svg><span class="lab">Divisão do mês</span></button>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="pj" title="Hygor (PJ)"><svg><use href="#ic-brief"/></svg><span class="lab">Hygor (PJ)</span></button>
@@ -1491,15 +1497,16 @@
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="patrimonio" title="Patrimônio e metas"><svg><use href="#ic-trend"/></svg><span class="lab">Patrimônio e metas</span></button>
       <button type="button" class="dr-it" data-tab="analises" title="Análises e projeção"><svg><use href="#ic-chart"/></svg><span class="lab">Análises</span></button>
       <button type="button" class="dr-it" data-tab="obra" title="Construção da casa"><svg><use href="#ic-house"/></svg><span class="lab">Construção</span></button>
-      <div class="dr-grp">Ferramentas</div>
       <button type="button" class="dr-it" data-tab="extratos" title="Extratos do banco"><svg><use href="#ic-bank"/></svg><span class="lab">Extratos do banco</span><span class="dr-n red" id="menuNExtratos"></span></button>
       <button type="button" class="dr-it" id="abrirLerDocBtn" style="display:none;" title="Cadastrar por foto ou PDF"><svg><use href="#ic-cam"/></svg><span class="lab">Ler foto ou PDF</span></button>
       <button type="button" class="dr-it" id="abrirRecebiBtn" title="Recebi R$ (registrar recebimento)"><svg><use href="#ic-coin"/></svg><span class="lab">Recebi R$</span></button>
-      <button type="button" class="dr-it" id="abrirRelMuriloBtn" title="Cobranças e relatório do Murilo"><svg><use href="#ic-send"/></svg><span class="lab">Cobranças e relatório do Murilo</span></button>
       <button type="button" class="dr-it" id="abrirFechamentoBtn" title="Fechamento do mês"><svg><use href="#ic-cal"/></svg><span class="lab">Fechamento do mês</span></button>
-      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href='/sair'"><svg><use href="#ic-out"/></svg><span class="lab">Sair</span></button>
+      <button type="button" class="dr-it" id="abrirRelMuriloBtn" title="Relatório do Murilo"><svg><use href="#ic-send"/></svg><span class="lab">Relatório do Murilo</span></button>
+      <div class="dr-grp">Sistema</div>
+      <button type="button" class="dr-it" data-tab="configuracoes" title="Configurações"><svg><use href="#ic-gear"/></svg><span class="lab">Configurações</span></button>
       <button type="button" class="dr-it" id="backupBtn" title="Backup e restauração"><svg><use href="#ic-dl"/></svg><span class="lab">Backup e restauração</span></button>
       <button type="button" class="dr-it" id="exportBtn" title="Exportar lista (CSV)"><svg><use href="#ic-table"/></svg><span class="lab">Exportar lista (CSV)</span></button>
+      <button type="button" class="dr-it" id="sairBtn" title="Sair (pede a senha de novo)" onclick="location.href='/sair'"><svg><use href="#ic-out"/></svg><span class="lab">Sair</span></button>
     </nav>
     <div class="dr-foot">
       <button type="button" class="dr-mini" id="themeBtn" title="Alternar tema"><svg><use href="#ic-sun"/></svg><span class="lab">Tema</span></button>
@@ -1796,6 +1803,10 @@
 
   <div id="bodyProcessos" style="display:none;">
     <div class="ob-wrap" id="prWrap"></div>
+  </div>
+
+  <div id="bodyConfig" style="display:none;">
+    <div class="ob-wrap" id="cfWrap"></div>
   </div>
 
   <div id="bodyAnalises" style="display:none;">
@@ -9497,14 +9508,15 @@
     qs('bodyPublicacoes').style.display = (tab === 'publicacoes') ? '' : 'none';
     qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';
     qs('bodyProcessos').style.display = (tab === 'processos') ? '' : 'none';
+    qs('bodyConfig').style.display = (tab === 'configuracoes') ? '' : 'none';
     qs('headFinanceiro').style.display = (tab === 'financeiro') ? '' : 'none';
     qs('bodyPeticoes').style.display = (tab === 'peticoes') ? '' : 'none';
     qs('bodyAcordos').style.display = (tab === 'acordos') ? '' : 'none';
     qs('bodyAlvaras').style.display = (tab === 'alvaras') ? '' : 'none';
     qs('bodyClientes').style.display = (tab === 'clientes') ? '' : 'none';
     qs('bodyFinanceiro').style.display = (tab === 'financeiro') ? '' : 'none';
-    qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda' || tab === 'processos') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
-    qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda' || tab === 'processos') ? 'none' : '';
+    qs('mesNav').style.display = (tab === 'analises' || tab === 'extratos' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda' || tab === 'processos' || tab === 'configuracoes') ? 'none' : '';   /* essas telas não dependem do mês escolhido: sobra espaço para o título */
+    qs('fabNew').style.display = (tab === 'arquivados' || tab === 'inicio' || tab === 'extratos' || tab === 'analises' || tab === 'obra' || tab === 'publicacoes' || tab === 'agenda' || tab === 'processos' || tab === 'configuracoes') ? 'none' : '';
     if (tab !== 'financeiro') qs('finFabMenu').style.display = 'none';
     qs('fabNew').title = (tab === 'peticoes') ? 'Nova inicial' : (tab === 'acordos' ? 'Novo termo de acordo' : (tab === 'alvaras' ? 'Novo alvará' : (tab === 'clientes' ? 'Novo cliente' : 'Lançar')));
     atualizarMenuAtivo();
@@ -9522,13 +9534,14 @@
     else if (tab === 'publicacoes') pbRender();
     else if (tab === 'agenda') agRender();
     else if (tab === 'processos') prRender();
+    else if (tab === 'configuracoes') cfRender();
     else renderFinanceiro();
   }
 
   /* ============================================================
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
-  var TITULOS_TELA = { inicio:'Início', peticoes:'Iniciais', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', processos:'Processos', financeiro:'Financeiro' };
+  var TITULOS_TELA = { inicio:'Início', peticoes:'Iniciais', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', processos:'Processos', configuracoes:'Configurações', financeiro:'Financeiro' };
   var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
   var atencaoExpandida = false;
   var menuAberto = false;
@@ -9543,6 +9556,7 @@
     else if (activeTab === 'publicacoes') qs('subtitle').textContent = 'Diário Oficial (DJEN) · leitura automática todo dia às 10:00';
     else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';
     else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';
+    else if (activeTab === 'configuracoes') qs('subtitle').textContent = 'Notificações, backup e exportações';
   }
   function atualizarMenuAtivo(){
     document.body.setAttribute('data-tab', activeTab);
@@ -19948,6 +19962,56 @@ function bkClique(e){
 })();
 
 /*BK-FIM*/
+/*CF-INICIO*/
+/* ============================================================
+   CONFIGURAÇÕES (prefixo cf): aba nova que concentra o que é de administração.
+   Cada linha abre a tela que já existe (notificações, backup, exportar CSV); os botões originais continuam no menu, escondidos,
+   e é neles que a linha clica, então nada do que já funcionava foi mexido. Lixeira e Registro de ações ficam "em breve" até serem criados;
+   Usuários e Perfis e permissões já têm o lugar marcado para a fase de usuários.
+   ============================================================ */
+var CF_LINHAS = [
+  { id: 'notif', ic: '🔔', t: 'Notificações e lembretes do iPhone', s: 'avisos de prazos, publicações e compromissos', go: function(){ if (typeof ntAbrir === 'function') ntAbrir(); } },
+  { id: 'backup', ic: '💾', t: 'Backup e restauração', s: 'cópias, restaurar com segurança, voltar', go: function(){ var b = qs('backupBtn'); if (b) b.click(); } },
+  { id: 'csv', ic: '📤', t: 'Exportar lista (CSV)', s: 'Iniciais, acordos, alvarás, clientes', go: function(){ var b = qs('exportBtn'); if (b) b.click(); } },
+  { id: 'lixeira', ic: '🗑', t: 'Lixeira', s: 'restaurar o que foi excluído (30 dias)', breve: true },
+  { id: 'registro', ic: '🧾', t: 'Registro de ações', s: 'quem fez o quê, quando', breve: true },
+];
+var CF_FUTURAS = [
+  { ic: '👥', t: 'Usuários', s: 'cadastrar, ativar, encerrar sessões' },
+  { ic: '🔐', t: 'Perfis e permissões', s: 'quem vê e faz o quê, por módulo e por pessoa' },
+  { ic: '⚖️', t: 'OABs e publicações', s: 'OAB de cada advogado' },
+  { ic: '🗓', t: 'Agendas e regras operacionais', s: 'compartilhar, feriados, listas' },
+];
+function cfLinha(l, fut){
+  var tag = l.breve ? '<span class="cf-tag">em breve</span>' : (fut ? '<span class="cf-tag">depois</span>' : '<span class="cf-seta">›</span>');
+  return '<button type="button" class="pb-mi cf-it' + ((l.breve || fut) ? ' cf-off' : '') + '"' + ((l.breve || fut) ? ' disabled' : ' data-cf="' + l.id + '"') + '><span class="pb-mi-i">' + l.ic + '</span><span class="cf-tx">' + escapeHtml(l.t) + '<small>' + escapeHtml(l.s) + '</small></span>' + tag + '</button>';
+}
+function cfRender(){
+  var w = qs('cfWrap'); if (!w) return;
+  if (!w.getAttribute('data-ok')){
+    w.setAttribute('data-ok', '1');
+    w.addEventListener('click', function(e){
+      var b = e.target.closest ? e.target.closest('[data-cf]') : null; if (!b) return;
+      var l = CF_LINHAS.filter(function(x){ return x.id === b.getAttribute('data-cf'); })[0]; if (l && l.go) l.go();
+    });
+  }
+  w.innerHTML = '<div class="pb-painel pb-menu">' + CF_LINHAS.map(function(l){ return cfLinha(l, false); }).join('') + '</div>' +
+    '<div class="pb-sec-t" style="margin:16px 4px 6px">Reservado para a fase de usuários</div>' +
+    '<div class="pb-painel pb-menu">' + CF_FUTURAS.map(function(l){ return cfLinha(l, true); }).join('') + '</div>' +
+    '<div class="pb-aviso" style="margin:10px 4px">Cada linha abre a tela que já existia, só que agora por aqui. “Perfis e permissões” já tem o seu lugar marcado.</div>';
+}
+(function(){
+  var st = document.createElement('style');
+  st.textContent = '.cf-it{grid-template-columns:30px minmax(0,1fr) auto!important}.cf-tx{display:flex;flex-direction:column;gap:2px;min-width:0;text-align:left}.cf-tx small{font-size:var(--t2);color:var(--ink-soft);font-weight:400}' +
+    '.cf-seta{color:var(--ink-soft);font-size:var(--t5)}.cf-tag{font-size:var(--t1);font-weight:700;background:var(--surface-2);color:var(--ink-soft);border-radius:8px;padding:2px 8px}.cf-off{opacity:.55;cursor:default}';
+  document.head.appendChild(st);
+  /* "Cobrança de clientes" do menu: a mesma tela de cobrança de antes, direto no modo de clientes próprios (o Relatório do Murilo tem o seu próprio item no grupo Financeiro) */
+  var cb = qs('abrirCobrancaMenuBtn');
+  if (cb) cb.addEventListener('click', function(){ if (typeof fecharMenu === 'function') fecharMenu(); abrirRelMurilo(mesSelecionado, 'proprio'); });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { cfRender: cfRender });
+})();
+
+/*CF-FIM*/
 
 /* ---------- adiar parcela (só o vencimento de uma parcela; as outras não mudam) ---------- */
 function adPodeAdiar(u){

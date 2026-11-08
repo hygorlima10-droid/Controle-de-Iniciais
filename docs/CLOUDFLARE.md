@@ -8,7 +8,8 @@
 - **Workers:** `controle-juridico` (o app; última alteração em 08/11 21:19 UTC, igual ao último envio ao GitHub: o deploy automático funciona) e `controle-de-iniciais` (criado em 03/11, sem alteração desde então: provável cópia da primeira publicação; **pendente de decisão do proprietário** se ainda é usado; se não for, apagar para não deixar um segundo endereço público do app).
 - **Bancos D1:** `controle-juridico` (produção, 650 KB, região ENAM/EWR = leste dos EUA, sem réplica de leitura) e `controle-juridico-teste` (vazio, 24 KB, criado em 03/11, provavelmente do Worker antigo).
 - **R2:** **não ativado** na conta (precisa ativar no painel, o que costuma exigir forma de pagamento). Por isso a cópia fora do banco por R2 fica para depois.
-- Plano da conta (Free ou Paid): **não visível pelo conector**; perguntar ao proprietário (muda o prazo do Time Travel e alguns limites).
+- **Plano da conta: gratuito** (informado pelo proprietário em 08/11): Time Travel de 7 dias; limites diários do D1 em vigor (5 milhões de leituras e 100 mil escritas por dia).
+- O Worker `controle-de-iniciais` e o banco `controle-juridico-teste` são do ambiente de teste abandonado; o proprietário autorizou apagar o Worker (no painel, pois o conector não apaga Workers).
 
 ## Banco de produção (contagens em 08/11/2026)
 `_pub` 259 · processos 127 · clientes 51 · despesas 27 · casos (Iniciais) 24 · receitasManuais 16 · extratos 14 · config 10 · obraMov 9 · termosAcordo 6 · alvarás 4 · saldos 2 · metas 1 · agenda 0 · pecasAprendidas 0 · `_notif` 6 (2 aparelhos inscritos no push) · `_backups` 1 (de 08/11) · `_djen` 1 · `_sistema` 3. Maior registro: 40 KB (o backup comprimido); registros comuns, menos de 3 KB. Esquema: uma tabela `docs` com índice por coleção.
