@@ -5,6 +5,8 @@
    3) desfazer: volta para a cópia de segurança (que também fica guardada, então o próprio "desfazer" se desfaz).
    Só mexe nas coleções que o arquivo traz; o que não está no arquivo (ex.: backup antigo sem Processos) não é tocado. */
 
+import { canon, registrar } from './auditoria.js';
+
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const MAX_DOC = 900 * 1024, MAX_PROBLEMAS = 8, GUARDAR_COPIAS = 5, PARTE_B64 = 700 * 1024, LOTE = 90;
 const COL_COPIAS = '_seguranca', COL_ESPERA = '_restaurar';
@@ -22,9 +24,6 @@ const NOME_DA_COLECAO = Object.fromEntries(COLECOES_APP.map((c) => [c[1], c[3]])
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
 const ehObjeto = (x) => x && typeof x === 'object' && !Array.isArray(x);
-/* texto canônico (chaves em ordem) para comparar dois registros sem depender da ordem dos campos */
-const canon = (v) => (Array.isArray(v) ? '[' + v.map(canon).join(',') + ']' : ehObjeto(v) ? '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}' : JSON.stringify(v));
-
 const paraB64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
 async function gzipB64(texto) { return paraB64(await new Response(new Blob([texto]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); }
 async function gunzipTexto(b64) { const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); return new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
@@ -152,6 +151,7 @@ export async function restauracaoRotas(request, env, partes) {
     if (acao === 'conferir') return json({ ok: true, ...cmp, exportadoEm: (corpo && corpo.exportadoEm) || null });
     const copia = await copiaDeSeguranca(env, 'antes de restaurar um backup');
     await trocar(env, arquivo.docs, arquivo.colecoes, false);
+    await registrar(env, { op: 'restaurou', modulo: 'Backup', titulo: 'Backup restaurado: ' + cmp.total + ' registros (' + cmp.removidos + ' removidos); cópia de segurança ' + copia.id });
     return json({ ok: true, restaurados: cmp.total, removidos: cmp.removidos, copia: copia.id });
   }
   if (acao === 'desfazer') {
@@ -162,6 +162,7 @@ export async function restauracaoRotas(request, env, partes) {
     if (arquivo.problemas.length) return json({ ok: false, problemas: arquivo.problemas }, 400);
     const nova = await copiaDeSeguranca(env, 'antes de desfazer a restauração');
     await trocar(env, arquivo.docs, arquivo.colecoes, true);
+    await registrar(env, { op: 'restaurou', modulo: 'Backup', titulo: 'Voltou para a cópia de segurança ' + alvo + ' (' + arquivo.docs.size + ' registros)' });
     return json({ ok: true, restaurados: arquivo.docs.size, copia: nova.id });
   }
   return erro(404, 'not_found', 'Não encontrado.');

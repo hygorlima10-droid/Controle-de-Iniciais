@@ -1,15 +1,15 @@
 /* ============================================================
    CONFIGURAÇÕES (prefixo cf): aba nova que concentra o que é de administração.
    Cada linha abre a tela que já existe (notificações, backup, exportar CSV); os botões originais continuam no menu, escondidos,
-   e é neles que a linha clica, então nada do que já funcionava foi mexido. Lixeira e Registro de ações ficam "em breve" até serem criados;
+   e é neles que a linha clica, então nada do que já funcionava foi mexido. Lixeira e Registro de ações abrem as telas de cliente/seguranca.js;
    Usuários e Perfis e permissões já têm o lugar marcado para a fase de usuários.
    ============================================================ */
 var CF_LINHAS = [
   { id: 'notif', ic: '🔔', t: 'Notificações e lembretes do iPhone', s: 'avisos de prazos, publicações e compromissos', go: function(){ if (typeof ntAbrir === 'function') ntAbrir(); } },
   { id: 'backup', ic: '💾', t: 'Backup e restauração', s: 'cópias, restaurar com segurança, voltar', go: function(){ var b = qs('backupBtn'); if (b) b.click(); } },
   { id: 'csv', ic: '📤', t: 'Exportar lista (CSV)', s: 'Iniciais, acordos, alvarás, clientes', go: function(){ var b = qs('exportBtn'); if (b) b.click(); } },
-  { id: 'lixeira', ic: '🗑', t: 'Lixeira', s: 'restaurar o que foi excluído (30 dias)', breve: true },
-  { id: 'registro', ic: '🧾', t: 'Registro de ações', s: 'quem fez o quê, quando', breve: true },
+  { id: 'lixeira', ic: '🗑', t: 'Lixeira', s: 'restaurar o que foi excluído (30 dias)', go: function(){ sgLixAbrir(); } },
+  { id: 'registro', ic: '🧾', t: 'Registro de ações', s: 'quem fez o quê, quando', go: function(){ sgRegAbrir(); } },
 ];
 var CF_FUTURAS = [
   { ic: '👥', t: 'Usuários', s: 'cadastrar, ativar, encerrar sessões' },

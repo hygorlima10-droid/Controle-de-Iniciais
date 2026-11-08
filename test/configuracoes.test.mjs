@@ -35,7 +35,7 @@ await page.click('#drawer [data-tab="configuracoes"]'); await page.waitForTimeou
 check(await vis('#cfWrap') && /Configurações/.test(await t('#tituloTela')), 'a aba Configurações abre com o título certo');
 if (process.env.FOTOS) await page.screenshot({ path: process.env.FOTOS + '/cfg-aba.png' });
 const linhas = await t('#cfWrap');
-check(/Notificações e lembretes do iPhone/.test(linhas) && /Backup e restauração/.test(linhas) && /Exportar lista \(CSV\)/.test(linhas) && /Lixeira[^]*em breve/.test(linhas) && /Registro de ações[^]*em breve/.test(linhas), 'as linhas da aba: notificações, backup, exportar, lixeira e registro (em breve)');
+check(/Notificações e lembretes do iPhone/.test(linhas) && /Backup e restauração/.test(linhas) && /Exportar lista \(CSV\)/.test(linhas) && /Lixeira/.test(linhas) && /Registro de ações/.test(linhas) && !/em breve/.test(linhas) && await vis('#cfWrap [data-cf="lixeira"]') && await vis('#cfWrap [data-cf="registro"]'), 'as linhas da aba: notificações, backup, exportar, lixeira e registro de ações (todas ativas)');
 check(/Usuários[^]*depois/.test(linhas) && /Perfis e permissões[^]*depois/.test(linhas), 'Usuários e Perfis e permissões já têm o lugar marcado (para depois)');
 check(await page.evaluate(() => Array.from(document.querySelectorAll('#cfWrap button')).every(b => b.closest('.pb-painel'))), 'todas as linhas ficam dentro de cartões');
 await page.click('#cfWrap [data-cf="backup"]'); await page.waitForTimeout(700);

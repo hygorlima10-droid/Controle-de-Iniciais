@@ -5,6 +5,7 @@
    - sugere o prazo ("prazo de 15 dias") a partir do texto; quem confirma é você
    ============================================================ */
 import { sugerirPecas } from './pecas.js';
+import { registrar } from './auditoria.js';
 export const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
 let BASE = DJEN;   // os testes apontam DJEN_URL para um servidor de mentira
 let ESPERA = 1500;   // pausa entre as tentativas (os testes zeram com DJEN_ESPERA_MS)
@@ -259,6 +260,7 @@ export async function lerDjen(env, opcoes = {}) {
   await gravarCfg(env, cfg);
   await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND atualizado < ?').bind(COL_PUB, Date.now() - 400 * DIA).run();
   resumo.ms = Date.now() - t0;
+  if (resumo.novas) await registrar(env, { op: 'leitura', modulo: 'Publicações', por: 'Sistema', titulo: 'Diário Oficial: ' + resumo.novas + (resumo.novas === 1 ? ' publicação nova' : ' publicações novas') });
   return resumo;
 }
 

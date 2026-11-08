@@ -93,6 +93,13 @@ if '/*CF-INICIO*/' in s:
 else:
     assert s.count('/*BK-FIM*/\n') == 1
     s = s.replace('/*BK-FIM*/\n', '/*BK-FIM*/\n' + bloco_cf)
+sg = open(R + 'cliente/seguranca.js', encoding='utf-8').read()
+bloco_sg = '/*SG-INICIO*/\n' + sg + '\n/*SG-FIM*/\n'
+if '/*SG-INICIO*/' in s:
+    s = re.sub(r'/\*SG-INICIO\*/.*?/\*SG-FIM\*/\n', lambda m: bloco_sg, s, flags=re.S)
+else:
+    assert s.count('/*CF-FIM*/\n') == 1
+    s = s.replace('/*CF-FIM*/\n', '/*CF-FIM*/\n' + bloco_sg)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)

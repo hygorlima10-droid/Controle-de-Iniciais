@@ -6,6 +6,7 @@ import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
 import { restauracaoRotas } from './restauracao.js';
+import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -425,7 +426,8 @@ async function api(request, env, partes) {
   if (!id && metodo === 'POST') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
     const novo = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
-    await gravar(env, colecao, novo, dados);
+    if (registraColecao(colecao)) await env.DB.batch([stmtGravar(env, colecao, novo, dados), stmtRegistro(env, { op: 'criou', colecao, id: novo, titulo: tituloDe(colecao, dados) })]);
+    else await gravar(env, colecao, novo, dados);
     return json({ id: novo });
   }
   if (id && metodo === 'PUT') {
@@ -433,13 +435,23 @@ async function api(request, env, partes) {
     if (new URL(request.url).searchParams.get('soNovo') === '1') {
       /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
       const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
-      return json({ ok: true, criado: !!(r && r.meta && r.meta.changes > 0) });
+      const criado = !!(r && r.meta && r.meta.changes > 0);
+      if (criado && registraColecao(colecao)) await stmtRegistro(env, { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) }).run();
+      return json({ ok: true, criado });
     }
-    await gravar(env, colecao, id, dados);
+    if (!registraColecao(colecao)) { await gravar(env, colecao, id, dados); return json({ ok: true }); }
+    const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+    const antesObj = antes ? JSON.parse(antes.dados) : null, mud = antesObj ? mudancas(antesObj, dados) : [];
+    if (antesObj && !mud.length) { await gravar(env, colecao, id, dados); return json({ ok: true }); }   // nada mudou de verdade (só campos de controle): grava, mas não há o que registrar
+    await env.DB.batch([stmtGravar(env, colecao, id, dados), stmtRegistro(env, antesObj ? { op: 'alterou', colecao, id, titulo: tituloDe(colecao, dados), mud } : { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) })]);
     return json({ ok: true });
   }
   if (id && metodo === 'DELETE') {
-    await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).run();
+    const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+    const cmds = [env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id)];
+    if (antes && vaiParaLixeira(colecao)) cmds.push(stmtLixeira(env, colecao, id, antes.dados));   // a exclusão vira cópia na lixeira (30 dias) na mesma operação
+    if (antes && registraColecao(colecao)) cmds.push(stmtRegistro(env, { op: 'excluiu', colecao, id, titulo: tituloDe(colecao, JSON.parse(antes.dados)) }));
+    await env.DB.batch(cmds);
     return json({ ok: true });
   }
   return erro(405, 'method', 'Método não permitido.');
@@ -451,12 +463,13 @@ async function lerDoc(request) {
   if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return erro(400, 'invalid', 'O registro precisa ser um objeto.');
   return dados;
 }
-const gravar = (env, colecao, id, dados) =>
-  env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
+const stmtGravar = (env, colecao, id, dados) =>
+  env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now());
+const gravar = (env, colecao, id, dados) => stmtGravar(env, colecao, id, dados).run();
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : fazerBackup(env)));
+    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : fazerBackup(env)));
   },
   async fetch(request, env) {
     return comSeguranca(await tratar(request, env));
@@ -484,7 +497,7 @@ async function tratar(request, env) {
       if (o && new URL(o).host !== url.host) return erro(403, 'forbidden', 'Origem não permitida.');
     }
     const partes = url.pathname.slice(5).split('/').filter(Boolean);
-    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : partes[0] === 'restaurar' ? await restauracaoRotas(request, env, partes) : await api(request, env, partes); }
+    try { return partes[0] === 'ler' ? await ler(request, env, partes) : partes[0] === 'recebidos' ? await recebidos(request, env, partes) : partes[0] === 'anexos' ? await anexos(request, env, partes) : partes[0] === 'backups' ? await backups(request, env, partes) : partes[0] === 'notif' ? await notif(request, env, partes) : partes[0] === 'djen' ? await djenRotas(request, env, partes) : partes[0] === 'datajud' ? await datajudRotas(request, env, partes) : partes[0] === 'restaurar' ? await restauracaoRotas(request, env, partes) : partes[0] === 'lixeira' ? await lixeiraRotas(request, env, partes) : partes[0] === 'auditoria' ? await auditoriaRotas(request, env, partes) : await api(request, env, partes); }
     catch (e) { console.error(e); return erro(500, 'server', 'Erro no servidor.'); }
   }
   return env.ASSETS.fetch(request);
