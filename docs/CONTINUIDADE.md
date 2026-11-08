@@ -13,6 +13,11 @@ Relatório completo em `docs/FASE0-DIAGNOSTICO.md` (rotas, coleções, funcional
 Resultados que importam: restauração insegura; backups no mesmo banco; transferência PJ/PF em dois registros; limite de 1.000 registros (Agenda); sessão não revogável; `Recebido no mês` mistura honorários e renda da PJ; `config` mistura documentos do proprietário e gerais; DataJud não traz advogados, DJEN traz.
 Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUTH` não definida; baixar um backup para conferência.
 
+## Situação atual (08/11/2026, fim do dia)
+- Fase 0 concluída e entregue. **Fase 1 aprovada pelo proprietário, mas ele pediu para esperar o aviso dele antes de começar.**
+- Pendência do proprietário: conferir no painel do Cloudflare se existe a variável `ALLOW_NO_AUTH` (não pode existir em produção) e baixar um backup do app para conferência.
+- Novo item aprovado como ideia: **Banco Central de Ícones** (ver `docs/ICONES.md`), implementação a partir da Fase 2 (base invisível primeiro); logos de bancos e reconhecimento de extratos na Fase 3.
+
 ## Depois (Fase 1), cada item com esboço e ok antes
 1. Restauração segura (conferir arquivo, cópia de segurança automática, desfazer).
 2. Lixeira de 30 dias e registro de ações no ponto central do servidor.
