@@ -88,6 +88,29 @@
       c.avisar(); throw e;
     });
   }
+  /* Lote "tudo ou nada": o que precisa ficar junto (transferência PJ/PF = despesa + receita) vai numa só chamada e numa só transação do servidor.
+     ops: [{ colecao, id, dados }]  grava;  [{ colecao, id, apagar: true }]  exclui. A tela muda na hora e volta atrás se o servidor recusar. */
+  function novoId() { return Math.random().toString(36).slice(2, 12) + Date.now().toString(36); }
+  function lote(ops) {
+    var feitos = [], cols = {};
+    ops.forEach(function (o) {
+      var c = colecao(o.colecao), antes = c.mapa[o.id], existia = Object.prototype.hasOwnProperty.call(c.mapa, o.id);
+      if (o.apagar) delete c.mapa[o.id]; else c.mapa[o.id] = JSON.parse(JSON.stringify(o.dados));
+      c.pendentes++; cols[c.nome] = c;
+      registrar(c, o.id, antes, existia, o.dados, !!o.apagar);
+      feitos.push({ c: c, id: o.id, antes: antes, existia: existia });
+    });
+    Object.keys(cols).forEach(function (n) { cols[n].avisar(); });
+    var corpo = { ops: ops.map(function (o) { return o.apagar ? { acao: 'excluir', colecao: o.colecao, id: o.id } : { acao: 'gravar', colecao: o.colecao, id: o.id, dados: o.dados }; }) };
+    return req('POST', '/api/lote', corpo).then(function () {
+      feitos.forEach(function (f) { f.c.pendentes--; f.c.assinatura = ''; });
+    }, function (e) {
+      feitos.slice().reverse().forEach(function (f) { f.c.pendentes--; if (f.existia) f.c.mapa[f.id] = f.antes; else delete f.c.mapa[f.id]; });
+      Object.keys(cols).forEach(function (n) { cols[n].avisar(); });
+      throw e;
+    });
+  }
+  window.__horusLote = { gravar: lote, novoId: novoId };
   var db = {
     collection: function (nome) {
       var c = colecao(nome);

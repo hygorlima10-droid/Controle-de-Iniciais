@@ -17,6 +17,7 @@ O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), co
 - Entradas, tentativas que falharam, trocas de senha e sessões encerradas aparecem no **Registro de ações**.
 - **Chave de retorno:** a variável `LOGIN_ANTIGO=1` no Worker volta ao acesso por uma senha só (cookie assinado), caso algo dê errado.
 - Pedidos vindos de outros sites são recusados; o botão **Sair** fica no menu do app.
+- **Gravação em lote, tudo ou nada** (`/api/lote`, `src/lote.js`): a transferência PJ/PF (uma receita na PF + uma despesa na PJ, ligadas por `transferenciaId`) é criada e excluída numa só transação do banco, pelo novo-lançamento, pelo “Recebi R$” e pelo extrato. Queda de conexão no meio não deixa só um dos lados; a tela volta ao que era. Até 25 operações por lote, mesma lixeira e mesmo registro de ações da API comum.
 
 ## Colocar no ar (passo a passo, uma vez só)
 1. **Banco:** Cloudflare → *D1* → criar `controle-juridico`; o *Database ID* vai em `wrangler.jsonc`. Rode o `schema.sql` no *Console* do banco.

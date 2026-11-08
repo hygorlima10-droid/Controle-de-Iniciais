@@ -271,5 +271,50 @@ rep("    else if (tab === 'processos') prRender();\n", "    else if (tab === 'pr
 rep("processos:'Processos', financeiro:'Financeiro' };", "processos:'Processos', configuracoes:'Configurações', financeiro:'Financeiro' };")
 rep("    else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';", "    else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';\n    else if (activeTab === 'configuracoes') qs('subtitle').textContent = 'Notificações, backup e exportações';")
 rep("h += secPerfil('atos', 'Atos e processos', docs.length, atos);", "h += secPerfil('atos', 'Processos e atos', docs.length, atos);")
+
+# Transferência PJ/PF atômica (Fase 1, item 5): despesa + receita gravadas e excluídas juntas, numa só transação do servidor (/api/lote)
+rep("  function persistNovaReceita(data){\n    data.criadoEm = new Date().toISOString();",
+"""  /* transferência PJ/PF = uma receita + uma despesa ligadas por transferenciaId: gravadas juntas, tudo ou nada (queda de conexão no meio não deixa só uma) */
+  function persistNovaTransferencia(receita, despesa){
+    if (storageMode !== 'db' || !window.__horusLote) return Promise.all([persistNovaReceita(receita), persistNovaDespesa(despesa)]);
+    var agora = new Date().toISOString(); receita.criadoEm = agora; despesa.criadoEm = agora; despesa.atualizadoEm = agora;
+    return window.__horusLote.gravar([
+      { colecao: 'receitasManuais', id: window.__horusLote.novoId(), dados: receita },
+      { colecao: 'despesas', id: window.__horusLote.novoId(), dados: despesa }
+    ]);
+  }
+  function persistExcluiJunto(idsReceitas, idsDespesas){
+    if (storageMode !== 'db' || !window.__horusLote) return Promise.all(idsReceitas.map(persistExcluiReceitaSimples).concat(idsDespesas.map(persistExcluiDespesaSimples)));
+    receitasManuais = receitasManuais.filter(function(r){ return idsReceitas.indexOf(r.id) < 0; });
+    despesas = despesas.filter(function(d){ return idsDespesas.indexOf(d.id) < 0; });
+    renderFinanceiro();
+    return window.__horusLote.gravar(idsReceitas.map(function(id){ return { colecao: 'receitasManuais', id: id, apagar: true }; }).concat(idsDespesas.map(function(id){ return { colecao: 'despesas', id: id, apagar: true }; })));
+  }
+  function persistNovaReceita(data){
+    data.criadoEm = new Date().toISOString();""")
+rep("""    var r = receitasManuais.find(function(x){ return x.id === id; });
+    var promessas = [];
+    if (r && r.transferenciaId){
+      despesas.filter(function(d){ return d.transferenciaId === r.transferenciaId; }).forEach(function(d){ promessas.push(persistExcluiDespesaSimples(d.id)); });
+    }
+    promessas.push(persistExcluiReceitaSimples(id));
+    return Promise.all(promessas);""",
+"""    var r = receitasManuais.find(function(x){ return x.id === id; });
+    var pares = (r && r.transferenciaId) ? despesas.filter(function(d){ return d.transferenciaId === r.transferenciaId; }).map(function(d){ return d.id; }) : [];
+    return persistExcluiJunto([id], pares);""")
+rep("""    var d = despesas.find(function(x){ return x.id === id; });
+    var promessas = [];
+    if (d && d.transferenciaId){
+      receitasManuais.filter(function(r){ return r.transferenciaId === d.transferenciaId; }).forEach(function(r){ promessas.push(persistExcluiReceitaSimples(r.id)); });
+    }
+    promessas.push(persistExcluiDespesaSimples(id));
+    return Promise.all(promessas);""",
+"""    var d = despesas.find(function(x){ return x.id === id; });
+    var pares = (d && d.transferenciaId) ? receitasManuais.filter(function(r){ return r.transferenciaId === d.transferenciaId; }).map(function(r){ return r.id; }) : [];
+    return persistExcluiJunto(pares, [id]);""")
+rep("    Promise.all([persistNovaReceita(receita), persistNovaDespesa(despesa)]).then(function(){\n      qs('saveBtnTransf').disabled = false;", "    persistNovaTransferencia(receita, despesa).then(function(){\n      qs('saveBtnTransf').disabled = false;")
+rep("    return Promise.all([persistNovaReceita(receita), persistNovaDespesa(despesa)]);\n  }\n  function grupoRecebiDaLinha(o){", "    return persistNovaTransferencia(receita, despesa);\n  }\n  function grupoRecebiDaLinha(o){")
+rep("  return Promise.all([persistNovaReceita(receita), persistNovaDespesa(despesa)]);\n}\nfunction extPagarDespesa(", "  return persistNovaTransferencia(receita, despesa);\n}\nfunction extPagarDespesa(")
+
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

@@ -99,7 +99,7 @@ r = await entrar(EMAIL, SENHA3, { ip: '4.4.4.5' }); const c7 = ck(r);
 r = await api('/api/auditoria?limite=200', c7); j = await r.json(); check((j.itens || j.registros || j.docs || []).some((x) => (x.dados || x.data || x).op === 'saiu'), 'sair fica no registro');
 
 /* 9 — tabela de rotas e áreas reservadas */
-const RAIZES = ['ler', 'recebidos', 'anexos', 'notif', 'djen', 'datajud', 'db', 'backup', 'backups', 'restaurar', 'lixeira', 'auditoria', 'seguranca'];
+const RAIZES = ['ler', 'recebidos', 'anexos', 'notif', 'djen', 'datajud', 'db', 'backup', 'backups', 'restaurar', 'lixeira', 'auditoria', 'seguranca', 'lote'];
 let todas = true; for (const raiz of RAIZES) { const x = await fetch(B + '/api/' + raiz + '/x', { redirect: 'manual' }); const y = await fetch(B + '/api/' + raiz, { redirect: 'manual' }); if (x.status !== 401 || y.status !== 401) { todas = false; console.log('   sem sessão, /api/' + raiz + ' respondeu', x.status, y.status); } }
 check(todas, 'sem sessão: toda raiz da API responde 401 (' + RAIZES.length + ' conferidas)');
 r = await api('/api/inventada', c7); check(r.status === 404, 'com sessão: raiz desconhecida da API é recusada');

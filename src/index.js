@@ -5,6 +5,7 @@
 import { gerarChavesVapid, enviarPush } from './push.js';
 import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
+import { loteRotas } from './lote.js';
 import { restauracaoRotas } from './restauracao.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
@@ -484,6 +485,7 @@ const ROTAS = {
   ler: ['sessao', (r, e, p) => ler(r, e, p)], recebidos: ['sessao', (r, e, p) => recebidos(r, e, p)], anexos: ['sessao', (r, e, p) => anexos(r, e, p)],
   notif: ['sessao', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p) => djenRotas(r, e, p)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],
   db: ['sessao', (r, e, p) => api(r, e, p)],
+  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC })],
   backup: ['proprietario', (r, e, p) => api(r, e, p)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
