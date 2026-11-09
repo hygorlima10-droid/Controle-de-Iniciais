@@ -37,3 +37,8 @@ Registro curto para não repetir conversa. Atualize quando algo for decidido. Fo
 - Coleções que começam com `_` são reservadas ao sistema e não aparecem pela API `/api/db`; usuários, sessões, auditoria e lixeira serão coleções `_`.
 - Backup do servidor guarda tudo que não começa com `_`.
 - Importação de processos pelo DJEN: cliente automático vincula direto; demais vão para a revisão; processo excluído entra em `config/processosIgnorados` e não volta.
+
+## Fase 2 encerrada (09/11/2026)
+- Entregue: 2.1 base de ícones, 2.2 Iniciais/Acordos/Alvarás, 2.3 Processos/Agenda/Publicações/Clientes, 2.4 Financeiro e Construção.
+- **Seletor de ícones (2.5) adiado:** o proprietário preferiu deixar o sistema escolher o ícone por enquanto.
+- Em aberto, a critério do proprietário: indicador “Custo estimado final” da obra (precisa definir a conta); cartão de totais de volta nas listas, em versão compacta; sub-aba “OABs” em Publicações.

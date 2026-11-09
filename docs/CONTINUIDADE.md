@@ -61,7 +61,8 @@ Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (por
   - Modo discreto: os gráficos de dinheiro somem (`mdOculto`), como na tela de Análises.
   - Construção: sub-abas Resumo (novo), Etapas (contratos de mão de obra, etapas e checklist), Gastos (gastos e conferência do extrato) e Dinheiro e financiamento (cartão da conta da obra, financiamento, juros, caixa próprio e entradas). `mfObra()` roda depois de `renderObra()` e dos extras do `obra7` (embrulha `renderObra`) e só mostra/esconde os blocos que já existiam.
   - Memória da sub-aba: `financeiro` e `obra` em `horus.subaba.v1`.
-- **Próximo: 2.5** (seletor de ícones, opcional, só telas do proprietário). Depois, Fase 3.
+- **Fase 2 ENCERRADA em 09/11/2026** por decisão do proprietário. A etapa 2.5 (seletor de ícones) **não foi feita**: o sistema continua escolhendo o ícone sozinho. A base (catálogo, busca, resolvedor) está pronta em `cliente/icones.js` se um dia for retomada.
+- **Próximo:** o proprietário testa a Fase 2 em produção. Depois, Fase 3 (recursos financeiros, logos de bancos, reconhecimento de extratos), sempre com esboço em imagem e OK antes.
 
 ## Agenda renovada (09/11/2026, antes da Fase 2)
 - Pedido do proprietário a partir do Control Jus: tocar no compromisso para ver detalhes, **copiar o número do processo** (ícone de dois retângulos; **sem botão “abrir no tribunal”**, decidido), atalhos de situação (A fazer, Em andamento, Concluído, **Cancelado**), WhatsApp **para o cliente e para a equipe**, e visual no padrão do restante do app (o primeiro esboço foi recusado por parecer antigo; esta versão foi feita direto com os componentes reais). Teste `agenda-detalhe`; testes de agenda, audiências, relatórios e importação foram ajustados (cartão `.agc`, filtros em “Filtros”, Relatório e Importar no menu ⋯).

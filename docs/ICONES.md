@@ -1,5 +1,7 @@
 # Horus — Banco Central de Ícones (especificação recebida em 08/11/2026)
 
+**Decisão de 09/11/2026:** o seletor de ícones (etapa 2.5) fica para depois; por enquanto o sistema escolhe o ícone sozinho. A Fase 2 foi encerrada sem ele.
+
 Status: **etapa 2.1 (base técnica invisível) FEITA em 09/11/2026**: `cliente/icones-dados.js` (gerado), `cliente/icones.js` e `cliente/gerar_icones.py`, teste `icones`. Desde a etapa 2.2 os indicadores do Resumo de Iniciais, Acordos e Alvarás usam desenhos do catálogo (`mdIc` em `cliente/modulo.js`). Fora isso, nenhuma tela usa os ícones novos ainda (seletor e telas: etapas 2.2 a 2.5). Aprovado como ideia; implementação na Fase 2. Este arquivo guarda o que foi decidido, a validação técnica já feita e o catálogo recebido (transcrito de forma compacta), para não depender da conversa.
 
 ## 1. Decisões e opinião
