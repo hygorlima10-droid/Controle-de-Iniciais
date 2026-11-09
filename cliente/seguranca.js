@@ -153,4 +153,15 @@ function sgSegSenha(){
     .catch(function(e){ sgS.ocupado = false; fim(false, e.message); });
 }
 function sgSegAlertas(ativo){ sgApi('/api/seguranca/alertas', 'PUT', { ativo: !!ativo }).then(function(){ toast(ativo ? 'Avisos ligados.' : 'Avisos desligados.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); }); }
+/* quem está usando: o que é só do proprietário some da tela dos demais (nesta fase só existe o proprietário; a regra já fica pronta para os outros perfis).
+   No Início, quem não é o proprietário vê só a Central de atenção (o que vence, para cobrar) e os prazos: sem o total recebido, o a receber, o vencido, a divisão do mês, os extratos e as ferramentas Recebi R$, Foto/PDF e Pergunte. */
+(function(){
+  var st = document.createElement('style');
+  st.textContent = '.so-central .ini-hero,.so-central .ini-kpi,.so-central #toggleOrigemResumo,.so-central #resumoOrigem,.so-central #acRecebi,.so-central #inicioLerDoc,.so-central #inicioPergunte,.so-central .ini-divisao,.so-central .ini-extratos{display:none!important}';
+  document.head.appendChild(st);
+  if (window.__SERVIDOR) fetch('/api/eu', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    window.__papel = (j && j.papel) || 'proprietario';
+    document.documentElement.classList.toggle('so-central', window.__papel !== 'proprietario');
+  }).catch(function(){});
+})();
 (function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { sgLixAbrir: sgLixAbrir, sgRegAbrir: sgRegAbrir, sgSegAbrir: sgSegAbrir }); })();

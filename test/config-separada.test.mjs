@@ -47,7 +47,7 @@ check(r.j.ok !== false && nomes.includes('configDono') && nomes.includes('config
 r = await f('POST', '/api/restaurar/aplicar', { confirmar: true, arquivo: antigo }); check(r.s === 200 && r.j.ok, 'restauração do backup antigo aplicada');
 const bk3 = (await f('GET', '/api/backup')).j.docs;
 check(bk3.some(d => d.colecao === 'configDono' && d.id === 'planejamento' && d.dados.reservaRecusada['2026-09'] === 77) && !bk3.some(d => d.colecao === 'config' && DONO.includes(d.id)), 'o backup antigo coloca os documentos do proprietário em configDono, não em config');
-/* 5 — Início: total só de honorários e quadro da PJ à parte */
+/* 5 — Início: total = honorários + outras receitas (como antes); totais só para o proprietário */
 for (const c of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'saldos']) for (const d of (await f('GET', '/api/db/' + c)).j.docs || []) await f('DELETE', '/api/db/' + c + '/' + d.id);
 const hoje = new Date().toISOString().slice(0, 10), agora = new Date().toISOString();
 await f('PUT', '/api/db/receitasManuais/pj1', { descricao: 'Venda do tablet', coluna: 'pj', valor: 3500, mesReferencia: hoje.slice(0, 7), data: hoje, recorrente: false, criadoEm: agora });
@@ -58,13 +58,17 @@ await ctx.addInitScript(() => { try { localStorage.setItem('horus.leituraAuto', 
 const page = await ctx.newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
-check(/Honorários recebidos no mês/.test(await t('#resumoRecebidoLbl')), 'o rótulo do Início é "Honorários recebidos no mês"');
-check(/R\$\s*4\.000,00/.test(await t('#resumoRecebido')), 'a renda de R$ 3.500 da PJ não entra no total: só os R$ 4.000 de honorários (' + (await t('#resumoRecebido')).replace(/\n/g, ' ') + ')');
-check(await page.evaluate(() => document.querySelectorAll('#inicioBarra span').length === 2 && !document.querySelector('#inicioBarra .seg-out')), 'a barra tem só os segmentos de honorários (próprios e Murilo)');
-check(await page.evaluate(() => { const e = document.getElementById('inicioPjCard'); return !!e && e.style.display !== 'none'; }) && /3\.500,00/.test(await t('#inicioPjCard')) && /Só você vê/.test(await t('#inicioPjCard')), 'o quadro "Renda da PJ no mês" aparece à parte, marcado como só do proprietário: ' + (await t('#inicioPjCard')).replace(/\n/g, ' '));
-check(!/Outras receitas/.test(await t('#inicioLegenda')) && !(await page.evaluate(() => !!document.getElementById('resumoOrigemOutrasCard'))), 'sem "Outras receitas" na barra nem em "Ver por origem"');
-if (process.env.FOTOS) await page.screenshot({ path: process.env.FOTOS + '/inicio-pj.png' });
-await page.click('#inicioPjCard'); await page.waitForTimeout(900);
-check(await page.evaluate(() => { const e = document.getElementById('colunaFinanceiroPj'); return !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0; }), 'tocar no quadro abre a PJ');
+check(/Recebido no mês/.test(await t('#resumoRecebidoLbl')) && !/Honorários recebidos/.test(await t('#resumoRecebidoLbl')), 'o rótulo do Início voltou a ser "Recebido no mês"');
+check(/R\$\s*7\.500,00/.test(await t('#resumoRecebido')), 'o total soma os honorários (R$ 4.000) e as outras receitas da PJ (R$ 3.500): ' + (await t('#resumoRecebido')).replace(/\n/g, ' '));
+check(await page.evaluate(() => document.querySelectorAll('#inicioBarra span').length === 3 && !!document.querySelector('#inicioBarra .seg-out')) && /Outras receitas/.test(await t('#inicioLegenda')), 'a barra volta a ter as outras receitas como terceiro segmento');
+check(!(await page.evaluate(() => !!document.getElementById('inicioPjCard'))), 'não existe mais o quadro tracejado da renda da PJ');
+await page.click('#toggleOrigemResumo'); await page.waitForTimeout(300);
+check(await page.evaluate(() => { const c = document.getElementById('resumoOrigemOutrasCard'); return !!c && getComputedStyle(c).display !== 'none'; }) && /3\.500,00/.test(await t('#resumoOrigemOutrasRecebido')), '"Ver por origem" volta a mostrar "Outras receitas da PJ"');
+/* só o proprietário vê os totais: quem não é o proprietário fica só com a Central de atenção e os prazos */
+const eu = await f('GET', '/api/eu'); check(eu.j.papel === 'proprietario', 'o servidor informa o papel de quem usa (proprietário)');
+check(await page.evaluate(() => ['ini-hero', 'ini-kpi'].every(c => { const e = document.querySelector('.' + c); return e && getComputedStyle(e).display !== 'none'; }) && getComputedStyle(document.getElementById('acRecebi')).display !== 'none'), 'para o proprietário: total do mês, A receber, Vencido e Recebi R$ aparecem');
+await page.evaluate(() => document.documentElement.classList.add('so-central')); await page.waitForTimeout(200);
+check(await page.evaluate(() => ['.ini-hero', '.ini-kpi', '#toggleOrigemResumo', '#resumoOrigem', '#acRecebi', '.ini-divisao'].every(s => getComputedStyle(document.querySelector(s)).display === 'none') && getComputedStyle(document.getElementById('inicioPrazos')).display !== 'none' && !!document.querySelector('.ini-atencao') && getComputedStyle(document.querySelector('.ini-atencao')).display !== 'none'), 'para os demais usuários: some o total do mês, o A receber, o Vencido, "Ver por origem" e o Recebi R$; ficam os prazos e a Central de atenção');
+await page.evaluate(() => document.documentElement.classList.remove('so-central'));
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

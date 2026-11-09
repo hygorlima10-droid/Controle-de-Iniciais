@@ -30,8 +30,8 @@ Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (por
 - Guarde a senha antiga (`SENHA`): é a chave de emergência em `/recuperar`. Se algo der errado, defina a variável `LOGIN_ANTIGO` = `1` no Worker para voltar ao acesso antigo.
 - Testes do acesso individual rodam em servidor **sem** `LOGIN_ANTIGO` e com banco novo; todos os outros testes rodam com `--var LOGIN_ANTIGO:1`.
 
-## Item 6 (Início só com honorários e configuração separada): o que muda e como voltar atrás
-- **Início:** o total e a barra são **só honorários** (“Honorários recebidos no mês”); a renda lançada na PJ aparece num quadro tracejado “só você vê”, fora do total. O cartão “Outras receitas da PJ” saiu de “Ver por origem”.
+## Item 6 (configuração separada; o Início foi revisto em 09/11): o que muda e como voltar atrás
+- **Início (revisto em 09/11):** o total voltou a ser “Recebido no mês” = honorários + outras receitas da PJ (sem o quadro tracejado); os totais, a Divisão do mês e as ferramentas financeiras só aparecem para o proprietário (classe `so-central` nos demais, via `/api/eu`).
 - **Configuração:** `planejamento`, `obra`, `extratos`, `relatorioMurilo`, `alertasDispensados` e `backup` passaram de `config` para a coleção `configDono` (só proprietário). Fica em `config`: `personalizacao`, `modelosHonorario`, `vinculoIniciais`, `importacaoAuto`, `processosIgnorados`. A migração roda sozinha na primeira requisição depois da atualização (`src/migracao.js`, uma transação só, marca `_sistema/mig-config-dono-v1`).
 - **Compatibilidade:** o endereço antigo `/api/db/config/<documento do proprietário>` continua valendo (o servidor leva para `configDono`) e a lista de `config` ainda traz esses documentos para o proprietário; assim um aparelho com o app já aberto não recria documentos nem perde dados. Backups feitos antes da separação restauram direto para `configDono`.
 - **Tabela de coleções** (`src/colecoes.js`): coleção fora da tabela é recusada; coleções de finanças e `configDono` só abrem para o proprietário (a checagem de papel já está no servidor, vale quando existirem outros usuários).

@@ -51,11 +51,6 @@
 /* Segurança: campos de senha como os demais campos dos formulários */
 #overlaySgSeg .field input[type=password]{width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--ink);font-size:var(--t5);}
 @media (max-width:640px){#overlaySgSeg .field input[type=password]{padding:13px 14px;font-size:16px;}}
-/* Início: renda da PJ em quadro à parte (só do proprietário), fora do total de honorários */
-.ini-pj{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;margin-top:12px;padding:10px 12px;text-align:left;font:inherit;color:var(--ink);background:rgba(201,133,0,.07);border:1.5px dashed var(--c-gold,#c98500);border-radius:var(--radius-md,14px);cursor:pointer}
-.ini-pj-t{grid-column:1/-1;font-size:var(--t1,.7rem);font-weight:800;letter-spacing:.02em;color:var(--ink-soft)}
-.ini-pj-l{font-size:var(--t4,.9rem);font-weight:600}.ini-pj-v{font-size:var(--t5,1rem);font-weight:800;text-align:right}
-.ini-pj-s{grid-column:1/-1;font-size:var(--t2,.75rem);color:var(--ink-soft)}
 /* Importar compromissos da Agenda */
 #overlayAgi{z-index:180;}
 #agiC>*{flex-shrink:0;}

@@ -497,6 +497,7 @@ const ROTAS = {
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
+  eu: ['sessao', (r, e, p, a) => json({ papel: a && a.usuario ? a.usuario.papel : 'proprietario' })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);
 

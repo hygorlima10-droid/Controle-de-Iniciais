@@ -331,17 +331,7 @@ rep("    return Promise.all([persistNovaReceita(receita), persistNovaDespesa(des
 rep("  return Promise.all([persistNovaReceita(receita), persistNovaDespesa(despesa)]);\n}\nfunction extPagarDespesa(", "  return persistNovaTransferencia(receita, despesa);\n}\nfunction extPagarDespesa(")
 
 
-# Item 6: "Recebido no mês" só de honorários; a renda da PJ vira um quadro separado (só do proprietário) e a configuração se divide (servidor: src/colecoes.js)
-rep('<div class="lbl" id="resumoRecebidoLbl">Recebido no mês</div>', '<div class="lbl" id="resumoRecebidoLbl">Honorários recebidos no mês</div>')
-rep('        <div class="lbl" id="inicioLegenda"></div>\n      </div>', '        <div class="lbl" id="inicioLegenda"></div>\n        <button type="button" class="ini-pj" id="inicioPjCard" style="display:none;"><span class="ini-pj-t">🔒 Só você vê · não soma no total acima</span><span class="ini-pj-l">Renda da PJ no mês</span><span class="ini-pj-v" id="inicioPjValor">R$ 0,00</span><span class="ini-pj-s">lançada no Financeiro · toque para abrir a PJ ›</span></button>\n      </div>')
-rep("    qs('resumoRecebido').textContent = fmtMoeda(sp.recebido + sa.recebido + sv.recebido + receitaManualPj);", "    qs('resumoRecebido').textContent = fmtMoeda(sp.recebido + sa.recebido + sv.recebido);")
-rep("? 'Recebido no mês' : 'Recebido em ' + mesLabel(mesSelecionado);", "? 'Honorários recebidos no mês' : 'Honorários recebidos em ' + mesLabel(mesSelecionado);")
-rep("    qs('resumoOrigemOutrasCard').style.display = receitaManualPj > 0.004 ? '' : 'none';\n    qs('resumoOrigemOutrasRecebido').textContent = fmtMoeda(receitaManualPj);\n    var recTot = ro.proprio.recebido + ro.murilo.recebido + receitaManualPj;",
-"    /* renda lançada na PJ: quadro à parte, só do proprietário (nesta fase todo acesso é o proprietário); não entra no total de honorários */\n    var pjCard = qs('inicioPjCard');\n    if (pjCard){\n      pjCard.style.display = receitaManualPj > 0.004 ? '' : 'none';\n      qs('inicioPjValor').textContent = fmtMoeda(receitaManualPj);\n      pjCard.onclick = function(){ var b = document.querySelector('[data-tab=\"financeiro\"][data-fin=\"pj\"]'); if (b) b.click(); };\n    }\n    var recTot = ro.proprio.recebido + ro.murilo.recebido;")
-rep("pM = ro.murilo.recebido / recTot * 100, pO = receitaManualPj / recTot * 100;", "pM = ro.murilo.recebido / recTot * 100;")
-rep("<span class=\"seg-mur\" style=\"width:' + pM + '%\"></span><span class=\"seg-out\" style=\"width:' + pO + '%\"></span>';", "<span class=\"seg-mur\" style=\"width:' + pM + '%\"></span>'; /* só honorários na barra */")
-rep("Math.round(pM) + '%</span>' + (receitaManualPj > 0.004 ? '<span class=\"lg\"><i class=\"seg-out\"></i>Outras receitas ' + Math.round(pO) + '%</span>' : '');", "Math.round(pM) + '%</span>'; /* só honorários na legenda */")
-rep('      <div class="resumo-origem-card" id="resumoOrigemOutrasCard" style="display:none;">\n        <h3>Outras receitas da PJ</h3>\n        <div class="resumo-origem-row"><span>Recebido no mês</span><span class="v" id="resumoOrigemOutrasRecebido">R$ 0,00</span></div>\n        <div style="font-size:var(--t2);color:var(--muted,#6b7280);margin-top:4px;">Receitas lançadas direto no Financeiro (não vêm de petição, acordo ou alvará). Entram no total acima.</div>\n      </div>\n', '      <!-- a renda da PJ fica no quadro do Início (inicioPjCard), fora dos honorários -->\n')
+# Item 6 (parte da configuração): a tela lê até 50 documentos de config; o Início voltou a somar honorários + outras receitas da PJ (decisão de 09/11)
 rep("configRef.limit(10).onSnapshot(", "configRef.limit(50).onSnapshot(")
 
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
