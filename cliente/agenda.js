@@ -59,7 +59,7 @@ function agCriar(doc){
 function agItens(op){
   var l = [], quadro = !!(op && op.quadro);
   agDocs.forEach(function(d){
-    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || d.audPubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo', audTipo: d.audTipo || '', modalidade: d.modalidade || '', local: d.local || '', link: d.link || '', protocoladoEm: d.protocoladoEm || '', protocoloObs: d.protocoloObs || '' });
+    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.concluido ? 'feito' : (d.situacao || 'afazer'), concluido: !!d.concluido, pubId: d.pubId || d.audPubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo', audTipo: d.audTipo || '', modalidade: d.modalidade || '', local: d.local || '', link: d.link || '', obs: d.obs || '', protocoladoEm: d.protocoladoEm || '', protocoloObs: d.protocoloObs || '' });
   });
   casos.forEach(function(c){   /* prazos que já existiam nas Iniciais */
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
@@ -138,6 +138,7 @@ function agMontarTela(){
     else if (a === 'feitos'){ agS.feitos = !agS.feitos; agRender(); }
     else if (a === 'novo') agAbrir(null);
     else if (a === 'rel') rptAgenda();
+    else if (a === 'importar') agiAbrir();
     else if (a === 'nav'){ var n = Number(v); if (agS.vista === 'mes'){ var d = new Date(agS.mes + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); agS.mes = d.toISOString().slice(0, 7); agS.sel = agS.mes + '-01'; } else { agS.ref = pbSoma(agS.ref, 7 * n); } agRender(); }
     else if (a === 'hoje'){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); agRender(); }
     else if (a === 'dia'){ agS.sel = v; if (agS.vista === 'mes' && v.slice(0, 7) !== agS.mes) agS.mes = v.slice(0, 7); agRender(); if (agS.vista === 'semana'){ var g = qs('agd-' + v); if (g && g.scrollIntoView) g.scrollIntoView({ block: 'start' }); } }
@@ -158,7 +159,7 @@ function agRenderIn(){
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
   var h = '<div class="ini-acoes ag-acoes" id="agSeg">' + [['semana', 'Semana', 'ic-agenda'], ['mes', 'Mês', 'ic-mes'], ['lista', 'Lista', 'ic-lista'], ['quadro', 'Quadro', 'ic-quadro']].map(function(f){ return '<button type="button" class="acao' + (agS.vista === f[0] ? ' on' : '') + '" data-ag="vista" data-v="' + f[0] + '"><svg><use href="#' + f[2] + '"/></svg><span>' + f[1] + '</span></button>'; }).join('') + '<button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo</span></button></div>';
   if (agS.vista !== 'quadro' && agS.filtro === 'alvara') agS.filtro = 'tudo';
-  h += '<div class="ag-filtros">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas'], ['inicial', 'Iniciais']].concat(agS.vista === 'quadro' ? [['alvara', 'Alvarás']] : []).map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + (agS.vista === 'quadro' ? '' : '<button type="button" class="ag-f' + (agS.feitos ? ' on' : '') + '" data-ag="feitos">Concluídos</button>') + '<button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button></div>';
+  h += '<div class="ag-filtros">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas'], ['inicial', 'Iniciais']].concat(agS.vista === 'quadro' ? [['alvara', 'Alvarás']] : []).map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + (agS.vista === 'quadro' ? '' : '<button type="button" class="ag-f' + (agS.feitos ? ' on' : '') + '" data-ag="feitos">Concluídos</button>') + '<button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button><button type="button" class="ag-f" data-ag="importar">📥 Importar</button></div>';
   var todos = agS.vista === 'quadro' ? agItens({ quadro: true }).filter(function(i){ return agS.filtro === 'tudo' || i.cat === agS.filtro; }).sort(agOrdem) : agFiltrados(agItens()).sort(agOrdem);
   if (agS.vista === 'quadro') h += agVistaQuadro(todos);
   else if (agS.vista === 'semana') h += agVistaSemana(todos);
@@ -238,6 +239,8 @@ function agCartao(i){
   tags += '<span class="pb-tg ' + (i.situacao === 'feito' ? 'ok' : (i.situacao === 'elaboracao' ? 'pz' : '')) + '">' + (i.tipo === 'audiencia' && i.situacao === 'feito' ? 'Realizada' : AG_SITUACAO[i.situacao]) + '</span>';
   if (v) tags += '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + '</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
+  if (i.doc && /alta/i.test(i.doc.prioridade || '')) tags += '<span class="pb-tg pz">Prioridade alta</span>';
+  if (i.doc && i.doc.origem === 'controljus') tags += '<span class="pb-tg">do Control Jus</span>';
   if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
   if (i.concluido && i.tipo === 'prazo' && i.protocoladoEm) tags += '<span class="pb-tg ok">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</span>';
   if (i.tipo === 'audiencia' && i.modalidade) tags += '<span class="pb-tg">' + escapeHtml(AG_MODAL[i.modalidade] || i.modalidade) + '</span>';
@@ -417,6 +420,7 @@ function agAbrir(key, pre){
     '<div id="age_aud_box"><div class="pb-dois"><div class="field"><label class="field-label" for="age_audtipo">Tipo da audiência</label><select id="age_audtipo" class="filter-select" style="width:100%"><option value="">Não informado</option>' + AG_AUDS.map(function(t){ return '<option' + (V('audTipo') === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div><div class="field"><label class="field-label" for="age_mod">Modalidade</label><select id="age_mod" class="filter-select" style="width:100%"><option value="">Não informada</option>' + Object.keys(AG_MODAL).map(function(k){ return '<option value="' + k + '"' + (V('modalidade') === k ? ' selected' : '') + '>' + AG_MODAL[k] + '</option>'; }).join('') + '</select></div></div>' +
     '<div class="field"><label class="field-label" for="age_local">Local</label><input type="text" id="age_local" maxlength="140" value="' + escapeHtml(V('local')) + '" placeholder="Ex.: Fórum de Morrinhos, sala 2"></div>' +
     '<div class="field"><label class="field-label" for="age_link">Link da sala virtual (opcional)</label><input type="text" inputmode="url" autocapitalize="off" id="age_link" maxlength="300" value="' + escapeHtml(V('link')) + '" placeholder="https://…"></div></div>' +
+    '<div class="field"><label class="field-label" for="age_obs">Observações (opcional)</label><textarea id="age_obs" maxlength="1200" rows="3" style="width:100%">' + escapeHtml(V('obs')) + '</textarea></div>' +
     '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : '') + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
     '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + '>Em elaboração</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
     '<div class="field" id="age_prot_box" style="display:none"><label class="field-label" for="age_protoc">Data do protocolo</label><input type="date" id="age_protoc" value="' + escapeHtml(V('protocoladoEm') || agHoje()) + '"></div>' +
@@ -445,7 +449,7 @@ function agSalvarEd(){
   if (link && !/^https?:\/\/\S+$/i.test(link)){ err.textContent = 'O link da sala virtual deve começar com https://'; return; }
   var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '', audPubId: (agEditPre && agEditPre.audPubId) || '' }; delete base.id;
   var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av,
-    audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
+    obs: qs('age_obs') ? qs('age_obs').value.trim() : (base.obs || ''), audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
   if (t === 'prazo'){ if (sit === 'feito'){ doc.protocoladoEm = qs('age_protoc').value || agHoje(); if (!doc.concluidoEm) doc.concluidoEm = agHoje(); } else { doc.protocoladoEm = ''; doc.protocoloObs = ''; } }
   var p = i ? pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ doc.id = i.id; agDocs = agDocs.map(function(x){ return x.id === i.id ? doc : x; }); }) : agCriar(doc);
   p.then(function(){ qs('overlayAg').classList.remove('show'); toast('Salvo na agenda.'); agDepois(); }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });

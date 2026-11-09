@@ -23,7 +23,7 @@ for (let i = 0; i < 5; i++) await fetch(B + '/api/enviar', { method: 'POST', bod
 r = await fetch(B + '/api/enviar', { method: 'POST', body: 'x', headers: { authorization: 'Bearer ' + TOKEN, 'cf-connecting-ip': '5.5.5.5' } }); check(r.status === 429, 'depois de 5 tokens errados o IP é bloqueado');
 r = await fetch(B + '/api/recebidos'); check(r.status === 401, 'lista de recebidos exige sessão');
 r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }) }); const ck = r.headers.get('set-cookie').split(';')[0];
-j = await (await fetch(B + '/api/recebidos', { headers: { cookie: ck } })).json(); check(j.itens.length === 2 && !JSON.stringify(j).includes('b64'), 'sessão vê 2 recebidos (só os nomes, sem o conteúdo)');
+j = await (await fetch(B + '/api/recebidos', { headers: { cookie: ck } })).json(); check(j.itens.length === 2 && !JSON.stringify(j).includes('"b64"'), 'sessão vê 2 recebidos (só os nomes, sem o conteúdo)');
 r = await fetch(B + '/api/db/_recebidos', { headers: { cookie: ck } }); check(r.status === 404, 'a área interna não aparece pela API de dados');
 // tela
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 400, height: 860 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
