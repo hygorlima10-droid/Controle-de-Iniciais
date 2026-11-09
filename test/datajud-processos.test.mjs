@@ -35,7 +35,7 @@ check(chamadas.length === 1 && chamadas[0].url === '/api_publica_tjgo/_search' &
 check((await f('GET', '/api/datajud/processo?numero=123')).s === 400, 'número fora do padrão: 400');
 const semLogin = await fetch(B + '/api/datajud/processo?numero=' + dig(NA)); check(semLogin.status === 401 || semLogin.status === 302 || semLogin.status === 403, 'sem login a rota não responde (' + semLogin.status + ')');
 
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const v = async id => page.evaluate(i => document.getElementById(i).value, id);

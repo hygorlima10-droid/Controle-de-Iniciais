@@ -32,11 +32,11 @@ await A({ titulo: 'Protocolo B', data: dia(-15), situacao: 'feito', concluido: t
 await A({ titulo: 'Protocolo C', data: dia(-10), situacao: 'feito', concluido: true, protocoladoEm: dia(-8) });
 await A({ tipo: 'audiencia', titulo: 'Audiência', processo: N(1), data: dia(12), hora: '10:00' });
 
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(1000);
-check(await page.evaluate(() => document.querySelectorAll('#prSub .seg-btn').length) === 2 && /Lista/.test(await t('#prSub')) && /Análises/.test(await t('#prSub')), 'a aba Processos tem as subabas Lista | Análises');
+check(await page.evaluate(() => document.querySelectorAll('#prSub [data-pr="sub"]').length) === 3 && /Lista/.test(await t('#prSub')) && /Análises/.test(await t('#prSub')), 'a aba Processos tem as sub-abas Resumo | Lista | Análises');
 await page.click('[data-pr="sub"][data-v="analises"]'); await page.waitForTimeout(600);
 const an = await t('#prAnalises');
 check(await page.evaluate(() => document.getElementById('prListaBloco').style.display === 'none'), 'em Análises, a lista some');

@@ -25,7 +25,7 @@ await caso('ce', { cliente: 'Sem Processo Algum', nomeAcao: 'Parecer', semProces
 await caso('cf', { cliente: 'Já Ligada', nomeAcao: 'Execução', numeroProcesso: N1 });
 await f('POST', '/api/db/processos', { numero: N1, partes: 'Já Ligada x Banco', clienteIds: [], honorarios: 'sem', arquivado: false, origem: 'publicacao', criadoEm: agora });
 
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const cfg = (await docs('config')).filter(d => d.id === 'vinculoIniciais')[0];

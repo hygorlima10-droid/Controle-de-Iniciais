@@ -33,7 +33,18 @@ function mdIrSub(mod, sub, lembrar){
   mdLer(); mdS.sub[mod] = sub; if (lembrar !== false) mdGravar();
   mdRedesenhar(mod);
 }
-function mdRedesenhar(mod){ if (mod === 'peticoes') render(); else if (mod === 'acordos') renderAcordos(); else if (mod === 'alvaras') renderAlvaras(); }
+function mdRedesenhar(mod){
+  if (mod === 'peticoes') render(); else if (mod === 'acordos') renderAcordos(); else if (mod === 'alvaras') renderAlvaras();
+  else if (mod === 'processos') prRender(); else if (mod === 'publicacoes') pbRender(); else if (mod === 'agenda') agRender(); else if (mod === 'clientes') renderClientes();
+}
+/* para os módulos que montam a própria tela (Processos, Publicações, Agenda, Clientes): eles guardam a sub-aba no próprio estado
+   e só usam a memória (mdInicial na primeira vez, mdLembrar quando o usuário troca) e o desenho da barra (mdBarraHtml) */
+function mdInicial(mod, validos){ mdLer(); var s0 = mdS.sub[mod]; return validos.indexOf(s0) >= 0 ? s0 : 'resumo'; }
+function mdLembrar(mod, sub){ mdLer(); mdS.sub[mod] = sub; mdGravar(); }
+function mdBarraHtml(abas, atual, attrs){
+  mdCss();
+  return '<div class="md-abas" role="tablist" aria-label="Sub-abas">' + abas.map(function(a){ return '<button type="button" role="tab" ' + attrs(a[0]) + ' aria-selected="' + (a[0] === atual) + '" class="' + (a[0] === atual ? 'on' : '') + '">' + a[1] + (a[2] ? ' <b class="md-n">' + a[2] + '</b>' : '') + '</button>'; }).join('') + '</div>';
+}
 
 /* ---------- visual ---------- */
 function mdCss(){
@@ -43,6 +54,8 @@ function mdCss(){
     '.md-abas{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border);margin:0 0 12px}.md-abas::-webkit-scrollbar{display:none}' +
     '.md-abas button{flex:none;appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px 9px;font:inherit;font-size:var(--t3);font-weight:700;color:var(--ink-soft);white-space:nowrap;cursor:pointer;margin-bottom:-1px;border-radius:8px 8px 0 0}' +
     '.md-abas button:hover{color:var(--ink)}.md-abas button.on{color:var(--ink);border-bottom-color:#C98500}.md-abas button:focus-visible{outline:2px solid var(--accent-2);outline-offset:-2px}' +
+    '.md-abas .md-n{display:inline-block;min-width:18px;padding:1px 6px;border-radius:99px;background:rgba(217,59,59,.14);color:var(--urgente,#D93B3B);font-size:11px;font-weight:800;text-align:center;margin-left:2px}' +
+    '.ini-acoes.md-um{display:flex!important;justify-content:flex-end;margin:0 0 10px;gap:8px}.ini-acoes.md-um .acao{flex:none;flex-direction:row;align-items:center;gap:8px;padding:9px 16px;min-height:0;height:auto;width:auto;border-radius:12px;font-size:var(--t3)}.ini-acoes.md-um .acao svg{width:18px;height:18px;margin:0}' +
     '#segPeticaoView,#segAlvaraView{display:none!important}' +
     '[data-md] > .rs-wrap{display:none!important}' +
     '[data-md="resumo"] > .alvara-view-bar,[data-md="resumo"] > .filters,[data-md="receb"] > .alvara-view-bar,[data-md="receb"] > .filters,[data-md="lista"] > .alvara-view-bar{display:none!important}' +
@@ -97,7 +110,7 @@ function mdBarras(meses, a, b, o){
   });
   if (o.sel != null && meses[o.sel]){
     var c2 = px + o.sel * gw + gw / 2, tx = Math.min(Math.max(c2, 96), w - 96);
-    s += '<rect class="tipbg" x="' + (tx - 94) + '" y="1" width="188" height="38" rx="10"/><text class="tip1" x="' + tx + '" y="16" text-anchor="middle" font-size="10">' + escapeHtml(mdMesAno(meses[o.sel]) + ' · ' + o.ra + ' ' + mdCompacto(a[o.sel])) + '</text><text class="tip2" x="' + tx + '" y="31" text-anchor="middle" font-size="11.5">' + escapeHtml(o.rb + ' ' + fmtMoeda(b[o.sel])) + '</text>';
+    s += '<rect class="tipbg" x="' + (tx - 94) + '" y="1" width="188" height="38" rx="10"/><text class="tip1" x="' + tx + '" y="16" text-anchor="middle" font-size="10">' + escapeHtml(mdMesAno(meses[o.sel]) + ' · ' + o.ra + ' ' + (o.fmt || mdCompacto)(a[o.sel])) + '</text><text class="tip2" x="' + tx + '" y="31" text-anchor="middle" font-size="11.5">' + escapeHtml(o.rb + ' ' + (o.fmt || fmtMoeda)(b[o.sel])) + '</text>';
   }
   return s + '</svg>';
 }

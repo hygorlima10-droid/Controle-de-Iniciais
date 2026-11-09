@@ -24,7 +24,7 @@ await f('POST', '/api/db/agenda', { tipo: 'prazo', titulo: 'Recurso de apelaçã
 await f('POST', '/api/db/agenda', { tipo: 'audiencia', titulo: 'Audiência de instrução', processo: N4, cliente: 'Fulano', data: dia(30), hora: '09:00', audTipo: 'Instrução e julgamento', local: 'Fórum de Morrinhos', situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], criadoEm: agora });
 await f('POST', '/api/db/agenda', { tipo: 'prazo', titulo: 'Contestação', processo: N4, cliente: 'Fulano', data: dia(-20), situacao: 'feito', concluido: true, protocoladoEm: dia(-22), avisos: [], criadoEm: agora });
 
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const cards = () => page.evaluate(() => Array.from(document.querySelectorAll('#prLista .pr-card')).map(c => c.getAttribute('data-pr-card')));

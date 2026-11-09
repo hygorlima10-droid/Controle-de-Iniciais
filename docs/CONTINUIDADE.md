@@ -38,7 +38,7 @@ Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (por
 - **Voltar atrás:** o original de cada documento ficou em `_sistema/cfg-antes-<nome>`. Para desfazer: copiar esses registros de volta para `config` (`INSERT ... SELECT 'config', substr(id,11), dados ...`), apagar de `configDono` e apagar a marca `mig-config-dono-v1` (ou usar o Time Travel de 7 dias do D1).
 
 ## Fase 2 (iniciada em 09/11/2026)
-- Esboço aprovado (versão 2, com gráficos clicáveis e cartões interativos, mesma identidade visual). Ordem aprovada: **2.1 base de ícones (FEITO)**; **2.2 (FEITO)** peça padrão do módulo (cabeçalho, indicadores clicáveis, sub-abas, gráficos) em Iniciais, Acordos e Alvarás; 2.3 Processos, Clientes, Publicações e Agenda; 2.4 Financeiro e Construção (dashboard financeiro, análises, listas padronizadas); 2.5 seletor de ícones.
+- Esboço aprovado (versão 2, com gráficos clicáveis e cartões interativos, mesma identidade visual). Ordem aprovada: **2.1 base de ícones (FEITO)**; **2.2 e 2.3 (FEITO)** peça padrão do módulo (cabeçalho, indicadores clicáveis, sub-abas, gráficos) em Iniciais, Acordos e Alvarás; 2.3 Processos, Clientes, Publicações e Agenda; 2.4 Financeiro e Construção (dashboard financeiro, análises, listas padronizadas); 2.5 seletor de ícones.
 - Regras: gráficos desenhados pelo app (SVG, sem biblioteca), usando os cálculos existentes (nada de fórmula paralela); tracejado = previsto; sub-abas iguais, que lembram a última usada; indicador não permitido ao usuário nem é desenhado; Início continua como está (o proprietário vê a síntese financeira).
 - 2.1: ver `docs/ICONES.md` (“Como a base funciona”).
 - **2.2 FEITA (09/11/2026):** peça padrão do módulo em **Iniciais, Acordos e Alvarás** (`cliente/modulo.js`, prefixo `md`, bloco `/*MD-INICIO*/`; teste `modulo-resumo`).
@@ -48,7 +48,14 @@ Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (por
   - O cartão grande antigo (`#stats`, `#statsAcordos`, `#statsAlvaras`) continua sendo calculado, mas fica escondido: os números agora moram no Resumo.
   - Quando outra tela manda abrir um item (busca, Central de atenção, perfil), o módulo vai sozinho para a Lista (sem mudar a sub-aba gravada).
   - A mesma peça (`.md-abas`, `.md-card`, `mdBarras`, `mdLinha`, `mdRosca`, `mdKpi`) serve para a 2.3 e a 2.4.
-- **Próximo: 2.3** (Processos, Clientes, Publicações e Agenda).
+- **2.3 FEITA (09/11/2026):** a mesma peça em **Processos, Agenda, Publicações e Clientes** (`cliente/modulo-juridico.js`, prefixo `mj`, dentro do bloco `/*MD-INICIO*/`; teste `modulo-juridico`).
+  - Sub-abas: Processos (Resumo, Lista, Revisar quando há importados, Análises), Agenda (Resumo, Semana, Mês, Lista, Quadro), Publicações (Resumo, Não lidas, Meus processos, Todas), Clientes (Resumo, Lista, A cobrar, Em atraso, Sem processos). Esses módulos guardam a sub-aba no próprio estado (`prS.sub`, `agS.vista`, `pbS.sub` + `pbS.filtro`, `mjS.cli` + `clientesFiltro.tipo`); a memória usa `mdInicial` (primeira vez) e `mdLembrar` (quando o usuário troca). Navegação vinda de outra tela não muda a memória.
+  - Os botões das sub-abas usam os mesmos atributos de antes (`data-pr="sub"`, `data-ag="vista"`, `data-pb="filtro"`), desenhados por `mdBarraHtml`. Em Clientes a barra é `#mdAbas-clientes` (`data-mj-cli`).
+  - Resumo de cada módulo: `mjProcessos`, `mjAgenda`, `mjPublicacoes`, `mjClientesHtml` (este recebe os dados já calculados por `renderClientes`). Cliques: `mjClique` (`data-md-ir="ação:valor"`).
+  - Processos ganhou dois filtros especiais (`prS.f.esp`: `semprov` = sem próxima providência, `parado` = sem andamento há 60 dias), usados pelos indicadores; aparecem na lista com um aviso e o botão Limpar.
+  - O cartão grande antigo de Processos (`#prResumo`) e o de Publicações saíram da tela; os números moram no Resumo. Na lista de Publicações ficou uma linha curta com as contagens.
+  - Ficou de fora do esboço: a sub-aba “OABs” em Publicações (continua sendo o botão “OABs monitoradas”, que abre a janela de sempre).
+- **Próximo: 2.4** (Financeiro e Construção).
 
 ## Agenda renovada (09/11/2026, antes da Fase 2)
 - Pedido do proprietário a partir do Control Jus: tocar no compromisso para ver detalhes, **copiar o número do processo** (ícone de dois retângulos; **sem botão “abrir no tribunal”**, decidido), atalhos de situação (A fazer, Em andamento, Concluído, **Cancelado**), WhatsApp **para o cliente e para a equipe**, e visual no padrão do restante do app (o primeiro esboço foi recusado por parecer antigo; esta versão foi feita direto com os componentes reais). Teste `agenda-detalhe`; testes de agenda, audiências, relatórios e importação foram ajustados (cartão `.agc`, filtros em “Filtros”, Relatório e Importar no menu ⋯).

@@ -72,7 +72,7 @@ await f('PUT', '/api/db/processos/d' + dig(N1), { numero: N1, partes: 'Cliente E
 await f('PUT', '/api/db/agenda/pre1', { tipo: 'prazo', titulo: 'emenda', processo: '', data: dia(4), situacao: 'afazer', concluido: false, criadoEm: agora });   // parece o compromisso 7 (mesma data, tipo e título)
 const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'America/Sao_Paulo' });
 await ctx.addInitScript(() => { try { localStorage.setItem('horus.leituraAuto', '0'); } catch (e) { /* sem armazenamento */ } });
-const page = await ctx.newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, x => x.abort());
+const page = await ctx.newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(4000);
 const t = s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(1000);

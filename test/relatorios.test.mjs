@@ -31,7 +31,7 @@ await A({ tipo: 'prazo', titulo: 'Recurso antigo', cliente: 'Beltrano', data: di
 await A({ tipo: 'prazo', titulo: 'Embargos cumpridos', cliente: 'Fulano', data: dia(1), situacao: 'feito', concluido: true, protocoladoEm: dia(-1) });
 await f('POST', '/api/djen/buscar', {});
 
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message + ' ' + String(x.stack).split('\n').slice(0, 4).join(' | '))); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message + ' ' + String(x.stack).split('\n').slice(0, 4).join(' | '))); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const SHOT = process.env.SHOT || ''; const foto = async n => { if (SHOT) await page.screenshot({ path: SHOT + n + '.png' }); };

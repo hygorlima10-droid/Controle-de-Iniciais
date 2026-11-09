@@ -132,8 +132,8 @@ function prRelacionados(num, tipoAtual, jaTem){
 /* ---------- aba ---------- */
 function prMontarTela(){
   var w = qs('prWrap'); if (!w || w.getAttribute('data-ok')) return; w.setAttribute('data-ok', '1');
-  w.innerHTML = '<div class="rs-wrap" id="prResumo"></div><div class="ini-acoes"><button type="button" class="acao acao-ouro" data-pr="novo"><svg><use href="#ic-plus"/></svg><span>Novo processo</span></button></div>' +
-    '<div class="pb-seg-lin"><div class="segmented" id="prSub"></div></div><div id="prAnalises" style="display:none"></div><div id="prListaBloco">' +
+  w.innerHTML = '<div id="prSub"></div><div class="rs-wrap" id="prResumo" style="display:none"></div><div class="ini-acoes md-um"><button type="button" class="acao acao-ouro" data-pr="novo"><svg><use href="#ic-plus"/></svg><span>Novo processo</span></button></div><div id="prMdResumo"></div>' +
+    '<div id="prAnalises" style="display:none"></div><div id="prListaBloco">' +
     '<div id="prAvisoVinc"></div><div class="field" style="margin:0"><input type="text" id="prBusca" placeholder="Buscar por cliente, partes ou número…" autocomplete="off"></div>' +
     '<div class="pb-seg-lin"><div class="segmented" id="prSeg"></div><button type="button" class="btn btn-ghost pb-funil" id="prFunil" data-pr="painel" aria-label="Filtros" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></button><button type="button" class="btn btn-ghost pb-funil" id="prMenuBtn" data-pr="menu" aria-label="Mais opções" title="Mais opções"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div><div id="prPainel"></div><div id="prMenu"></div><div id="prLista" class="pb-lista"></div></div>';
   w.addEventListener('click', function(e){
@@ -149,7 +149,7 @@ function prMontarTela(){
     else if (a === 'menu'){ prS.mAberto = !prS.mAberto; prMenuPainel(); }
     else if (a === 'rel'){ prS.mAberto = false; prMenuPainel(); rptProcessos(); }
     else if (a === 'imp'){ prS.mAberto = false; prMenuPainel(); impAbrir(); }
-    else if (a === 'rev-ir'){ prS.filtro = 'revisar'; prS.mais = 1; prRender(); }
+    else if (a === 'rev-ir'){ prS.sub = 'lista'; prS.filtro = 'revisar'; prS.mais = 1; prRender(); }
     else if (a === 'rev-gvinc') impGrupoVincular(n);
     else if (a === 'rev-gesc') impEscolherParaGrupo(n);
     else if (a === 'rev-gnovo') impGrupoNovo(n);
@@ -157,8 +157,8 @@ function prMontarTela(){
     else if (a === 'rev-esc') impEscolherCliente(n);
     else if (a === 'rev-novo') impNovoCliente(n);
     else if (a === 'rev-del') impPerguntarExcluir(n);
-    else if (a === 'sub'){ prS.sub = b.getAttribute('data-v'); prRender(); }
-    else if (a === 'limpar'){ prS.f = { cli: '', orgao: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
+    else if (a === 'sub'){ var sv = b.getAttribute('data-v'); mdLembrar('processos', sv); prS.mais = 1; if (sv === 'revisar'){ prS.sub = 'lista'; prS.filtro = 'revisar'; } else { prS.sub = sv; if (sv === 'lista' && prS.filtro === 'revisar') prS.filtro = 'andamento'; } prRender(); }
+    else if (a === 'limpar'){ prS.f = { cli: '', orgao: '', esp: '' }; prS.mais = 1; prPainel(); prRenderLista(); }
   });
   w.addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('[data-pan]') : null; if (!b) return; var a = b.getAttribute('data-pan');
@@ -174,10 +174,15 @@ function prLinhaReu(r){
 }
 function prRender(){
   prMontarTela(); var w = qs('prWrap'); if (!w) return;
-  qs('prSub').innerHTML = [['lista', 'Lista'], ['analises', 'Análises']].map(function(f){ return '<button type="button" class="seg-btn' + (prS.sub === f[0] ? ' active' : '') + '" data-pr="sub" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('');
-  var an = prS.sub === 'analises';
-  qs('prAnalises').style.display = an ? '' : 'none'; qs('prListaBloco').style.display = an ? 'none' : ''; qs('prResumo').style.display = an ? 'none' : ''; var bn = w.querySelector('.ini-acoes'); if (bn) bn.style.display = an ? 'none' : '';
+  /* sub-abas padrão (Fase 2): Resumo, Lista, Revisar (só quando há importados para conferir) e Análises; a última usada fica lembrada */
+  if (!prS.mdOk){ prS.mdOk = 1; if (prS.sub === 'lista' && prS.filtro !== 'revisar'){ var s0 = mdInicial('processos', ['lista', 'revisar', 'analises']); if (s0 === 'revisar'){ prS.filtro = 'revisar'; } else prS.sub = s0; } }
+  var nRev0 = impContaRev(); if (!nRev0 && prS.filtro === 'revisar') prS.filtro = 'andamento';
+  var chave = prS.sub === 'lista' && prS.filtro === 'revisar' ? 'revisar' : prS.sub;
+  qs('prSub').innerHTML = mdBarraHtml([['resumo', 'Resumo'], ['lista', 'Lista']].concat(nRev0 ? [['revisar', 'Revisar', nRev0]] : []).concat([['analises', 'Análises']]), chave, function(k){ return 'data-pr="sub" data-v="' + k + '"'; });
+  var an = prS.sub === 'analises', res = prS.sub === 'resumo';
+  qs('prAnalises').style.display = an ? '' : 'none'; qs('prListaBloco').style.display = (an || res) ? 'none' : ''; qs('prMdResumo').style.display = res ? '' : 'none'; var bn = w.querySelector('.ini-acoes'); if (bn) bn.style.display = an ? 'none' : '';
   if (an){ panRender(); return; }
+  if (res){ try{ qs('prMdResumo').innerHTML = mjPainel('processos', mjProcessos()); }catch(e){ console.error('resumo de processos', e); qs('prMdResumo').innerHTML = '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; } return; }
   var mp = prMapa(), pm = pendentesPorDoc(), linhas = mp.ordem.map(function(n){ return mp.m[n]; });
   var ativos = linhas.filter(function(r){ return !prArquivado(r); });
   var comPrazo = ativos.filter(function(r){ return prPrazosAbertos(r).length > 0; }).length, parados = ativos.filter(function(r){ return prParado(r, pm); }).length;
@@ -196,7 +201,8 @@ function prOrgaoDe(r){
   if (r.doc && r.doc.orgao) return String(r.doc.orgao).trim();
   var ps = prPubsDe(r.num); return ps[0] ? [ps[0].tribunal, ps[0].orgao].filter(Boolean).join(' · ') : '';
 }
-function prFiltrosAtivos(){ return (prS.f.cli ? 1 : 0) + (prS.f.orgao ? 1 : 0); }
+function prFiltrosAtivos(){ return (prS.f.cli ? 1 : 0) + (prS.f.orgao ? 1 : 0) + (prS.f.esp ? 1 : 0); }
+var PR_ESP = { semprov: 'sem próxima providência', parado: 'sem andamento há 60 dias' };
 function prFunilMarca(){
   var b = qs('prFunil'); if (!b) return; var n = prFiltrosAtivos();
   b.classList.toggle('ativo', n > 0); var i = b.querySelector('.pb-n'); if (n){ if (!i){ i = document.createElement('i'); i.className = 'pb-n'; b.appendChild(i); } i.textContent = n; } else if (i) i.remove();
@@ -213,7 +219,7 @@ function prPainel(){
 }
 /* a lista que o filtro e a busca deixam (usada na tela e nos relatórios) */
 function prFiltrar(filtro){
-  var mp = prMapa(), q = normNome(prS.busca); filtro = filtro || prS.filtro;
+  var mp = prMapa(), q = normNome(prS.busca), pmEsp = prS.f.esp === 'parado' ? pendentesPorDoc() : null; filtro = filtro || prS.filtro;
   return mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){
     var arq = prArquivado(r);
     if (filtro === 'andamento' && arq) return false;
@@ -222,6 +228,8 @@ function prFiltrar(filtro){
     if (prS.f.cli === '__sem'){ if (prClienteIds(r).length) return false; }
     else if (prS.f.cli && prClienteIds(r).indexOf(prS.f.cli) < 0) return false;
     if (prS.f.orgao && prOrgaoDe(r) !== prS.f.orgao) return false;
+    if (prS.f.esp === 'semprov' && (arq || !mjSemProv(r))) return false;
+    if (prS.f.esp === 'parado' && (arq || !prParado(r, pmEsp))) return false;
     if (q){
       var alvo = normNome([r.numero, prTitulo(r), prClienteIds(r).map(nomeCliente).join(' '), (r.doc && (r.doc.orgao + ' ' + r.doc.classe + ' ' + (r.doc.autor || '') + ' ' + (r.doc.reu || ''))) || '', prReu(r)].join(' '));
       if (alvo.indexOf(q) < 0 && (q.replace(/\D/g, '').length < 4 || r.num.indexOf(q.replace(/\D/g, '')) < 0)) return false;
@@ -243,7 +251,7 @@ function prRenderLista(){
   linhas.sort(function(a, b){ return info[a.num].prox.localeCompare(info[b.num].prox) || info[b.num].ult.localeCompare(info[a.num].ult) || prTitulo(a).localeCompare(prTitulo(b), 'pt-BR'); });
   if (!linhas.length){ box.innerHTML = '<div class="financeiro-vazio">' + (prS.busca || prFiltrosAtivos() ? 'Nenhum processo com essa busca ou esses filtros.' : (prS.filtro === 'andamento' ? 'Nenhum processo em andamento. Toque em “Novo processo” ou cadastre pela aba Publicações.' : 'Nada aqui.')) + '</div>'; return; }
   var lim = prS.mais * 30;
-  box.innerHTML = (prS.filtro === 'revisar' ? impGruposHtml() : '') + linhas.slice(0, lim).map(function(r){
+  box.innerHTML = (prS.f.esp && PR_ESP[prS.f.esp] ? '<div class="saldo-data pb-resfiltro">Mostrando só os processos ' + PR_ESP[prS.f.esp] + ' (' + linhas.length + '). <button type="button" class="btn-text" data-pr="limpar">Limpar</button></div>' : '') + (prS.filtro === 'revisar' ? impGruposHtml() : '') + linhas.slice(0, lim).map(function(r){
     var i = info[r.num], origens = prOrigens(r), arq = prArquivado(r), pubs = prPubsDe(r.num), tags = '';
     var orgao = r.doc ? [r.doc.orgao, r.doc.classe].filter(Boolean).join(' · ') : (pubs[0] ? [pubs[0].tribunal, pubs[0].orgao].filter(Boolean).join(' · ') : '');
     if (i.pz.length) tags += '<span class="pb-tg" style="background:rgba(217,59,59,.12);color:var(--urgente)">' + i.pz.length + (i.pz.length === 1 ? ' prazo aberto' : ' prazos abertos') + '</span>';
@@ -301,7 +309,7 @@ function prMontarFicha(){
     else if (a === 'prazo-novo'){ var nn = prEd.num; d.classList.remove('show'); agAbrir(null); var r = prMapa().m[nn]; qs('age_proc').value = r ? r.numero : ''; qs('age_proc').dispatchEvent(new Event('input', { bubbles: true })); }
     else if (a === 'prazo-abrir'){ d.classList.remove('show'); agAbrir(v); }
     else if (a === 'pub'){ d.classList.remove('show'); setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(v); }, 80); }
-    else if (a === 'pubs-todas'){ d.classList.remove('show'); pbS.f = { q: v, de: '', ate: '', oab: 'todas', adv: '', trib: '' }; pbS.filtro = 'todas'; pbS.fAberto = true; setActiveTab('publicacoes'); }
+    else if (a === 'pubs-todas'){ d.classList.remove('show'); pbS.f = { q: v, de: '', ate: '', oab: 'todas', adv: '', trib: '' }; pbS.filtro = 'todas'; pbS.sub = 'lista'; pbS.mdOk = 1; pbS.fAberto = true; setActiveTab('publicacoes'); }
     else if (a === 'cliente'){ d.classList.remove('show'); abrirPerfilCliente(v); }
   });
   d.addEventListener('input', function(e){ if (e.target && e.target.id === 'pr_cli') prSug(); if (e.target && e.target.id === 'pr_numero') prInfoNumero(); if (e.target && e.target.id === 'pr_vincq'){ prEd.vincQ = e.target.value; prRefazVincLista(); } });

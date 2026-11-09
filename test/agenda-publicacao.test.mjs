@@ -20,7 +20,7 @@ await f('PUT', '/api/db/config/backup', { ultimoEm: agora }); await f('PUT', '/a
 await f('PUT', '/api/db/clientes/cl1', { nome: 'A Construtora e Mult Casa Materiais Para Construcao Ltda', pagador: 'cliente', criadoEm: agora });
 await f('PUT', '/api/db/processos/d' + N.replace(/\D/g, ''), { numero: N, partes: 'A Construtora x Banco', clienteIds: ['cl1'], honorarios: 'sem', arquivado: false, origem: 'manual', criadoEm: agora });
 await f('POST', '/api/djen/buscar', {});
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'America/Sao_Paulo' })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'America/Sao_Paulo' })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.addInitScript(() => { try { localStorage.setItem('horus.leituraAuto', '0'); } catch (e) { /* sem armazenamento */ } });
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);

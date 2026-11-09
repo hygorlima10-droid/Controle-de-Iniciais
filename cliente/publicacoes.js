@@ -137,7 +137,7 @@ function pbMontarTela(){
   qs('pbWrap').addEventListener('click', function(e){
     var b = e.target.closest ? e.target.closest('[data-pb]') : null; if (!b) return;
     var a = b.getAttribute('data-pb'), id = b.getAttribute('data-id');
-    if (a === 'filtro'){ pbS.filtro = b.getAttribute('data-v'); pbS.mais = 1; pbRender(); }
+    if (a === 'filtro'){ var fv = b.getAttribute('data-v'); mdLembrar('publicacoes', fv); if (fv === 'resumo') pbS.sub = 'resumo'; else { pbS.sub = 'lista'; pbS.filtro = fv; } pbS.mais = 1; pbRender(); }
     else if (a === 'buscar') pbBuscarAgora();
     else if (a === 'oabs') pbAbrirOabs();
     else if (a === 'mais'){ pbS.mais++; pbRenderLista(); }
@@ -376,11 +376,19 @@ function pbRender(){
   var vis = pbGrupos(pbVisiveis()), naoLidas = vis.filter(function(p){ return !pbLidaG(p); });
   var aDefinir = vis.filter(function(p){ return p.sug && !pbSemPrazoG(p) && !pbPrazoGrupo(p) && !pbLidaG(p); }).length;
   var semProc = naoLidas.filter(function(p){ return !pbVinculo(p.processo); }).length;
-  var h = '<div class="financeiro-bloco rs-hero pb-hero"><span class="fv-k">Publicações não lidas</span><div class="fv-big">' + naoLidas.length + '</div><div class="fv-pat-l"><span>' + rsChip('Atualizado ' + escapeHtml(pbQuandoAtualizou()), '') + '</span></div></div>' +
-    '<div class="rs-tiles"><div class="fv-tile"><span class="fv-tl">' + fvIc('clip', '#B7791E') + 'Prazo a definir</span><b class="' + (aDefinir ? 'neg' : '') + '">' + aDefinir + '</b></div><div class="fv-tile"><span class="fv-tl">' + fvIc('doc', '#2A78D6') + 'Processo novo</span><b>' + semProc + '</b></div></div>';
+  /* sub-abas padrão (Fase 2): Resumo, Não lidas, Meus processos e Todas; a última usada fica lembrada */
+  if (!pbS.mdOk){ pbS.mdOk = 1; var s0 = mdInicial('publicacoes', ['naolidas', 'meus', 'todas']); if (s0 === 'resumo') pbS.sub = 'resumo'; else { pbS.sub = 'lista'; pbS.filtro = s0; } }
+  var res = pbS.sub === 'resumo';
+  var h = '<div id="pbSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['naolidas', 'Não lidas', naoLidas.length || ''], ['meus', 'Meus processos'], ['todas', 'Todas']], res ? 'resumo' : pbS.filtro, function(k){ return 'data-pb="filtro" data-v="' + k + '"'; }) + '</div>';
   h += '<div class="ini-acoes pb-barra"><button type="button" class="acao acao-ouro" data-pb="buscar"' + (pbS.buscando ? ' disabled' : '') + '><svg><use href="#ic-sync"/></svg><span>' + (pbS.buscando ? 'Buscando…' : 'Buscar agora') + '</span></button><button type="button" class="acao" data-pb="oabs"><svg><use href="#ic-users"/></svg><span>OABs monitoradas</span></button></div>';
   var n = pbFiltrosAtivos();
-  h += '<div class="pb-filtros"><div class="pb-seg-lin"><div class="segmented" id="pbSeg">' + [['naolidas', 'Não lidas'], ['meus', 'Meus processos'], ['todas', 'Todas']].map(function(f){ return '<button type="button" class="seg-btn' + (pbS.filtro === f[0] ? ' active' : '') + '" data-pb="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div>' +
+  if (res){
+    if (pbS.erro) h += '<div class="aviso-sis"><span class="as-txt">Não consegui carregar: ' + escapeHtml(pbS.erro) + '</span></div>';
+    h += pbAvisoLeitura();
+    try{ h += mjPainel('publicacoes', mjPublicacoes()); }catch(e){ console.error('resumo de publicações', e); h += '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; }
+    w.innerHTML = h; return;
+  }
+  h += '<div class="pb-filtros"><div class="pb-seg-lin"><span class="saldo-data" style="flex:1;align-self:center">' + naoLidas.length + (naoLidas.length === 1 ? ' não lida' : ' não lidas') + (aDefinir ? ' · ' + aDefinir + ' com prazo a definir' : '') + ' · atualizado ' + escapeHtml(pbQuandoAtualizou()) + '</span>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (n ? ' ativo' : '') + '" data-pb="painel" aria-label="Filtros" aria-expanded="' + (pbS.fAberto ? 'true' : 'false') + '" title="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>' + (n ? '<i class="pb-n">' + n + '</i>' : '') + '</button>' +
     '<button type="button" class="btn btn-ghost pb-funil' + (pbS.mAberto ? ' ativo' : '') + '" data-pb="menu" aria-label="Mais opções" aria-expanded="' + (pbS.mAberto ? 'true' : 'false') + '" title="Mais opções"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>';
   if (pbS.fAberto) h += pbPainelHtml();

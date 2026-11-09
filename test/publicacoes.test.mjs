@@ -78,7 +78,7 @@ check((await f('POST', '/api/djen/marcar', { ids: ['900005'], lida: true })).j.a
 await f('POST', '/api/djen/marcar', { ids: ['900005'], lida: false });
 
 // ---- tela ----
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', x => erros.push(x.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3000);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 // calendário (funções puras)
@@ -97,7 +97,7 @@ check(cal.nu[0] === true && cal.nu[1] === false, 'feriado nacional (20/11) não 
 check(await page.evaluate(() => !!document.querySelector('#drawer [data-tab="publicacoes"]')), 'o menu tem a aba Publicações');
 check(/[1-9]/.test(await page.evaluate(() => (document.getElementById('menuNPub') || {}).textContent || '')), 'o menu mostra quantas publicações não foram lidas');
 await page.evaluate(() => document.querySelector('[data-tab="publicacoes"]').click()); await page.waitForTimeout(1200);
-check(/PUBLICAÇÕES NÃO LIDAS/i.test(await t('#pbWrap')) && (await page.evaluate(() => document.querySelectorAll('.pb-card').length)) === 4, 'lista os cartões (A, B, C e a nova E; D do Murilo fica escondida por ser "só em conjunto")');
+check(/não lidas?/i.test(await t('#pbWrap')) && (await page.evaluate(() => document.querySelectorAll('.pb-card').length)) === 4, 'lista os cartões (A, B, C e a nova E; D do Murilo fica escondida por ser "só em conjunto")');
 check(!/Fulano/i.test(await t('#pbWrap')), 'publicação do Murilo sem processo em comum não aparece (escopo "só em conjunto")');
 const cardDe = async id => page.evaluate(id => { const b = document.querySelector('.pb-b[data-id="' + id + '"]'); return b ? b.closest('.pb-card').innerText : ''; }, id);
 const ta = await cardDe('900001'), tb = await cardDe('900002'), tc = await cardDe('900003');
@@ -232,7 +232,7 @@ let cg = await doProc();
 check(cg.length === 2, 'no mesmo processo e dia, as 3 decisões idênticas viram 1 cartão e o ato ordinatório (outro tipo) continua separado: ' + cg.length + ' cartões');
 const grupo = cg.find(x => /idênticas reunidas/.test(x)) || '';
 check(/3 publicações idênticas reunidas/.test(grupo) && /AUTOR UM/.test(grupo) && /AUTOR DOIS/.test(grupo) && /AUTOR TRES/.test(grupo), 'o cartão reunido diz quantas são e para quem: ' + grupo.replace(/\n/g, ' | ').slice(0, 130));
-const heroNum = async () => Number(await page.evaluate(() => document.querySelector('.pb-hero .fv-big').innerText));
+const heroNum = async () => Number(await page.evaluate(() => (document.querySelector('#pbSeg [data-v="naolidas"] .md-n') || { innerText: '0' }).innerText));   // o total de não lidas agora fica no selo da sub-aba
 const antes = await heroNum();
 await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.pb-card')).find(c => /idênticas reunidas/.test(c.innerText)); c.querySelector('[data-pb="lida"]').click(); }); await page.waitForTimeout(1200);
 const lg = (await f('GET', '/api/djen/lista')).j.pubs.filter(p => p.processo === numG);

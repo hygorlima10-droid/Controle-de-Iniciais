@@ -168,7 +168,7 @@ function impMontarJanela(){
     else if (a === 'mais'){ impS.mais++; impDesenhar(); }
     else if (a === 'importar') impImportar();
     else if (a === 'voltar'){ impS.fase = 'config'; impDesenhar(); }
-    else if (a === 'revisar'){ d.classList.remove('show'); prS.filtro = 'revisar'; prS.mais = 1; try{ if (activeTab !== 'processos') setActiveTab('processos'); }catch(e2){} prDepois(); }
+    else if (a === 'revisar'){ d.classList.remove('show'); prS.sub = 'lista'; prS.filtro = 'revisar'; prS.mais = 1; try{ if (activeTab !== 'processos') setActiveTab('processos'); }catch(e2){} prDepois(); }
     else if (a === 'fechar') d.classList.remove('show');
     else if (a === 'auto-liga'){ impS.cfg.ativo = !impS.cfg.ativo; if (impS.cfg.ativo) impS.cfg.desde = new Date().toISOString(); impGravarCfg().catch(function(){}); impDesenhar(); if (impS.cfg.ativo) toast('Ligado: os processos novos que aparecerem nas publicações serão cadastrados sozinhos.'); }
     else if (a === 'cli-desliga'){ var c = clienteById(v); if (c){ var o = JSON.parse(JSON.stringify(c)); o.vinculoAuto = false; persistClienteSet(o).then(function(){ impDesenhar(); }); } }

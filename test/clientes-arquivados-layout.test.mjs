@@ -15,7 +15,7 @@ const caso = (id, cliente, origem, ps, extra = {}) => api('PUT', 'casos/' + id, 
 await caso('c1', 'Joana Murilo', 'murilo', [{ valor: 1000, data: dia(-40), pago: true }, { valor: 1000, data: dia(-10) }], { cli: 'cl1' });
 await caso('c2', 'Ana Própria', 'proprio', [{ valor: 700, data: dia(15) }], { cli: 'cl2' });
 await caso('c3', 'Antigo Arquivado', 'proprio', [{ valor: 500, data: dia(-30) }], { cli: 'cl2', arquivado: true, arquivadoEm: agora });
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { processos: 'lista', agenda: 'semana', publicacoes: 'naolidas', clientes: 'lista' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 await page.evaluate(() => document.querySelector('[data-tab="clientes"]').click()); await page.waitForTimeout(900);
