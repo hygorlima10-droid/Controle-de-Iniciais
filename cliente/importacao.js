@@ -57,6 +57,16 @@ function impDecidir(g){
   }
   return { tipo: 'revisar', motivo: 'sem-cliente', sugestao: '', nome: c.nome };
 }
+/* advogados nossos que participam: as OABs cadastradas que acharam o processo (g.oabs: { idDaOab: 1 }) */
+function impAdvogadosDe(g){
+  var out = [];
+  Object.keys(g.oabs || {}).forEach(function(id){
+    var o = (pbS.oabs || []).filter(function(x){ return x.id === id; })[0]; if (!o) return;
+    var k = String(o.numero || '').replace(/\D/g, '').replace(/^0+/, '') + '/' + String(o.uf || '').toUpperCase().slice(0, 2);
+    if (!out.some(function(a){ return a.oab === k; })) out.push({ oab: k, nome: String(o.nome || '').slice(0, 80) });
+  });
+  return out;
+}
 /* o documento do processo (a mesma forma do cadastro manual) */
 function impMontarDoc(g, dec, origem){
   var pt = impPartesDe(g), agora = new Date().toISOString(), n = g.p;
@@ -65,6 +75,7 @@ function impMontarDoc(g, dec, origem){
     clienteIds: dec.tipo === 'auto' ? [dec.cliente.id] : [], obs: '', honorarios: 'sem', arquivado: false, origem: 'diario', derivado: true, importadoEm: agora, criadoEm: agora,
     ultimaPublicacao: (g.ult && g.ult.data) || '', ultimaPubTipo: (g.ult && g.ult.tipo) || '', parteNome: dec.nome || '' };
   if (g.ult && g.ult.enc) d.possivelEncerrado = g.ult.enc;
+  var adv = impAdvogadosDe(g); if (adv.length) d.advogados = adv;
   if (dec.tipo === 'auto'){ d.vinculoAuto = true; d.revisar = ''; }
   else { d.revisar = dec.motivo; d.sugestaoClienteId = dec.sugestao || ''; }
   if (String(n).length === 20) d.djPendente = true;
@@ -100,7 +111,7 @@ function impTalvezAuto(){
     return cad.then(function(){
       var p = por[n];
       if (p.enc) return;   /* a publicação diz que acabou: não cadastra sozinho (aparece em Publicações) */
-      var g = { p: n, numero: p.numero || n, trib: p.tribunal || '', orgao: p.orgao || '', classe: p.classe || '', natureza: p.natureza || '', ativo: p.ativo || '', passivo: p.passivo || '', valor: p.valor || 0, dest: p.dest || [], ult: { data: p.data, tipo: p.tipo, enc: '' } };
+      var g = { p: n, numero: p.numero || n, trib: p.tribunal || '', orgao: p.orgao || '', classe: p.classe || '', natureza: p.natureza || '', ativo: p.ativo || '', passivo: p.passivo || '', valor: p.valor || 0, dest: p.dest || [], ult: { data: p.data, tipo: p.tipo, enc: '' }, oabs: (p.oabs || []).reduce(function(m, id){ m[id] = 1; return m; }, {}) };
       var dec = impDecidir(g), d = impMontarDoc(g, dec, 'diario');
       return impGravarProcesso(d).then(function(r){ if (!r.existia){ novos++; if (dec.tipo === 'auto') aut++; else rev++; } });
     });

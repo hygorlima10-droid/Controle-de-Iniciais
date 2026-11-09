@@ -18,6 +18,7 @@ O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), co
 - **Chave de retorno:** a variável `LOGIN_ANTIGO=1` no Worker volta ao acesso por uma senha só (cookie assinado), caso algo dê errado.
 - Pedidos vindos de outros sites são recusados; o botão **Sair** fica no menu do app.
 - **Tabela de coleções** (`src/colecoes.js`): cada coleção do banco é do jurídico (qualquer pessoa logada) ou do proprietário (finanças, patrimônio, Construção, extratos e `configDono`); nome fora da tabela é recusado. Os documentos de configuração do proprietário ficam em `configDono`; os gerais, em `config`.
+- **Advogados participantes** (`src/advogados.js`): em cada processo, Inicial, Acordo e Alvará fica `advogados` (OAB e nome dos nossos advogados que aparecem nas publicações daquele processo), completado depois de cada leitura do DJEN e na importação de processos. Ainda sem tela.
 - **Início:** “Honorários recebidos no mês” soma só honorários; a renda lançada na PJ aparece à parte (quadro “só você vê”).
 - **Gravação em lote, tudo ou nada** (`/api/lote`, `src/lote.js`): a transferência PJ/PF (uma receita na PF + uma despesa na PJ, ligadas por `transferenciaId`) é criada e excluída numa só transação do banco, pelo novo-lançamento, pelo “Recebi R$” e pelo extrato. Queda de conexão no meio não deixa só um dos lados; a tela volta ao que era. Até 25 operações por lote, mesma lixeira e mesmo registro de ações da API comum.
 

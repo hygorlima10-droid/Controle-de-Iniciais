@@ -210,4 +210,7 @@ await page.click('[data-imp="auto-liga"]'); await page.waitForTimeout(700);
 check(((await f('GET', '/api/db/config')).j.docs.find(d => d.id === 'importacaoAuto') || {}).data.ativo === false, 'o botão do cadastro automático desliga e grava');
 const a1 = await f('PUT', '/api/db/processos/dteste1?soNovo=1', { numero: 'x', partes: 'um' }), a2 = await f('PUT', '/api/db/processos/dteste1?soNovo=1', { numero: 'x', partes: 'dois' });
 check(a1.j.criado === true && a2.j.criado === false && (await docs('processos')).find(d => d.id === 'dteste1').partes === 'um', 'criar com o mesmo id duas vezes: a segunda não sobrescreve (evita duplicar entre aparelhos)');
+const adv1 = ((await docs('processos')).find(d => d.numero === num(1)) || {}).advogados || [], adv8 = ((await docs('processos')).find(d => d.numero === num(8)) || {}).advogados || [];
+check(adv1.map(x => x.oab).sort().join() === '49308/GO,60456/GO' && adv1.find(x => x.oab === '60456/GO').nome === 'Hygor Lima Andrade', 'processo achado pelas duas OABs já nasce com os dois advogados (60456/GO e 49308/GO)');
+check(adv8.length === 1 && adv8[0].oab === '49308/GO', 'e o achado só pela OAB do Murilo nasce com ele (49308/GO)');
 await br.close(); fake.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

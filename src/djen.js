@@ -4,6 +4,7 @@
    - guarda só o trecho; o texto completo é buscado quando você abre a publicação
    - sugere o prazo ("prazo de 15 dias") a partir do texto; quem confirma é você
    ============================================================ */
+import { completarAdvogados } from './advogados.js';
 import { sugerirPecas } from './pecas.js';
 import { registrar } from './auditoria.js';
 export const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
@@ -257,6 +258,10 @@ export async function lerDjen(env, opcoes = {}) {
   }
   cfg.ultimaLeitura = new Date().toISOString();
   if (!cfg.advsOk && resumo.porOab.every((x) => !x.erro && !x.parcial)) cfg.advsOk = true;
+  /* advogados participantes: quando chegou publicação nova, ou a cada 6 horas (pega também os processos cadastrados nesse meio-tempo) */
+  if (resumo.novas || !cfg.advogadosEm || Date.now() - cfg.advogadosEm > 6 * 36e5) {
+    try { resumo.advogados = (await completarAdvogados(env, cfg)).registros; cfg.advogadosEm = Date.now(); } catch (e) { console.error('advogados participantes', e); }
+  }
   await gravarCfg(env, cfg);
   await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND atualizado < ?').bind(COL_PUB, Date.now() - 400 * DIA).run();
   resumo.ms = Date.now() - t0;
@@ -379,6 +384,7 @@ export async function djenRotas(request, env, partes) {
     for (let k = 0; k < cmds.length; k += 50) await env.DB.batch(cmds.slice(k, k + 50));
     return json({ ok: true, alteradas: cmds.length });
   }
+  if (acao === 'advogados' && m === 'POST') return json({ ok: true, ...(await completarAdvogados(env, await lerCfg(env))) });
   if (acao === 'processo' && m === 'GET') {
     const n = (u.searchParams.get('numero') || '').replace(/\D/g, '');
     if (n.length < 15 || n.length > 25) return erro(400, 'invalid', 'Número de processo inválido.');
