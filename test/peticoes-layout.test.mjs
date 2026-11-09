@@ -17,11 +17,12 @@ const br = await chromium.launch(); const page = await (await br.newContext({ vi
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
 await page.evaluate(() => document.querySelector('[data-tab="peticoes"]').click()); await page.waitForTimeout(800);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
-let tx = await t('#stats');
+let tx = await t('#mdPainel-peticoes');   // desde a etapa 2.2 os números ficam na sub-aba Resumo
 check(/PENDENTE A RECEBER/i.test(tx) && /R\$\s*3\.400,00/.test(tx), 'número principal: pendente a receber (3.400)');
-check(/recebidos em|Nenhum recebimento/.test(tx) && /Honorários ativos/.test(tx) && /Vencido/.test(tx), 'selo do recebido no mês e os dois cartões com ícone');
-check(await page.evaluate(() => document.querySelectorAll('#stats .ct-ic svg').length) === 2, 'os cartões têm ícone');
-check(/R\$\s*1\.000,00/.test(await t('#stats .fv-tile:nth-child(2)')), 'vencido = parcela em atraso (R$ 1.000)');
+check(/em \w{3}\/\d\d/.test(tx) && /Honorários contratados/i.test(tx) && /Vencido/i.test(tx), 'selo do recebido no mês e os indicadores de honorários e vencido');
+check(await page.evaluate(() => document.querySelectorAll('#mdPainel-peticoes .md-kpi .ct-ic svg').length) === 4, 'os indicadores têm ícone');
+check(/R\$\s*1\.000,00/.test(await t('#mdPainel-peticoes .md-kpi:nth-child(3)')), 'vencido = parcela em atraso (R$ 1.000)');
+await page.click('#mdAbas-peticoes [data-md-aba="quadro"]'); await page.waitForTimeout(500);
 check(await page.evaluate(() => document.querySelectorAll('.kanban-card .kc-top .ct-ic').length) === 2, 'cartões do Kanban com ícone');
 const k1 = await t('[data-pcard="c1"]');
 check(/Murilo/.test(k1) && /parcela vencida/.test(k1) && /1 de 3 parcelas recebidas/.test(k1), 'cartão mostra origem, selo de atraso e progresso das parcelas');

@@ -18,13 +18,14 @@ const br = await chromium.launch(); const page = await (await br.newContext({ vi
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
 await page.evaluate(() => document.querySelector('[data-tab="alvaras"]').click()); await page.waitForTimeout(800);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
-const tx = await t('#statsAlvaras');
+const tx = await t('#mdPainel-alvaras');   // desde a etapa 2.2 os números ficam na sub-aba Resumo
 check(/PENDENTE A RECEBER/i.test(tx) && /R\$\s*12\.500,00/.test(tx), 'número principal: pendente a receber (12.500)');
-check(await page.evaluate(() => document.querySelectorAll('#statsAlvaras .ct-ic svg').length) === 2, 'dois cartões com ícone');
-check(/Previsão vencida/.test(tx) && /R\$\s*1\.500,00/.test(tx), 'com previsão vencida, o 2º cartão avisa em vermelho (1.500)');
+check(await page.evaluate(() => document.querySelectorAll('#mdPainel-alvaras .md-kpi .ct-ic svg').length) === 4, 'indicadores com ícone');
+check(/Previsão vencida/i.test(tx) && /R\$\s*1\.500,00/.test(tx), 'com previsão vencida, o 2º cartão avisa em vermelho (1.500)');
 await api('PUT', 'alvaras/v3', { numeroProcesso: '9v3', partes: 'Fulano x Seguradora', origem: 'proprio', valorTotalHonorarios: 1500, valorMeuHonorario: 1500, status: 'pendente', fase: 'protocolada', faseDesde: dia(-3), previsaoLevantamento: dia(60), clienteIds: [], criadoEm: agora, atualizadoEm: agora });
 await page.reload(); await page.waitForTimeout(2800); await page.evaluate(() => document.querySelector('[data-tab="alvaras"]').click()); await page.waitForTimeout(800);
-check(/Previsão em 7 dias/.test(await t('#statsAlvaras')) && /R\$\s*8\.000,00/.test(await t('#statsAlvaras .fv-tile:nth-child(2)')), 'sem atraso, o 2º cartão mostra "Previsão em 7 dias" (8.000)');
+check(/nenhuma previsão vencida/.test(await t('#mdPainel-alvaras .md-kpi:nth-child(3)')) && /R\$\s*8\.000,00/.test(await t('#mdPainel-alvaras .md-kpi:nth-child(4)')), 'sem atraso: nenhuma previsão vencida e "Previsão em 7 dias" = 8.000');
+await page.click('#mdAbas-alvaras [data-md-aba="fases"]'); await page.waitForTimeout(500);
 check(await page.evaluate(() => document.querySelectorAll('.kanban-card .kc-top .ct-ic').length) === 3, 'cartões do Kanban com ícone');
 const k1 = await t('[data-kcard="v1"]');
 check(/Previsão \d\d\/\d\d · em 5 dias/.test(k1) && /nesta fase/.test(k1) && /Cliente próprio/.test(k1), 'cartão: selo de previsão (em 5 dias), tempo na fase e origem');

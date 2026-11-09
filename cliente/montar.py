@@ -121,6 +121,13 @@ if '/*IC-INICIO*/' in s:
 else:
     assert s.count('/*AGD-FIM*/\n') == 1
     s = s.replace('/*AGD-FIM*/\n', '/*AGD-FIM*/\n' + bloco_ic)
+md_js = open(R + 'cliente/modulo.js', encoding='utf-8').read()
+bloco_md = '/*MD-INICIO*/\n' + md_js + '\n/*MD-FIM*/\n'
+if '/*MD-INICIO*/' in s:
+    s = re.sub(r'/\*MD-INICIO\*/.*?/\*MD-FIM\*/\n', lambda m: bloco_md, s, flags=re.S)
+else:
+    assert s.count('/*IC-FIM*/\n') == 1
+    s = s.replace('/*IC-FIM*/\n', '/*IC-FIM*/\n' + bloco_md)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
@@ -340,6 +347,12 @@ rep("  return Promise.all([persistNovaReceita(receita), persistNovaDespesa(despe
 
 # Item 6 (parte da configuração): a tela lê até 50 documentos de config; o Início voltou a somar honorários + outras receitas da PJ (decisão de 09/11)
 rep("configRef.limit(10).onSnapshot(", "configRef.limit(50).onSnapshot(")
+
+# Fase 2, etapa 2.2: peça padrão do módulo (sub-abas, Resumo com gráficos, Recebimentos) em Iniciais, Acordos e Alvarás
+rep("  function render(){\n    renderStats();", "  function render(){\n    mdAplicar('peticoes');\n    renderStats();")
+rep("  function renderAcordos(){\n    renderStatsAcordos();", "  function renderAcordos(){\n    mdAplicar('acordos');\n    renderStatsAcordos();")
+rep("  function renderAlvaras(){\n    renderStatsAlvaras();", "  function renderAlvaras(){\n    mdAplicar('alvaras');\n    renderStatsAlvaras();")
+rep("    peticaoView = 'lista';\n    if (activeTab !== 'peticoes') setActiveTab('peticoes');", "    peticaoView = 'lista'; mdS.sub.peticoes = 'lista';\n    if (activeTab !== 'peticoes') setActiveTab('peticoes');")
 
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

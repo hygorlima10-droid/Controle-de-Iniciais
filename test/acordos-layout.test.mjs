@@ -17,10 +17,11 @@ const br = await chromium.launch(); const page = await (await br.newContext({ vi
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
 await page.evaluate(() => document.querySelector('[data-tab="acordos"]').click()); await page.waitForTimeout(800);
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
-const tx = await t('#statsAcordos');
+const tx = await t('#mdPainel-acordos');   // desde a etapa 2.2 os números ficam na sub-aba Resumo
 check(/PENDENTE A RECEBER/i.test(tx) && /R\$\s*3\.400,00/.test(tx), 'número principal: pendente a receber (1.000 + 1.500 + 900 = 3.400)');
-check(await page.evaluate(() => document.querySelectorAll('#statsAcordos .ct-ic svg').length) === 2 && /Vencido/.test(tx) && /Meus honorários/.test(tx), 'dois cartões com ícone (honorários e vencido)');
-check(/R\$\s*1\.000,00/.test(await t('#statsAcordos .fv-tile:nth-child(2)')), 'vencido = parcela atrasada (R$ 1.000)');
+check(await page.evaluate(() => document.querySelectorAll('#mdPainel-acordos .md-kpi .ct-ic svg').length) === 4 && /Vencido/i.test(tx) && /Meus honorários/i.test(tx), 'indicadores com ícone (honorários e vencido)');
+check(/R\$\s*1\.000,00/.test(await t('#mdPainel-acordos .md-kpi:nth-child(3)')), 'vencido = parcela atrasada (R$ 1.000)');
+await page.click('#mdAbas-acordos [data-md-aba="lista"]'); await page.waitForTimeout(500);
 check(await page.evaluate(() => document.querySelectorAll('#listAcordos .cliente-cell .ct-ic').length) === 3, 'cada termo tem ícone');
 const c1 = await t('[data-acordo-card="a1"]');
 check(/Parcela 2\/2/.test(c1) && /atrasada desde/.test(c1) && /1 de 2 parcelas recebidas/.test(c1), 'termo com parcelas: selo da próxima parcela (atrasada) e progresso');
