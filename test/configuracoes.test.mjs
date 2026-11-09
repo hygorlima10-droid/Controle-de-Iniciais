@@ -18,7 +18,7 @@ const t = s => page.evaluate(s => (document.querySelector(s) || {}).innerText ||
 await page.click('#menuBtn'); await page.waitForTimeout(500);
 if (process.env.FOTOS) await page.screenshot({ path: process.env.FOTOS + '/cfg-menu.png' });
 const itens = await page.evaluate(() => Array.from(document.querySelectorAll('#drawer .dr-nav > *')).filter(e => e.getClientRects().length > 0).map(e => (e.classList.contains('dr-grp') ? '## ' : '') + e.innerText.trim().replace(/\n.*/, '')));
-check(itens.join('|') === 'Início|Iniciais|Termos de Acordo|Alvarás|Agenda|Processos|Publicações|Clientes|Arquivados|Cobrança de clientes|## FINANCEIRO|Divisão do mês|Hygor (PJ)|Pessoa física|Patrimônio e metas|Análises|Construção|Extratos do banco|Recebi R$|Fechamento do mês|Relatório do Murilo|## SISTEMA|Configurações|Desfazer última ação|Sair', 'menu lateral: ' + itens.join(' | '));
+check(itens.join('|') === 'Início|Iniciais|Termos de Acordo|Alvarás|Agenda|Processos|Publicações|Clientes|Arquivados|Cobrança de clientes|## FINANCEIRO|Visão geral|Divisão do mês|Hygor (PJ)|Pessoa física|Patrimônio e metas|Análises|Construção|Extratos do banco|Recebi R$|Fechamento do mês|Relatório do Murilo|## SISTEMA|Configurações|Desfazer última ação|Sair', 'menu lateral: ' + itens.join(' | '));
 check(!(await vis('#backupBtn')) && !(await vis('#exportBtn')) && !(await vis('#abrirLembretesBtn')), 'Backup, Exportar CSV e Lembretes saíram do menu (os botões originais ficam escondidos)');
 // Cobrança de clientes: abre a tela de cobrança no modo "clientes próprios"
 await page.click('#abrirCobrancaMenuBtn'); await page.waitForTimeout(800);

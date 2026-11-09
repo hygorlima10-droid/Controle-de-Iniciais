@@ -121,7 +121,7 @@ if '/*IC-INICIO*/' in s:
 else:
     assert s.count('/*AGD-FIM*/\n') == 1
     s = s.replace('/*AGD-FIM*/\n', '/*AGD-FIM*/\n' + bloco_ic)
-md_js = open(R + 'cliente/modulo.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-juridico.js', encoding='utf-8').read()
+md_js = open(R + 'cliente/modulo.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-juridico.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-financeiro.js', encoding='utf-8').read()
 bloco_md = '/*MD-INICIO*/\n' + md_js + '\n/*MD-FIM*/\n'
 if '/*MD-INICIO*/' in s:
     s = re.sub(r'/\*MD-INICIO\*/.*?/\*MD-FIM\*/\n', lambda m: bloco_md, s, flags=re.S)
@@ -201,7 +201,7 @@ rep('  .ini-acoes .acao.acao-ouro{background:var(--gold-btn);color:var(--gold-in
 # ---- aba Processos ----
 repm('id="bodyProcessos"', '  <div id="bodyAnalises" style="display:none;">', '  <div id="bodyProcessos" style="display:none;">\n    <div class="ob-wrap" id="prWrap"></div>\n  </div>\n\n  <div id="bodyAnalises" style="display:none;">')
 repm('data-tab="processos"', '      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">', '      <button type="button" class="dr-it" data-tab="processos" title="Processos"><svg><use href="#ic-proc"/></svg><span class="lab">Processos</span></button>\n      <button type="button" class="dr-it" data-tab="publicacoes" title="Publicações do Diário Oficial">')
-rep('<symbol id="ic-sync" ', '<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>\n<symbol id="ic-sync" ')
+repm('id="ic-proc"', '<symbol id="ic-sync" ', '<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>\n<symbol id="ic-sync" ')
 rep("    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';\n", "    qs('bodyAgenda').style.display = (tab === 'agenda') ? '' : 'none';\n    qs('bodyProcessos').style.display = (tab === 'processos') ? '' : 'none';\n")
 s = s.replace("tab === 'publicacoes' || tab === 'agenda') ? 'none'", "tab === 'publicacoes' || tab === 'agenda' || tab === 'processos') ? 'none'")
 rep("    else if (tab === 'agenda') agRender();\n", "    else if (tab === 'agenda') agRender();\n    else if (tab === 'processos') prRender();\n")
@@ -357,6 +357,20 @@ rep("    peticaoView = 'lista';\n    if (activeTab !== 'peticoes') setActiveTab(
 # Fase 2, etapa 2.3: Resumo e sub-abas em Clientes (Processos, Publicações e Agenda mudam nos próprios arquivos de cliente/)
 rep("    var semCli = docsSemCliente().length;\n    qs('clientesAviso').innerHTML = semCli", "    mjClientes({ lista: lista, ativos: ativos, tot: tot });\n    var semCli = docsSemCliente().length;\n    qs('clientesAviso').innerHTML = semCli")
 rep("  qs('filtroClienteTipo').addEventListener('change', function(){ clientesFiltro.tipo = this.value; renderClientes(); });", "  qs('filtroClienteTipo').addEventListener('change', function(){ clientesFiltro.tipo = this.value; mjS.cli = 'lista'; renderClientes(); });")
+
+# Fase 2, etapa 2.4: Financeiro (Visão geral + sub-abas) e Construção (Resumo + sub-abas)
+rep("  function aplicarFinTab(){\n    setSegValue('segFinTab', finTab);", "  function aplicarFinTab(){\n    mfAplicar();\n    setSegValue('segFinTab', finTab);")
+s = re.sub(r"localStorage\.setItem\('controlePeticoes\.finTab\.v1', finTab\); \}catch\(e\)\{\}(?! mfLembrar\(\);)", "localStorage.setItem('controlePeticoes.finTab.v1', finTab); }catch(e){} mfLembrar();", s)
+rep("  h += '</div>';\n  el.innerHTML = h;\n  mfObra(el, r, cfg);\n}\n(function(){\n  var wrap = qs('obraWrap');", "  h += '</div>';\n  el.innerHTML = h;\n}\n(function(){\n  var wrap = qs('obraWrap');")   # a Construção é separada em sub-abas por cliente/modulo-financeiro.js, que embrulha renderObra depois do obra7
+rep("function renderAnalises(){\n  var el = qs('anWrap');\n  if (!el) return;", "function renderAnalises(){\n  mfBarraAnalises();\n  var el = qs('anWrap');\n  if (!el) return;")
+rep('<button type="button" class="bt-it" data-tab="financeiro" data-fin="geral"><svg><use href="#ic-pie"/></svg><span>Finanças</span></button>', '<button type="button" class="bt-it" data-tab="financeiro"><svg><use href="#ic-pie"/></svg><span>Finanças</span></button>')
+rep('      <button type="button" class="dr-it" data-tab="financeiro" data-fin="geral" title="Divisão do mês">', '      <button type="button" class="dr-it" data-tab="financeiro" data-fin="resumo" title="Visão geral das finanças"><svg><use href="#ic-chart"/></svg><span class="lab">Visão geral</span></button>\n      <button type="button" class="dr-it" data-tab="financeiro" data-fin="geral" title="Divisão do mês">')
+rep("  var FIN_NOMES = { geral:'Finanças', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };", "  var FIN_NOMES = { resumo:'Finanças', geral:'Divisão do mês', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };")
+
+# limpeza: um ajuste antigo repetia os desenhos ic-proc e ic-gear a cada montagem; fica só o primeiro de cada
+for _id in ('ic-proc', 'ic-gear'):
+    _ms = list(re.finditer(r'<symbol id="' + _id + r'"[^>]*>.*?</symbol>', s, flags=re.S))
+    for _m in reversed(_ms[1:]): s = s[:_m.start()] + s[_m.end():]
 
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')

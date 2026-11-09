@@ -29,7 +29,7 @@ await api('PUT', 'obraMov/l1', { tipo: 'liberacao', data: dia(-30), valor: 60000
 await api('PUT', 'obraMov/a1', { tipo: 'aporte', origem: 'pf', data: dia(-45), valor: 50000, criadoEm: agora });
 await api('PUT', 'obraMov/g1', { tipo: 'gasto', etapaId: 'e1', descricao: 'Concreto', fornecedor: 'Usina', valor: 30000, nf: '123', status: 'pago', data: dia(-20), dataPagamento: dia(-20), criadoEm: agora });
 await api('PUT', 'obraMov/g2', { tipo: 'gasto', etapaId: 'e2', descricao: 'Tijolos', fornecedor: 'Olaria', valor: 12000, status: 'apagar', data: dia(-1), vencimento: dia(2), criadoEm: agora });
-const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 420, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 420, height: 900 } })).newPage(); await page.addInitScript(() => { try { if (!localStorage.getItem('horus.subaba.v1')) localStorage.setItem('horus.subaba.v1', JSON.stringify({ sub: { obra: 'tudo', financeiro: 'geral' }, per: 6 })); } catch (e) { /* sem armazenamento */ } }); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2500);
 const txt = sel => page.evaluate(s => Array.from(document.querySelectorAll(s)).map(e => e.innerText).join('\n'), sel);
 const getDoc = async (col, id) => (await (await api('GET', col)).json()).docs.find(d => d.id === id)?.data;

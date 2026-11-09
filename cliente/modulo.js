@@ -96,34 +96,44 @@ function mdCompacto(v){
 }
 
 /* ---------- gráficos (SVG) ---------- */
-/* barras em pares por mês; sel = mês em destaque (balão); cada grupo é clicável (data-md-mes) */
+/* barras em pares; por padrão cada grupo é um mês. Opções: sel (grupo em destaque, com balão), ca/cb (cores), ra/rb (rótulos do balão),
+   fmt (formato dos números: sem ele é dinheiro e o gráfico some no modo discreto), rot(i)/tit(i) (rótulo curto e título de cada grupo, quando não é mês),
+   proj (true = previsão: barras vazadas e tracejadas) */
+function mdOculto(){ return '<div class="md-vazio">Gráfico oculto no modo discreto (o tamanho das barras mostraria os valores).</div>'; }
 function mdBarras(meses, a, b, o){
+  if (discreto && !o.fmt) return mdOculto();
   var w = 330, h = 168, px = 6, py = 46, W = w - px * 2, H = h - py - 22, n = meses.length, gw = W / n, bw = Math.min(16, gw * 0.3);
+  var rot = o.rot || function(i){ return n > 6 ? mdMesCurto(meses[i]).charAt(0) : mdMesCurto(meses[i]); }, tit = o.tit || function(i){ return mdMesAno(meses[i]); };
   var max = Math.max.apply(null, a.concat(b).concat([0])) * 1.1 || 1, s = '<svg class="md-svg" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + escapeHtml(o.titulo || '') + '">';
   for (var k = 0; k < 4; k++){ var yy = py + (H * k) / 3; s += '<line class="gr" x1="' + px + '" x2="' + (w - px) + '" y1="' + yy + '" y2="' + yy + '"/>'; }
+  var barra = function(x, v, cor, dim){
+    var hh = Math.max(v > 0 ? 2 : 0, (Math.max(v, 0) / max) * H);
+    return '<rect x="' + x + '" y="' + (py + H - hh) + '" width="' + bw + '" height="' + hh + '" rx="3.5" ' + (o.proj ? 'fill="' + cor + '" fill-opacity=".14" stroke="' + cor + '" stroke-width="1.4" stroke-dasharray="4 3"' : 'fill="' + cor + '"') + ' opacity="' + dim + '"/>';
+  };
   meses.forEach(function(m, i){
-    var cx = px + i * gw + gw / 2, h1 = Math.max(a[i] > 0 ? 2 : 0, (a[i] / max) * H), h2 = Math.max(b[i] > 0 ? 2 : 0, (b[i] / max) * H), dim = (o.sel != null && o.sel !== i) ? 0.4 : 1;
-    s += '<g class="alvo" data-md-mes="' + i + '"><rect x="' + (px + i * gw) + '" y="' + py + '" width="' + gw + '" height="' + (H + 20) + '" fill="transparent"/>' +
-      '<rect x="' + (cx - bw - 1.5) + '" y="' + (py + H - h1) + '" width="' + bw + '" height="' + h1 + '" rx="3.5" fill="' + o.ca + '" opacity="' + dim + '"/>' +
-      '<rect x="' + (cx + 1.5) + '" y="' + (py + H - h2) + '" width="' + bw + '" height="' + h2 + '" rx="3.5" fill="' + o.cb + '" opacity="' + dim + '"/>' +
-      '<text x="' + cx + '" y="' + (h - 6) + '" text-anchor="middle" font-size="' + (n > 6 ? 9 : 10.5) + '"' + (o.sel === i ? ' font-weight="800" style="fill:var(--ink)"' : '') + '>' + (n > 6 ? mdMesCurto(m).charAt(0) : mdMesCurto(m)) + '</text></g>';
+    var cx = px + i * gw + gw / 2, dim = (o.sel != null && o.sel !== i) ? 0.4 : 1;
+    s += '<g class="alvo" data-md-mes="' + i + '"><rect x="' + (px + i * gw) + '" y="' + py + '" width="' + gw + '" height="' + (H + 20) + '" fill="transparent"/>' + barra(cx - bw - 1.5, a[i], o.ca, dim) + barra(cx + 1.5, b[i], o.cb, dim) +
+      '<text x="' + cx + '" y="' + (h - 6) + '" text-anchor="middle" font-size="' + (n > 6 ? 9 : 10.5) + '"' + (o.sel === i ? ' font-weight="800" style="fill:var(--ink)"' : '') + '>' + escapeHtml(rot(i)) + '</text></g>';
   });
-  if (o.sel != null && meses[o.sel]){
+  if (o.sel != null && meses[o.sel] != null){
     var c2 = px + o.sel * gw + gw / 2, tx = Math.min(Math.max(c2, 96), w - 96);
-    s += '<rect class="tipbg" x="' + (tx - 94) + '" y="1" width="188" height="38" rx="10"/><text class="tip1" x="' + tx + '" y="16" text-anchor="middle" font-size="10">' + escapeHtml(mdMesAno(meses[o.sel]) + ' · ' + o.ra + ' ' + (o.fmt || mdCompacto)(a[o.sel])) + '</text><text class="tip2" x="' + tx + '" y="31" text-anchor="middle" font-size="11.5">' + escapeHtml(o.rb + ' ' + (o.fmt || fmtMoeda)(b[o.sel])) + '</text>';
+    s += '<rect class="tipbg" x="' + (tx - 94) + '" y="1" width="188" height="38" rx="10"/><text class="tip1" x="' + tx + '" y="16" text-anchor="middle" font-size="10">' + escapeHtml(tit(o.sel) + ' · ' + o.ra + ' ' + (o.fmt || mdCompacto)(a[o.sel])) + '</text><text class="tip2" x="' + tx + '" y="31" text-anchor="middle" font-size="11.5">' + escapeHtml(o.rb + ' ' + (o.fmt || fmtMoeda)(b[o.sel])) + '</text>';
   }
   return s + '</svg>';
 }
-/* linha com área (contagens por mês) */
+/* linha com área. Opções: fmt (rótulo de cada ponto; com dinheiro:true o gráfico some no modo discreto), alvo (linha tracejada de meta), id */
 function mdLinha(meses, serie, cor, o){
-  var w = 330, h = 150, px = 14, py = 30, W = w - px * 2, H = h - py - 22, n = serie.length, max = Math.max.apply(null, serie.concat([1])) * 1.15;
-  function X(i){ return px + (n > 1 ? (i * W) / (n - 1) : W / 2); } function Y(v){ return py + H - (v / max) * H; }
-  var pts = serie.map(function(v, i){ return X(i) + ',' + Y(v); }).join(' '), id = 'mdg' + cor.slice(1) + (o.id || '');
+  if (discreto && o.dinheiro) return mdOculto();
+  var w = 330, h = 150, px = 20, py = 30, W = w - px * 2, H = h - py - 22, n = serie.length;
+  var max = Math.max.apply(null, serie.concat([o.alvo || 0, 1])) * 1.15, min = Math.min.apply(null, serie.concat([0])); if (min < 0) min *= 1.15;
+  function X(i){ return px + (n > 1 ? (i * W) / (n - 1) : W / 2); } function Y(v){ return py + H - ((v - min) / (max - min || 1)) * H; }
+  var pts = serie.map(function(v, i){ return X(i) + ',' + Y(v); }).join(' '), id = 'mdg' + cor.slice(1) + (o.id || ''), fmt = o.fmt || function(v){ return String(v); };
   var s = '<svg class="md-svg" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + escapeHtml(o.titulo || '') + '"><defs><linearGradient id="' + id + '" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="' + cor + '" stop-opacity=".26"/><stop offset="1" stop-color="' + cor + '" stop-opacity="0"/></linearGradient></defs>';
   for (var k = 0; k < 4; k++){ var yy = py + (H * k) / 3; s += '<line class="gr" x1="' + px + '" x2="' + (w - px) + '" y1="' + yy + '" y2="' + yy + '"/>'; }
-  s += '<polygon points="' + X(0) + ',' + (py + H) + ' ' + pts + ' ' + X(n - 1) + ',' + (py + H) + '" fill="url(#' + id + ')"/><polyline points="' + pts + '" fill="none" stroke="' + cor + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+  if (o.alvo > 0) s += '<line x1="' + px + '" x2="' + (w - px) + '" y1="' + Y(o.alvo) + '" y2="' + Y(o.alvo) + '" stroke="#C98500" stroke-width="1.5" stroke-dasharray="3 4"/><text x="' + (w - px) + '" y="' + (Y(o.alvo) - 4) + '" text-anchor="end" font-size="9.5" font-weight="700" style="fill:#C98500">alvo</text>';
+  s += '<polygon points="' + X(0) + ',' + Y(min) + ' ' + pts + ' ' + X(n - 1) + ',' + Y(min) + '" fill="url(#' + id + ')"/><polyline points="' + pts + '" fill="none" stroke="' + cor + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
   serie.forEach(function(v, i){
-    s += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="3.4" fill="' + cor + '"/><text x="' + X(i) + '" y="' + (Y(v) - 8) + '" text-anchor="middle" font-size="10.5" font-weight="700" style="fill:var(--ink)">' + v + '</text>' +
+    s += '<circle cx="' + X(i) + '" cy="' + Y(v) + '" r="3.4" fill="' + cor + '"/><text x="' + X(i) + '" y="' + (Y(v) - 8) + '" text-anchor="' + (i === 0 && n > 1 ? 'start' : (i === n - 1 && n > 1 ? 'end' : 'middle')) + '" font-size="' + (o.fmt ? 9.5 : 10.5) + '" font-weight="700" style="fill:var(--ink)">' + escapeHtml(fmt(v)) + '</text>' +
       '<text x="' + X(i) + '" y="' + (h - 6) + '" text-anchor="middle" font-size="' + (n > 6 ? 9 : 10.5) + '">' + (n > 6 ? mdMesCurto(meses[i]).charAt(0) : mdMesCurto(meses[i])) + '</text>';
   });
   return s + '</svg>';
@@ -253,6 +263,7 @@ function mdDicaMes(sel, meses){
   return '<div class="md-foot">' + (sel != null && meses[sel] ? 'Toque de novo em <b>' + escapeHtml(mdMesAno(meses[sel])) + '</b> para abrir os recebimentos desse mês.' : 'Toque num mês para ver os valores.') + '</div>';
 }
 function mdSituacao(mod, L){
+  if (discreto) return mdCard('Situação das parcelas', mdOculto());
   var us = mdUnidades(mod), rec = 0;
   us.forEach(function(u){ rec += Math.max(0, meuValor(u, u.valor) - restanteMeu(u)); });
   var venc = mdSoma(L.vencido), aVencer = r2(mdSoma(L.aberto) - venc), tot = r2(rec + venc + aVencer);
