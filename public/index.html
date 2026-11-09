@@ -1480,6 +1480,8 @@
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
 <symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+<symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -20315,16 +20317,19 @@ function agiPreparar(){
       nomes[k].itens++;
     });
   });
-  Object.keys(nomes).forEach(function(k){
-    var x = nomes[k], cs = cliParecidos(x.nome);
+  var chaves = Object.keys(nomes);
+  chaves.forEach(function(k){
+    var x = nomes[k], cs = cliParecidos(x.nome); x.cands = cs.slice(0, 4);
     if (cs.length){
       x.nivel = cs[0].nivel; x.cand = cs[0].c;
-      var empate = cs.some(function(y, i){ return i > 0 && y.nivel >= cs[0].nivel; });
-      x.seguro = cs[0].nivel === 3 && !empate;
+      var iguais = cs.filter(function(y){ return y.nivel === 3; }).length, mesmoNivel = cs.filter(function(y){ return y.nivel >= cs[0].nivel; }).length;
+      x.seguro = cs[0].nivel === 3 && iguais === 1;                                          /* um só cliente com exatamente esse nome (ou apelido) */
+      x.auto = !x.seguro && cs[0].nivel >= 2 && cs[0].c.vinculoAuto === true && mesmoNivel === 1;   /* abreviação do nome de um cliente marcado como "vincular sozinho" (mesma regra da importação do Diário Oficial) */
     }
+    /* outros nomes deste mesmo arquivo que parecem ser a mesma pessoa */
+    x.irmaos = chaves.filter(function(o){ return o !== k && cliNivel(x.nome, nomes[o].nome) >= 2; });
     var atual = agiS.decisao[k];
-    if (!atual) agiS.decisao[k] = x.seguro ? 'c:' + x.cand.id : 'novo';
-    if (x.cand && !x.seguro && agiS.decisao[k] === 'novo' && x.nivel >= 1) agiS.decisao[k] = 'sem';   /* parecido, mas não igual: não liga nem cria sozinho; você escolhe */
+    if (!atual) agiS.decisao[k] = (x.seguro || x.auto) ? 'c:' + x.cand.id : (x.cand ? 'sem' : 'novo');   /* parecido, mas não igual: não liga nem cria sozinho; você escolhe */
   });
   agiS.nomes = nomes;
 }
@@ -20405,10 +20410,12 @@ function agiDesenhar(){
       h += '<div class="pb-sec" style="margin-top:8px"><div class="pb-sec-t">Clientes e partes (' + ks.length + ')</div><div class="pb-aviso">Equipe (Estagiários, Hygor, Murilo…) fica como responsável e não entra aqui. Confira o que fazer com cada nome:</div></div>';
       h += ks.map(function(k){
         var x = agiS.nomes[k], v = agiS.decisao[k] || 'sem', ops = '';
-        if (x.cand) ops += '<option value="c:' + escapeHtml(x.cand.id) + '"' + (v === 'c:' + x.cand.id ? ' selected' : '') + '>' + (x.seguro ? 'Cliente cadastrado: ' : 'Ligar a: ') + escapeHtml(x.cand.nome) + '</option>';
-        ops += '<option value="novo"' + (v === 'novo' ? ' selected' : '') + '>Cadastrar como cliente novo</option><option value="sem"' + (v === 'sem' ? ' selected' : '') + '>Sem cliente (só o texto)</option>';
+        (x.cands || []).forEach(function(m){ ops += '<option value="c:' + escapeHtml(m.c.id) + '"' + (v === 'c:' + m.c.id ? ' selected' : '') + '>' + (m.nivel === 3 ? 'Cliente cadastrado: ' : 'Ligar a: ') + escapeHtml(m.c.nome) + (m.nivel === 3 ? '' : (m.nivel === 2 ? ' (nome mais curto ou mais longo)' : ' (parecido)')) + '</option>'; });
+        ops += '<option value="novo"' + (v === 'novo' ? ' selected' : '') + '>Cadastrar como cliente novo</option>';
+        (x.irmaos || []).forEach(function(o){ ops += '<option value="m:' + escapeHtml(o) + '"' + (v === 'm:' + o ? ' selected' : '') + '>Mesmo cliente que: ' + escapeHtml(agiS.nomes[o].nome) + '</option>'; });
+        ops += '<option value="sem"' + (v === 'sem' ? ' selected' : '') + '>Sem cliente (só o texto)</option>';
         return '<div class="pb-card" style="--pb-bar:' + (x.seguro ? '#1BAF7A' : (x.cand ? '#C98500' : '#8A93AD') + ';padding:8px 11px') + '"><div class="pb-l1"><span>' + escapeHtml(x.nome) + '</span><span class="pb-tipo">' + x.itens + (x.itens === 1 ? ' compromisso' : ' compromissos') + '</span></div>' +
-          '<select class="filter-select" data-agi="decisao" data-k="' + escapeHtml(k) + '" style="width:100%;margin-top:4px;padding:6px 8px;font-size:13px">' + ops + '</select>' + (x.cand && !x.seguro ? '<div class="pb-aviso" style="margin-top:4px">Parecido, mas não igual: confirme se é a mesma pessoa.</div>' : '') + '</div>';
+          '<select class="filter-select" data-agi="decisao" data-k="' + escapeHtml(k) + '" style="width:100%;margin-top:4px;padding:6px 8px;font-size:13px">' + ops + '</select>' + (x.cand && !x.seguro && !x.auto ? '<div class="pb-aviso" style="margin-top:4px">Nome parecido com um cliente cadastrado, mas não igual: confirme se é o mesmo antes de ligar.</div>' : '') + (x.auto ? '<div class="pb-aviso" style="margin-top:4px">Ligado sozinho: o cliente está marcado para vincular automaticamente.</div>' : '') + ((x.irmaos || []).length ? '<div class="pb-aviso" style="margin-top:4px">Parecido com outro nome deste arquivo (' + escapeHtml(agiS.nomes[x.irmaos[0]].nome) + '). Se for o mesmo cliente, escolha “Mesmo cliente que…”.</div>' : '') + '</div>';
       }).join('');
     }
     /* processos */
@@ -20445,7 +20452,7 @@ function agiCartao(it, idx){
   it.responsaveis.forEach(function(n){ tags += agiTg('responsável: ' + n); });
   it.partes.forEach(function(n){
     var d = agiS.decisao[normNome(n)] || 'sem', x = agiS.nomes[normNome(n)] || {};
-    tags += d.indexOf('c:') === 0 ? agiTg('✓ ' + ((clienteById(d.slice(2)) || {}).nome || n), 'ok') : (d === 'novo' ? agiTg('＋ cliente novo: ' + n, 'nv') : agiTg(n + ' · sem cliente'));
+    tags += d.indexOf('c:') === 0 ? agiTg('✓ ' + ((clienteById(d.slice(2)) || {}).nome || n), 'ok') : (d.indexOf('m:') === 0 ? agiTg('＋ mesmo cliente que ' + ((agiS.nomes[d.slice(2)] || {}).nome || '?'), 'nv') : (d === 'novo' ? agiTg('＋ cliente novo: ' + n, 'nv') : agiTg(n + ' · sem cliente')));
   });
   if (dup) tags += agiTg('já está na agenda · pula');
   else if (it.jaExiste === 'parecido') tags += agiTg('parece já estar na agenda', 'pz');
@@ -20480,21 +20487,25 @@ function agiImportar(){
   var r = { criados: 0, prazos: 0, audiencias: 0, tarefas: 0, pendentes: 0, concluidos: 0, comProcesso: 0, procExistentes: 0, procNovos: 0, procNovosSemCliente: 0, semProcesso: 0, clientesLigados: 0, clientesNovos: 0, pulados: agiS.itens.filter(function(i){ return i.jaExiste === 'igual'; }).length, falhas: 0 };
   var idPorNome = {}, ligados = {};
   /* 1) clientes novos (uma vez por nome) */
-  var novos = Object.keys(agiS.decisao).filter(function(k){ return agiS.decisao[k] === 'novo' && agiS.nomes[k] && sel.some(function(i){ return i.partes.some(function(n){ return normNome(n) === k; }); }); });
-  var criadosAgora = [];
+  var usados = {}; sel.forEach(function(i){ i.partes.forEach(function(n){ var k = normNome(n); usados[k] = 1; var d = agiS.decisao[k] || ''; if (d.indexOf('m:') === 0) usados[d.slice(2)] = 1; }); });
+  var novos = Object.keys(usados).filter(function(k){ return agiS.decisao[k] === 'novo' && agiS.nomes[k]; });
   var cad = novos.reduce(function(p, k){
     return p.then(function(){
-      /* o mesmo cliente escrito de dois jeitos no arquivo (ex.: "Cooperativa X" e "Cooperativa X - COMPLEM"): cadastra um só e guarda o outro nome como apelido */
-      var cs = cliParecidos(agiS.nomes[k].nome).filter(function(m){ return criadosAgora.indexOf(m.c.id) >= 0 && m.nivel >= 2; });
-      if (cs.length){ idPorNome[k] = cs[0].c.id; prAprenderApelido(cs[0].c.id, agiS.nomes[k].nome); return; }
       var c = novoClienteObj({ nome: cliTitulo(agiS.nomes[k].nome), pagador: 'cliente', origem: 'agenda' });
-      return persistClienteSet(c).then(function(){ idPorNome[k] = c.id; criadosAgora.push(c.id); r.clientesNovos++; });
+      return persistClienteSet(c).then(function(){ idPorNome[k] = c.id; r.clientesNovos++; });
     });
   }, Promise.resolve());
+  function idDaDecisao(k, fundo){
+    var d = agiS.decisao[k] || 'sem';
+    if (d.indexOf('c:') === 0) return d.slice(2);
+    if (d === 'novo') return idPorNome[k] || '';
+    if (d.indexOf('m:') === 0 && !fundo){ var o = agiS.decisao[d.slice(2)] || 'sem'; return o.indexOf('m:') === 0 ? '' : idDaDecisao(d.slice(2), true); }   /* "mesmo cliente que" aponta para outro nome; sem voltar a apontar */
+    return '';
+  }
   function idsDe(it){
     var ids = [], txt = [];
     it.partes.forEach(function(n){
-      var k = normNome(n), d = agiS.decisao[k] || 'sem', id = d.indexOf('c:') === 0 ? d.slice(2) : (d === 'novo' ? idPorNome[k] : '');
+      var k = normNome(n), id = idDaDecisao(k);
       if (id){ if (ids.indexOf(id) < 0) ids.push(id); txt.push((clienteById(id) || {}).nome || n); } else txt.push(n);
     });
     return { ids: ids, txt: txt.slice(0, 3).join(', ') + (txt.length > 3 ? ' e mais ' + (txt.length - 3) : '') };
@@ -20532,6 +20543,8 @@ function agiImportar(){
     /* "já cadastrados" conta processos, não compromissos */
     var existentes = {}; sel.forEach(function(it){ if (it.num && it.procExiste && !it.procCriado) existentes[it.num] = 1; });
     r.procExistentes = Object.keys(existentes).length;
+    /* o que você confirmou fica aprendido: o nome escrito assim no arquivo passa a ser reconhecido como apelido daquele cliente */
+    Object.keys(usados).forEach(function(k){ var x = agiS.nomes[k], id = x ? idDaDecisao(k) : ''; if (id && clienteById(id) && cliNivel(x.nome, clienteById(id).nome) < 3){ try{ prAprenderApelido(id, x.nome); }catch(e){} } });
     agiS.res = r; agiS.fase = 'feito'; agiS.ocupado = false; agiDesenhar();
     try{ prDepois(); }catch(e){} try{ agDepois(); }catch(e){} try{ impFilaDatajud(); }catch(e){}
     toast(r.criados + (r.criados === 1 ? ' compromisso importado.' : ' compromissos importados.'));

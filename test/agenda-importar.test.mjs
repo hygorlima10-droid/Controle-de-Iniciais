@@ -51,10 +51,10 @@ const I1 = { titulo: 'Contestação ', tipo: 'Prazo', data: dia(5), part: ['Hygo
 const I2 = { titulo: 'manifestar', tipo: 'Prazo', data: dia(-2), status: 'Concluído', part: ['Estagiários', 'Hygor Lima Andrade', 'Maria Parecida Souza', 'Novo Cliente Ltda'], proc: { cod: '089', num: N2 } };
 const I3 = { titulo: 'audiência 13:30', tipo: 'Audiência', data: dia(8), part: ['Estagiários', 'MURILO FALONE ROCHA', 'Novo Cliente Ltda'], obs: N3 + '\n' };
 const I4 = { titulo: 'audiência  conciliação ' + br_(dia(9)) + ' 13:00)', tipo: 'Audiência', data: dia(9), ini: '12:45:00', fim: '16:00:00', part: ['Estagiários', 'Hygor Lima Andrade', 'Adineu Alves Da Silva'], proc: { cod: '475', num: N4 } };
-const I5 = { titulo: 'Juntar planilha Eduardo Lopes TO', tipo: 'Andamento', data: dia(-1), status: 'Concluído', part: ['Hygor Lima Andrade'] };
+const I5 = { titulo: 'Juntar planilha Eduardo Lopes TO', tipo: 'Andamento', data: dia(-1), status: 'Concluído', part: ['Hygor Lima Andrade', 'COOPERATIVA MISTA DOS PRODUTORES DE LEITE DE MORRINHOS'] };
 const I6 = { titulo: 'Agravo de Instrumento ', tipo: 'Prazo', data: dia(3), prioridade: 'Alta', subtipo: 'Interposição de agravo de instrumento - CPC, art. 1.015', part: ['Hygor Lima Andrade', 'Cliente Exato Silva'], obs: 'Cliente pediu urgência. Ação nº 1.', proc: { cod: '488', num: N6 } };
 const I7 = { titulo: 'emenda', tipo: 'Prazo', data: dia(4), part: ['Estagiários'] };
-const I8 = { titulo: 'Perícia 14:00', tipo: 'Audiência', data: dia(20), part: ['Hygor Lima Andrade', 'Novo Cliente Ltda - Filial'] };   // o mesmo cliente do compromisso 2, escrito de outro jeito
+const I8 = { titulo: 'Perícia 14:00', tipo: 'Audiência', data: dia(20), part: ['Hygor Lima Andrade', 'Novo Cliente Ltda - Filial', 'COOPERATIVA AGROPECUARIA MISTA DE PIRACANJUBA'] };   // Filial: o mesmo cliente do compromisso 2, escrito de outro jeito; as duas cooperativas: Complem (compromisso 5) e Coapil
 const dir = join(tmpdir(), 'horus-agenda-importar'); mkdirSync(dir, { recursive: true });
 const A1 = join(dir, 'Agenda_1.xml'), A2 = join(dir, 'Agenda_2.xml'), PDF = join(dir, 'Agenda.pdf'), RUIM = join(dir, 'ruim.xml');
 writeFileSync(A1, xml([I1, I2, I3, I4, I5, I6, I7])); writeFileSync(A2, xml([I1, I8])); writeFileSync(PDF, '%PDF-1.4 teste'); writeFileSync(RUIM, '<html><body>nao e agenda</body></html>');
@@ -66,6 +66,8 @@ for (const col of ['agenda', 'processos', 'clientes', 'casos', 'config']) for (c
 await f('PUT', '/api/db/config/backup', { ultimoEm: agora }); await f('PUT', '/api/db/config/importacaoAuto', { ativo: false, desde: agora }); await f('PUT', '/api/db/config/processosIgnorados', { numeros: {} }); await f('PUT', '/api/db/config/vinculoIniciais', { corte: hoje });
 await f('PUT', '/api/db/clientes/cexato', { nome: 'Cliente Exato Silva', pagador: 'cliente', criadoEm: agora });
 await f('PUT', '/api/db/clientes/cparec', { nome: 'Maria Souza', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/clientes/complem', { nome: 'Complem', apelidos: ['Cooperativa Mista dos Produtores de Leite de Morrinhos - Complem'], vinculoAuto: true, pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/clientes/coapil', { nome: 'Coapil', apelidos: ['COOPERATIVA AGROPECUARIA MISTA DE PIRACANJUBA - COAPIL'], pagador: 'cliente', criadoEm: agora });
 await f('PUT', '/api/db/processos/d' + dig(N1), { numero: N1, partes: 'Cliente Exato Silva x Banco', clienteIds: ['cexato'], honorarios: 'sem', arquivado: false, origem: 'manual', criadoEm: agora });
 await f('PUT', '/api/db/agenda/pre1', { tipo: 'prazo', titulo: 'emenda', processo: '', data: dia(4), situacao: 'afazer', concluido: false, criadoEm: agora });   // parece o compromisso 7 (mesma data, tipo e título)
 const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'America/Sao_Paulo' });
@@ -89,13 +91,17 @@ let tx = await t('#agiC');
 check(/8 compromissos encontrados/i.test(tx) && /1 repetido\(s\) entre os arquivos/.test(tx), 'lê os dois arquivos e junta o compromisso repetido: 8 compromissos (' + tx.slice(0, 120).replace(/\n/g, ' ') + ')');
 check(/4 prazos, 3 audiências, 1 tarefas/.test(tx), 'conta os tipos (prazos, audiências, tarefas): ' + (tx.match(/\d+ prazos[^.]*\./) || [''])[0]);
 const nomesCli = await page.evaluate(() => Array.from(document.querySelectorAll('#agiC .pb-card')).filter(c => c.querySelector('select[data-agi="decisao"]')).map(c => c.innerText.split('\n')[0]));
-check(/Clientes e partes \(5\)/i.test(tx) && nomesCli.length === 5, 'as partes são 5 nomes (' + nomesCli.join(' | ') + ')');
+check(/Clientes e partes \(7\)/i.test(tx) && nomesCli.length === 7, 'as partes são 7 nomes (' + nomesCli.join(' | ') + ')');
 check(!nomesCli.some(n => /Estagi|Hygor|Murilo/i.test(n)), 'a equipe (Estagiários, Hygor, MURILO FALONE ROCHA) não entra na lista de clientes');
 check(/responsável: Estagiários/.test(tx) && /responsável: Hygor Lima Andrade/.test(tx) && /responsável: MURILO FALONE ROCHA/.test(tx), 'a equipe aparece como responsável de cada compromisso');
 const sel = n => page.evaluate(n => { const s = Array.from(document.querySelectorAll('#agiC select[data-agi="decisao"]')).find(x => x.closest('.pb-card').innerText.startsWith(n)); return s ? { v: s.value, o: Array.from(s.options).map(x => x.text) } : null; }, n);
 const sExato = await sel('Cliente Exato Silva'), sPar = await sel('Maria Parecida Souza'), sNovo = await sel('Novo Cliente Ltda'), sAdi = await sel('Adineu Alves Da Silva');
 check(sExato && sExato.v === 'c:cexato' && /Cliente cadastrado: Cliente Exato Silva/.test(sExato.o[0]), 'nome igual a um cliente: já vem ligado ao cadastro');
 check(sPar && sPar.v === 'sem' && /Ligar a: Maria Souza/.test(sPar.o[0]), 'nome parecido (Maria Parecida Souza x Maria Souza): não liga sozinho, oferece ligar');
+const sMista = await sel('COOPERATIVA MISTA'), sAgro = await sel('COOPERATIVA AGROPECUARIA'), sFilial = await sel('Novo Cliente Ltda - Filial');
+check(sMista && sMista.v === 'c:complem' && !sMista.o.some(x => /Coapil/.test(x)), 'cooperativa Complem (nome sem a sigla): liga sozinha ao Complem, que está marcado para vincular automaticamente, e o Coapil nem é oferecido');
+check(sAgro && sAgro.v === 'sem' && sAgro.o.some(x => /Coapil/.test(x)) && !sAgro.o.some(x => /Complem/.test(x)), 'cooperativa Coapil (sem a sigla): só oferece o Coapil, nunca o Complem, e não liga sem você escolher');
+check(sFilial && sFilial.v === 'novo' && sFilial.o.some(x => /Mesmo cliente que: Novo Cliente Ltda$/.test(x)) && /Parecido com outro nome deste arquivo/.test(await t('#agiC')), 'dois nomes parecidos no arquivo: não junta sozinho; avisa e oferece "Mesmo cliente que…"');
 check(sNovo && sNovo.v === 'novo' && sAdi && sAdi.v === 'novo', 'nome que não existe (inclui o Adineu): vem para cadastrar como cliente novo');
 check(/12:45/.test(tx) && /13:00/.test(tx) && /Horário diferente: o arquivo diz 12:45, o título diz 13:00/.test(tx), 'horário do arquivo (12:45) diferente do título (13:00): mostra o aviso para escolher');
 check(/13:30/.test(tx), 'dia inteiro com a hora no título ("audiência 13:30"): reconhece 13:30');
@@ -105,6 +111,8 @@ const marcado = n => page.evaluate(n => { const c = Array.from(document.querySel
 check((await marcado('emenda')) === false && (await marcado('Contestação')) === true, 'o parecido vem desmarcado; os demais marcados');
 /* 3) escolher: ligar o parecido à Maria Souza e importar */
 await page.evaluate(() => { const s = Array.from(document.querySelectorAll('#agiC select[data-agi="decisao"]')).find(x => x.closest('.pb-card').innerText.startsWith('Maria Parecida Souza')); s.value = 'c:cparec'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+await page.waitForTimeout(300);
+await page.evaluate(() => { const pick = (ini, v) => { const s = Array.from(document.querySelectorAll('#agiC select[data-agi="decisao"]')).find(x => x.closest('.pb-card').innerText.startsWith(ini)); s.value = v; s.dispatchEvent(new Event('change', { bubbles: true })); }; pick('COOPERATIVA AGROPECUARIA', 'c:coapil'); pick('Novo Cliente Ltda - Filial', 'm:novo cliente ltda'); });
 await page.waitForTimeout(300);
 await page.evaluate(() => Array.from(document.querySelectorAll('#agiC button')).find(b => /^Importar \d+/.test(b.innerText)).click()); await page.waitForTimeout(3500);
 tx = await t('#agiC');
@@ -126,9 +134,14 @@ check(P.length === 5 && pp(N2) && pp(N3) && pp(N4) && pp(N6) && pp(N1).origem ==
 check(pp(N2).origem === 'agenda' && pp(N2).clienteIds.length === 2 && !pp(N2).revisar, 'processo novo com clientes escolhidos: já vinculado, sem ir para Revisar');
 check(pp(N3).clienteIds.length === 1 && pp(N4).clienteIds.length === 1, 'processos novos das audiências ligados aos clientes novos (Novo Cliente Ltda e Adineu)');
 const C = await docs('clientes');
-check(C.length === 4 && C.some(c => c.nome === 'Novo Cliente Ltda' && c.origem === 'agenda' && (c.apelidos || []).includes('Novo Cliente Ltda - Filial')) && C.some(c => c.nome === 'Adineu Alves da Silva'), 'clientes novos cadastrados com o nome tratado (Adineu Alves da Silva): ' + C.map(c => c.nome).join(' | '));
+check(C.length === 6 && C.some(c => c.nome === 'Novo Cliente Ltda' && c.origem === 'agenda' && (c.apelidos || []).includes('Novo Cliente Ltda - Filial')) && C.some(c => c.nome === 'Adineu Alves da Silva'), 'clientes novos cadastrados com o nome tratado (Adineu Alves da Silva): ' + C.map(c => c.nome).join(' | '));
 check(!C.some(c => /Estagi|Hygor|Murilo/i.test(c.nome)), 'equipe não virou cliente');
-const c8 = ag.find(d => /Perícia/.test(d.titulo)); check(c8 && c8.hora === '14:00' && c8.clienteIds.length === 1 && c2.clienteIds.includes(c8.clienteIds[0]), 'o mesmo cliente escrito de outro jeito (Ltda - Filial) foi ligado ao mesmo cadastro, sem duplicar; hora 14:00 do título');
+const c8 = ag.find(d => /Perícia/.test(d.titulo)); const novoId = (C.find(c => c.nome === 'Novo Cliente Ltda') || {}).id;
+check(c8 && c8.hora === '14:00' && c8.clienteIds.length === 2 && c8.clienteIds.includes(novoId) && c8.clienteIds.includes('coapil') && !c8.clienteIds.includes('complem'), 'perícia: "Ltda - Filial" ligada ao mesmo cadastro do Novo Cliente Ltda (sem duplicar) e a cooperativa ligada ao Coapil, nunca ao Complem; hora 14:00 do título');
+check(c5.clienteIds.join() === 'complem' && !c5.clienteIds.includes('coapil'), 'Andamento com a cooperativa Complem: ligado só ao Complem');
+const cpl = C.find(c => c.id === 'complem'), cpa = C.find(c => c.id === 'coapil');
+check((cpl.apelidos || []).some(a => /^Cooperativa Mista Dos Produtores De Leite De Morrinhos$/i.test(a)) && (cpa.apelidos || []).some(a => /^Cooperativa Agropecuaria Mista De Piracanjuba$/i.test(a)), 'o que foi confirmado vira apelido do cliente certo (Complem e Coapil), para reconhecer sozinho da próxima vez');
+check(!(cpl.apelidos || []).some(a => /piracanjuba|coapil/i.test(a)) && !(cpa.apelidos || []).some(a => /morrinhos|complem/i.test(a)), 'nenhum apelido de uma cooperativa vazou para a outra');
 /* 4) a agenda mostra os itens */
 await page.click('#agiC [data-agi="agenda"]'); await page.waitForTimeout(600);
 await page.evaluate(() => document.querySelector('[data-ag="vista"][data-v="lista"]').click()); await page.waitForTimeout(600);
@@ -140,7 +153,7 @@ tx = await t('#agiC');
 check((tx.match(/já está na agenda · pula/g) || []).length === 7, 'reimportar: os 7 já importados aparecem como "já está na agenda · pula"');
 check(!(await page.evaluate(() => Array.from(document.querySelectorAll('#agiC input[data-agi="sel"]')).some(c => c.checked && !c.disabled && c.closest('.pb-card').innerText.includes('pula')))), 'e ficam desmarcados e travados');
 await page.evaluate(() => document.querySelector('#overlayAgi [data-agi="fechar"]').click());
-check((await docs('agenda')).length === 8 && (await docs('processos')).length === 5 && (await docs('clientes')).length === 4, 'nada foi duplicado (agenda, processos e clientes iguais)');
+check((await docs('agenda')).length === 8 && (await docs('processos')).length === 5 && (await docs('clientes')).length === 6, 'nada foi duplicado (agenda, processos e clientes iguais)');
 /* 6) o editor guarda a observação */
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
