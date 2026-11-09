@@ -78,7 +78,8 @@ const t = s => page.evaluate(s => (document.querySelector(s) || {}).innerText ||
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(1000);
 
 /* 1) onde fica e erros de arquivo */
-check(/Importar/.test(await t('.ag-filtros')), 'a aba Agenda tem o botão "Importar"');
+await page.click('[data-ag="menu"]'); await page.waitForTimeout(200);
+check(/Importar/.test(await t('.ag-menu')), 'a aba Agenda tem o botão "Importar" (no menu ⋯)');
 await page.click('[data-ag="importar"]'); await page.waitForTimeout(500);
 check(await page.evaluate(() => document.getElementById('overlayAgi').classList.contains('show')) && /Escolher arquivo XML/.test(await t('#agiC')), 'abre a tela de importação');
 await page.setInputFiles('#agiArq', PDF); await page.waitForTimeout(500);
@@ -148,7 +149,7 @@ await page.evaluate(() => document.querySelector('[data-ag="vista"][data-v="list
 const lista = await t('#agWrap');
 check(/Contestação/.test(lista) && /Agravo de Instrumento/.test(lista) && /Prioridade alta/.test(lista), 'a Agenda (lista) mostra os compromissos importados e a prioridade alta');
 /* 5) importar o mesmo arquivo de novo não duplica */
-await page.click('[data-ag="importar"]'); await page.waitForTimeout(400); await page.setInputFiles('#agiArq', [A1, A2]); await page.waitForTimeout(900);
+await page.click('[data-ag="menu"]'); await page.click('[data-ag="importar"]'); await page.waitForTimeout(400); await page.setInputFiles('#agiArq', [A1, A2]); await page.waitForTimeout(900);
 tx = await t('#agiC');
 check((tx.match(/já está na agenda · pula/g) || []).length === 7, 'reimportar: os 7 já importados aparecem como "já está na agenda · pula"');
 check(!(await page.evaluate(() => Array.from(document.querySelectorAll('#agiC input[data-agi="sel"]')).some(c => c.checked && !c.disabled && c.closest('.pb-card').innerText.includes('pula')))), 'e ficam desmarcados e travados');

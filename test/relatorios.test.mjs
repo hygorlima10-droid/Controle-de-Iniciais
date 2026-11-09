@@ -39,7 +39,7 @@ const aberto = () => page.evaluate(() => document.getElementById('overlayRpt').c
 
 // Agenda
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(700);
-await page.click('[data-ag="rel"]'); await page.waitForTimeout(400);
+await page.click('[data-ag="menu"]'); await page.click('[data-ag="rel"]'); await page.waitForTimeout(400);
 check(await aberto(), 'a Agenda tem o botão “Relatório” e ele abre a folha');
 await page.selectOption('#rptop_periodo', '30'); await page.waitForTimeout(300);
 let fo = await t('#rptFolha');

@@ -7,6 +7,9 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
 const B = process.env.BASE || 'http://127.0.0.1:8812', SENHA = 'senha-de-teste-123';
+async function situacao(v){ await page.click('[data-ag="flt"]'); await page.click('[data-agf="sit"][data-v="' + v + '"]'); await page.click('[data-agf="ver"]'); await page.waitForTimeout(300); }
+async function abrirEditor(sel){ await page.click(sel + ' .agc-t'); await page.waitForTimeout(350); await page.click('[data-agd="editar"]'); await page.waitForTimeout(350); }
+
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), agora = new Date().toISOString();
 const dia = n => new Date(Date.parse(hoje + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
@@ -55,7 +58,7 @@ check(/Conciliação/.test(cartaoAg) && /Sala virtual do TJGO/.test(cartaoAg) &&
 check(await page.evaluate(() => { const a = Array.from(document.querySelectorAll('#agWrap a')).find(x => /Entrar na sala/.test(x.textContent)); return !!a && /meet\.google\.com/.test(a.href) && a.target === '_blank' && /noopener/.test(a.rel); }), 'tem o botão “Entrar na sala” (abre em outra aba, com rel seguro)');
 
 // 3) editor: link inválido é recusado
-await page.click('[data-ag="abrir"]'); await page.waitForTimeout(400);
+await abrirEditor('');
 await page.fill('#age_link', 'javascript:alert(1)'); await page.click('[data-age="salvar"]'); await page.waitForTimeout(300);
 check(/https:\/\//.test(await t('#age_erro')), 'link que não começa com http/https é recusado: ' + (await t('#age_erro')));
 await page.fill('#age_link', ''); await page.click('#agEdX'); await page.waitForTimeout(300);
@@ -64,19 +67,19 @@ await page.fill('#age_link', ''); await page.click('#agEdX'); await page.waitFor
 await page.click('[data-ag="novo"]'); await page.waitForTimeout(300);
 await page.fill('#age_tit', 'Contestação'); await page.fill('#age_data', dia(3)); await page.click('[data-age="salvar"]'); await page.waitForTimeout(900);
 check((await ag()).some(d => d.titulo === 'Contestação' && d.tipo === 'prazo' && !d.audTipo && !d.local), 'novo prazo salvo sem os campos de audiência');
-await page.click('.ag-it:has-text("Contestação") [data-ag="concluir"]'); await page.waitForTimeout(400);
+await page.click('.agc:has-text("Contestação") [data-ag="concluir"]'); await page.waitForTimeout(400);
 await page.fill('#agp_data', dia(2)); await page.click('#agpOk'); await page.waitForTimeout(300);
 check(/não pode ser no futuro/.test(await t('#agp_erro')), 'data de protocolo no futuro é recusada');
 await page.fill('#agp_data', dia(-1)); await page.fill('#agp_obs', 'juntada no evento 12'); await page.click('#agpOk'); await page.waitForTimeout(1000);
 const pz = (await ag()).filter(d => d.titulo === 'Contestação')[0];
 check(pz.concluido && pz.protocoladoEm === dia(-1) && pz.protocoloObs === 'juntada no evento 12', 'o protocolo grava data e observação');
-await page.click('[data-ag="feitos"]'); await page.waitForTimeout(400);
+await situacao('todos');
 check(new RegExp('Protocolada em ' + br_(dia(-1))).test(await t('#agWrap')), 'o cartão concluído mostra “Protocolada em dd/mm/aaaa”');
-await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .ag-it')).find(x => /Contestação/.test(x.innerText)); b.querySelector('[data-ag="reabrir"]').click(); }); await page.waitForTimeout(900);
+await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .agc')).find(x => /Contestação/.test(x.innerText)); b.querySelector('[data-ag="reabrir"]').click(); }); await page.waitForTimeout(900);
 const pz2 = (await ag()).filter(d => d.titulo === 'Contestação')[0];
 check(!pz2.concluido && !pz2.protocoladoEm, 'reabrir limpa a data do protocolo');
 // 5) editor com situação “concluído” pede a data do protocolo
-await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .ag-it')).find(x => /Contestação/.test(x.innerText)); b.querySelector('[data-ag="abrir"]').click(); }); await page.waitForTimeout(400);
+await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .agc')).find(x => /Contestação/.test(x.innerText)); b.click(); }); await page.waitForTimeout(350); await page.click('[data-agd="editar"]'); await page.waitForTimeout(400);
 await page.selectOption('#age_sit', 'feito'); await page.waitForTimeout(200);
 check(await page.evaluate(() => getComputedStyle(document.getElementById('age_prot_box')).display) !== 'none', 'no editor, marcar “Concluído” mostra o campo da data do protocolo');
 await page.fill('#age_protoc', dia(-2)); await page.click('[data-age="salvar"]'); await page.waitForTimeout(900);

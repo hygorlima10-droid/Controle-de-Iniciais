@@ -6,6 +6,9 @@
 import { createRequire } from 'node:module';
 const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
 const B = process.env.BASE || 'http://127.0.0.1:8812', SENHA = 'senha-de-teste-123';
+async function situacao(v){ await page.click('[data-ag="flt"]'); await page.click('[data-agf="sit"][data-v="' + v + '"]'); await page.click('[data-agf="ver"]'); await page.waitForTimeout(300); }
+async function abrirEditor(sel){ await page.click(sel + ' .agc-t'); await page.waitForTimeout(350); await page.click('[data-agd="editar"]'); await page.waitForTimeout(350); }
+
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), agora = new Date().toISOString();
 const dia = n => new Date(Date.parse(hoje + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
@@ -56,7 +59,7 @@ check(/Prazos, audiências e tarefas/.test(await t('#subtitle')) && /Semana/.tes
 await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(400);
 let lista = await t('#agWrap');
 check(/Réplica à contestação/.test(lista) && /da inicial/.test(lista) && /Recolher o sistema/.test(lista) && /via publicação/.test(lista), 'a Lista junta o prazo da inicial e o da publicação, com a origem de cada um');
-await page.click('.ag-it:has-text("Réplica") [data-ag="concluir"]'); await page.waitForTimeout(400);
+await page.click('.agc:has-text("Réplica") [data-ag="concluir"]'); await page.waitForTimeout(400);
 check(await page.evaluate(() => document.getElementById('overlayAgProt').classList.contains('show')), 'marcar protocolada pergunta a data do protocolo');
 await page.fill('#agp_data', dia(-1)); await page.fill('#agp_obs', 'protocolo 123'); await page.click('#agpOk'); await page.waitForTimeout(900);
 { const pz = (await f('GET', '/api/db/casos')).j.docs[0].data.prazo; check(pz.protocoladoEm === dia(-1) && pz.protocoloObs === 'protocolo 123', 'a data e a observação do protocolo ficam gravadas na própria Inicial'); }
@@ -81,19 +84,19 @@ check(aud && aud.hora === '14:30' && aud.data === dia(1) && JSON.stringify(aud.a
 // tarefa + concluir + reabrir
 await page.click('[data-ag="novo"]'); await page.waitForTimeout(300); await page.click('[data-age="tipo"][data-v="tarefa"]');
 await page.fill('#age_tit', 'Preparar inicial do cliente'); await page.fill('#age_data', hoje); await page.click('[data-age="salvar"]'); await page.waitForTimeout(1200);
-await page.click('.ag-it:has-text("Preparar inicial") [data-ag="concluir"]'); await page.waitForTimeout(900);
+await page.click('.agc:has-text("Preparar inicial") [data-ag="concluir"]'); await page.waitForTimeout(900);
 check(!/Preparar inicial/.test(await t('#agWrap')), 'tarefa concluída sai da lista');
-await page.click('[data-ag="feitos"]'); await page.waitForTimeout(400);
-check(/Preparar inicial/.test(await t('#agWrap')) && /Reabrir/.test(await t('#agWrap')), '"Concluídos" mostra de novo, com Reabrir');
-await page.click('.ag-it:has-text("Preparar inicial") [data-ag="reabrir"]'); await page.waitForTimeout(800);
+await situacao('todos');
+check(/Preparar inicial/.test(await t('#agWrap')) && await page.evaluate(() => !!document.querySelector('#agWrap [data-ag="reabrir"]')), '"Concluídos" (situação Todos) mostra de novo, com o ✓ que reabre');
+await page.click('.agc:has-text("Preparar inicial") [data-ag="reabrir"]'); await page.waitForTimeout(800);
 check((await ag()).find(d => d.titulo === 'Preparar inicial do cliente').concluido === false, 'Reabrir volta para a lista');
-await page.click('[data-ag="feitos"]');
+await situacao('abertos');
 // filtros
 await page.click('[data-ag="filtro"][data-v="audiencia"]'); await page.waitForTimeout(300);
 check(/Audiência de conciliação/.test(await t('#agWrap')) && !/Contestação/.test(await t('#agWrap')), 'filtro "Audiências"');
 await page.click('[data-ag="filtro"][data-v="tudo"]');
 // editar
-await page.click('.ag-it:has-text("Audiência de conciliação") [data-ag="abrir"]'); await page.waitForTimeout(400);
+await abrirEditor('.agc:has-text("Audiência de conciliação")');
 check((await page.evaluate(() => document.getElementById('age_hora').value)) === '14:30' && (await page.evaluate(() => document.getElementById('age_seg').style.display)) === 'none', 'editar abre os dados salvos');
 await page.fill('#age_hora', '15:00'); await page.click('[data-age="salvar"]'); await page.waitForTimeout(1000);
 check((await ag()).find(d => d.tipo === 'audiencia').hora === '15:00' && /15:00/.test(await t('#agWrap')), 'a edição é salva e aparece');
@@ -116,7 +119,7 @@ check(/[1-9]/.test(await page.evaluate(() => (document.getElementById('menuNAgen
 await page.click('[data-ag-ir="agenda"]'); await page.waitForTimeout(500);
 check(/Semana|Mês|Lista/.test(await t('#agSeg')), '"Ver agenda completa" abre a Agenda');
 // excluir
-await page.click('[data-ag="vista"][data-v="lista"]'); await page.click('.ag-it:has-text("Contestação") [data-ag="abrir"]'); await page.waitForTimeout(300);
+await page.click('[data-ag="vista"][data-v="lista"]'); await abrirEditor('.agc:has-text("Contestação")');
 await page.click('[data-age="excluir"]'); await page.waitForTimeout(150);
 check((await ag()).some(d => d.titulo === 'Contestação'), 'o primeiro toque em Excluir só pede confirmação');
 await page.click('[data-age="excluir"]'); await page.waitForTimeout(900);

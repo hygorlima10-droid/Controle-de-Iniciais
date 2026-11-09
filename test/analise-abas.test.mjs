@@ -36,7 +36,7 @@ for (const [v, nome] of [['semana', 'Semana'], ['lista', 'Lista'], ['quadro', 'Q
 }
 await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(300);
 check((await t('#agWrap')).match(/Audiência de conciliação/g).length === 1, 'sem repetir o mesmo cartão');
-await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .ag-it')).find(x => /conciliação/.test(x.innerText)); b.querySelector('[data-ag="concluir"]').click(); }); await page.waitForTimeout(900);
+await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#agWrap .agc')).find(x => /conciliação/.test(x.innerText)); b.querySelector('[data-ag="concluir"]').click(); }); await page.waitForTimeout(900);
 check(!/foi realizada\?/i.test(await t('#agWrap')), 'ao marcar como realizada, ela sai da lista');
 
 // 2) processo vindo só de Inicial, quitado e novo: não é "parado"

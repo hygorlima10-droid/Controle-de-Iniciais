@@ -71,7 +71,7 @@ check(ags.length === 1 && ags[0].data === dia(9), 'mudar a data atualiza a mesma
 // concluir a tarefa na Agenda: a ficha mostra concluída
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(600);
 await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(300);
-await page.click('.ag-it:has-text("Pedir penhora") [data-ag="concluir"]'); await page.waitForTimeout(900);
+await page.click('.agc:has-text("Pedir penhora") [data-ag="concluir"]'); await page.waitForTimeout(900);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(700);
 check(/✓ Pedir penhora/.test(await t('#prLista')), 'quando a tarefa é concluída, o cartão mostra ✓');
 await page.click('[data-pr="abrir"][data-n="' + d(N4) + '"]'); await page.waitForTimeout(500);
