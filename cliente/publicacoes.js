@@ -152,6 +152,8 @@ function pbMontarTela(){
     else if (a === 'ir') pbIrVinculo(id);
     else if (a === 'prazo') pbAbrirPrazoPub(id);
     else if (a === 'aud') pbCriarAudiencia(id);
+    else if (a === 'aud-livre') pbCriarAudiencia(id, true);
+    else if (a === 'tarefa') pbCriarTarefa(id);
     else if (a === 'rel'){ pbS.mAberto = false; pbRender(); rptPublicacoes(); }
     else if (a === 'pecas'){ pbS.mAberto = false; pbRender(); pbAbrirPecas(); }
   });
@@ -325,8 +327,18 @@ function pbAudNaAgenda(p, a){
   var ids = pbMembros(p).map(function(x){ return x.id; }), num = String(p.processo || '');
   return agDocs.some(function(d){ return d.tipo === 'audiencia' && ((d.audPubId && ids.indexOf(d.audPubId) >= 0) || (num && d.data === a.data && prNum(d.processo) === num && (!a.hora || !d.hora || d.hora === a.hora))); });
 }
-function pbCriarAudiencia(id){
-  var p = pbPub(id), a = p && pbAudDe(p); if (!a) return;
+/* audiência ou tarefa da Agenda a partir de uma publicação, mesmo quando o app não reconheceu nada no texto: abre o editor já com o processo, o cliente e o órgão; data e hora você informa */
+function pbCriarAudienciaLivre(p){
+  var v = pbVinculo(p.processo);
+  agAbrir(null, { tipo: 'audiencia', titulo: 'Audiência', processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: '', hora: '', audTipo: '', modalidade: '', local: [p.tribunal, p.orgao].filter(Boolean).join(' · '), link: '', audPubId: p.id });
+}
+function pbCriarTarefa(id){
+  var p = pbPub(id); if (!p) return; var v = pbVinculo(p.processo);
+  agAbrir(null, { tipo: 'tarefa', titulo: 'Providência' + (p.tipo ? ' — ' + p.tipo : ''), processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: '', audPubId: p.id });   /* audPubId só guarda a origem (aparece "via publicação"); não confirma prazo da publicação */
+}
+function pbCriarAudiencia(id, livre){
+  var p = pbPub(id), a = p && pbAudDe(p); if (!p) return;
+  if (!a){ if (livre) pbCriarAudienciaLivre(p); return; }
   var v = pbVinculo(p.processo), presencial = a.modalidade !== 'online';
   agAbrir(null, { tipo: 'audiencia', titulo: 'Audiência' + (a.tipo ? ' de ' + a.tipo.toLowerCase() : ''), processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: a.data, hora: a.hora, audTipo: a.tipo, modalidade: a.modalidade, local: presencial ? [p.tribunal, p.orgao].filter(Boolean).join(' · ') : '', link: a.link, audPubId: p.id });
 }
@@ -475,6 +487,8 @@ function pbMontarDetalhe(){
     else if (a === 'naoe'){ pbMarcar(pbMembros(pbPub(pbDetId)).map(function(x){ return x.id; }), { semPrazo: true, lida: true }); d.classList.remove('show'); toast('Marcada como sem prazo.'); }
     else if (a === 'manual'){ var m = qs('pbManualBox'); m.style.display = m.style.display === 'none' ? '' : 'none'; }
     else if (a === 'aud') pbCriarAudiencia(pbDetId);
+    else if (a === 'aud-livre') pbCriarAudiencia(pbDetId, true);
+    else if (a === 'tarefa') pbCriarTarefa(pbDetId);
     else if (a === 'peca'){ var st = pbPeca[pbDetId] = pbPeca[pbDetId] || {}; st.i = parseInt(b.getAttribute('data-i'), 10); pbDesenharDetalhe(); var bx = qs('pbPrazoBox'); if (bx && bx.scrollIntoView) bx.scrollIntoView(); }
     else if (a === 'registrar'){ var ps = pbPub(pbDetId), sl = ps && pbPecaSel(ps); if (sl) prRegistrar(ps, sl.peca + (sl.base ? ' (' + sl.base + ')' : '')); }
     else if (a === 'cadastrar') pbCadastrar(pbDetId);   /* a leitura continua aberta por baixo: depois de cadastrar, dá para marcar prazo ou lida */
@@ -511,6 +525,7 @@ function pbDesenharDetalhe(){
   else h += '<div class="saldo-data">Não consegui buscar o texto completo (' + escapeHtml(t.motivo || 'erro') + '). Abaixo, o trecho guardado.</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
   h += '<div class="pb-acts">' + (p.link ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener noreferrer">Abrir original no tribunal ↗</a>' : '') + '<button type="button" class="btn btn-ghost pb-b" data-pbd="copiar">Copiar texto</button></div>' +
     '<div class="pb-acts">' + (!v ? '<button type="button" class="btn btn-primary pb-b" data-pbd="cadastrar">Cadastrar processo</button>' : '<button type="button" class="btn btn-ghost pb-b" data-pbd="irproc">Abrir o processo</button>' + (v.arquivado ? '<button type="button" class="btn btn-primary pb-b" data-pbd="reabrirproc">Reabrir processo</button>' : '')) + '<button type="button" class="btn btn-ghost pb-b" data-pbd="naolida">Manter como não lida</button></div></div>';
+  { var au0 = pbAudDe(p); h += '<div class="pb-sec"><div class="pb-sec-t">Agenda</div><div class="saldo-data">Cadastre a partir desta publicação, mesmo que o app não tenha reconhecido nada no texto.</div><div class="pb-acts">' + (au0 ? '' : '<button type="button" class="btn btn-ghost pb-b" data-pbd="aud-livre">Criar audiência</button>') + '<button type="button" class="btn btn-ghost pb-b" data-pbd="tarefa">Criar tarefa</button></div></div>'; }
   h += '<div class="pb-sec pb-ia" id="pbPrazoBox">';
   if (pz){
     h += '<div class="pb-sec-t">Prazo confirmado</div><div class="pb-prazo-ok"><b>' + escapeHtml(fmtData(pz.data)) + '</b> <span>(' + escapeHtml(pbDiaSem(pz.data)) + ')</span><div class="saldo-data">' + escapeHtml(pz.descricao || '') + (pz.concluido ? ' · cumprido' : '') + '</div></div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" id="pbVerPrazo">Abrir prazo</button></div>';
