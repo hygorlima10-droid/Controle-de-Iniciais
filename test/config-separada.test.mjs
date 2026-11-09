@@ -1,7 +1,7 @@
 // Testa a separação da configuração (Fase 1, item 6): migração para configDono, tabela de coleções, compatibilidade do endereço antigo,
 // restauração de backup antigo e o Início só com honorários.
-// Precisa de um banco semeado ANTES de subir o servidor (ver /tmp/rodar_cfg.sh: config/planejamento, obra, personalizacao, vinculoIniciais, alertasDispensados, backup, modelosHonorario).
-//   BASE=http://127.0.0.1:8814 node test/config-separada.test.mjs   (servidor com LOGIN_ANTIGO=1)
+// Precisa de um banco semeado ANTES de subir o servidor (test/semente-config.sql). O test/rodar.mjs faz isso:  node test/rodar.mjs config-separada
+// (à mão: BASE=http://127.0.0.1:8814 DADOS=<pasta do banco> node test/config-separada.test.mjs, com o servidor em LOGIN_ANTIGO=1)
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import { checarColecao, resolverColecao } from '../src/colecoes.js';

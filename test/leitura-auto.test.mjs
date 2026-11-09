@@ -22,7 +22,7 @@ const f = (m, p, b) => fetch(B + p, { method: m, headers: { cookie: ck, 'content
 await f('PUT', '/api/db/config/backup', { ultimoEm: new Date().toISOString() });
 const br = await chromium.launch();
 async function abrir(opts = {}) {
-  const ctx = await br.newContext({ viewport: { width: 390, height: 900 } });
+  const ctx = await br.newContext({ viewport: { width: 390, height: 900 }, timezoneId: 'America/Sao_Paulo' });   // o servidor conta o dia no horário de Brasília; o navegador do teste tem de contar igual (senão, entre 21h e 0h de Brasília o dia do navegador já é o seguinte)
   if (opts.semAuto) await ctx.addInitScript(() => { try { localStorage.setItem('horus.leituraAuto', '0'); } catch (e) { /* sem armazenamento */ } });
   const page = await ctx.newPage(); await page.route(/fonts\./, x => x.abort());
   await page.goto(B + '/'); if (await page.$('input[name=senha]')) { await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); }

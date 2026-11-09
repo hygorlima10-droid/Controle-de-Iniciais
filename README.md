@@ -31,12 +31,13 @@ O mesmo app que rodava dentro do Claude, agora num servidor seu (Cloudflare), co
 ## Testar no computador
 ```
 npm install
-npm run banco:local
-npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8788
-node test/login.test.mjs   # login antigo (rode o servidor com --var LOGIN_ANTIGO:1)
-# acesso individual (servidor SEM LOGIN_ANTIGO, banco novo): node test/login-individual.test.mjs  e  node test/login-tela.test.mjs
-node test/e2e-local.mjs    # cadastra, recarrega e confere
+npm test                          # roda TODOS os testes (sobe e desliga os servidores sozinho, com banco novo; leva uns 15 minutos)
+node test/rodar.mjs --lista       # mostra os grupos e os testes
+node test/rodar.mjs login-tela    # só um teste (o servidor certo é escolhido sozinho)
+node test/rodar.mjs acesso-individual configuracao   # só alguns grupos
 ```
+`test/rodar.mjs` cuida de tudo: servidor local de cada grupo (portas 8790 a 8814, variáveis de teste como `LOGIN_ANTIGO=1`, Diário Oficial e DataJud simulados), banco novo, o banco semeado do teste de configuração (`test/semente-config.sql`) e o resultado final. Os logs de cada teste ficam na pasta `horus-testes` do diretório temporário. Os testes de tela precisam do Playwright instalado no computador. Cuidado: o script encerra qualquer `wrangler dev --local` que estiver aberto.
+Para desenvolver à mão: `npm run banco:local` e `npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8788`.
 
 ## Leitura de foto/PDF
 Crie o segredo `ANTHROPIC_API_KEY` (chave do Console do Claude) no Worker. Enquanto ele não existir, os botões de câmera ficam escondidos. Opcional: `MODELO_LEITURA` troca o modelo (padrão `claude-sonnet-5-5`). Limite de 200 leituras por dia.

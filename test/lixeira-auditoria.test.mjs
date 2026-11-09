@@ -61,7 +61,7 @@ check(ign && !ign.numeros['53686446720268090107'] && ign.numeros['999'], 'restau
 check((await f('GET', '/api/db/_lixeira')).s !== 200 && (await f('GET', '/api/db/_auditoria')).s !== 200, 'as áreas _lixeira e _auditoria não aparecem pela API do banco');
 check((await f('POST', '/api/lixeira/restaurar', { chave: 'nao|existe|1' })).s === 404, 'restaurar item que não existe dá 404');
 await f('DELETE', '/api/db/clientes/' + c1.j.id); const it4 = (await lix()).find(x => x.id === c1.j.id);
-try { execSync('npx wrangler d1 execute controle-juridico --local --persist-to /tmp/dev-data-pub --command "UPDATE docs SET atualizado = 1 WHERE colecao = \'_lixeira\' AND id = \'' + it4.chave.replace(/'/g, '') + '\'"', { stdio: 'pipe', cwd: '/home/user/Controle-de-Iniciais' }); } catch (e) { console.log('   (não consegui envelhecer o item: ' + String(e.message).slice(0, 80) + ')'); }
+try { execSync('npx wrangler d1 execute controle-juridico --local --persist-to ' + (process.env.DADOS || '/tmp/dev-data-pub') + ' --command "UPDATE docs SET atualizado = 1 WHERE colecao = \'_lixeira\' AND id = \'' + it4.chave.replace(/'/g, '') + '\'"', { stdio: 'pipe', cwd: '/home/user/Controle-de-Iniciais' }); } catch (e) { console.log('   (não consegui envelhecer o item: ' + String(e.message).slice(0, 80) + ')'); }
 check(!(await lix()).some(x => x.id === c1.j.id) && (await f('POST', '/api/lixeira/restaurar', { chave: it4.chave })).s === 404, 'item com mais de 30 dias some da lista e não pode ser restaurado');
 // 8) paginação do registro e filtro por tipo
 for (let i = 0; i < 5; i++) await f('POST', '/api/db/despesas', { nome: 'Despesa ' + i, valor: i });

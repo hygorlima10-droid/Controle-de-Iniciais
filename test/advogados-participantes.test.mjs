@@ -1,6 +1,6 @@
 // Testa o registro dos advogados participantes: a partir das publicações do DJEN (advs e OABs que acharam o processo), os advogados NOSSOS
 // (OABs cadastradas) são gravados em processos, Iniciais, Acordos e Alvarás; advogados de fora não entram; nada é tirado; a importação já grava.
-// O Diário Oficial é simulado na porta 8890.   Servidor: ver /tmp/rodar_v.sh (LOGIN_ANTIGO=1, DJEN_URL na 8890).
+// O Diário Oficial é simulado na porta 8890.   Rode:  node test/rodar.mjs advogados-participantes
 import http from 'node:http';
 const B = process.env.BASE || 'http://127.0.0.1:8812', SENHA = 'senha-de-teste-123';
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
