@@ -1,6 +1,6 @@
 # Horus — Banco Central de Ícones (especificação recebida em 08/11/2026)
 
-Status: **aprovado como ideia; implementação na Fase 2 (não começar antes).** Este arquivo guarda o que foi decidido, a validação técnica já feita e o catálogo recebido (transcrito de forma compacta), para não depender da conversa.
+Status: **etapa 2.1 (base técnica invisível) FEITA em 09/11/2026**: `cliente/icones-dados.js` (gerado), `cliente/icones.js` e `cliente/gerar_icones.py`, teste `icones`. Nenhuma tela usa os ícones novos ainda (seletor e telas: etapas 2.2 a 2.5). Aprovado como ideia; implementação na Fase 2. Este arquivo guarda o que foi decidido, a validação técnica já feita e o catálogo recebido (transcrito de forma compacta), para não depender da conversa.
 
 ## 1. Decisões e opinião
 - **Quando:** em três partes, todas depois da Fase 1 (segurança/integridade não mistura com visual):
@@ -15,6 +15,12 @@ Status: **aprovado como ideia; implementação na Fase 2 (não começar antes).*
 - **Acesso:** os ícones financeiros e da obra só aparecem em telas do proprietário; o catálogo em si não tem dado sensível.
 - **Fontes de logos indicadas pelo proprietário (08/11):** Itaú (Wikimedia Commons, `File:Itaú_Unibanco_logo_2023.svg`), Sicoob (Wikimedia Commons, `File:Sicoob_Logo.png`), C6 Bank (seeklogo.com, vector 384717) e Caixa (seeklogo.com, vector 24768). Na Fase 3: baixar, conferir a licença/diretrizes de marca de cada arquivo e guardar em `public/icones/bancos/`. Os demais bancos seguem com selo de inicial e cor até haver arquivo.
 - **Logos de bancos:** são marcas registradas. Não baixar de fontes aleatórias: usar arquivos oficiais fornecidos pelo proprietário (SVG/PNG transparente, versões para fundo claro e escuro) ou, enquanto não houver, um **selo com a inicial e a cor** da instituição. “Instituição não encontrada” usa um ícone de banco genérico. A logo não substitui o nome da conta (duas contas Itaú, PJ e PF, continuam com nomes diferentes).
+
+### Como a base funciona (2.1)
+- **Dados:** `cliente/icones-dados.js` é gerado por `python3 cliente/gerar_icones.py <pasta do pacote lucide-static>` a partir da seção 3 deste arquivo (477 situações; 259 desenhos do Lucide 1.70.0, ~47 KB de SVG; os 7 nomes que o Lucide não tem usam substitutos). Para acrescentar ou trocar um ícone: editar a seção 3 e rodar o gerador; **ids existentes nunca mudam** (se for preciso, o id antigo entra em `IC_ALIAS`).
+- **Identificador:** `<família>_<nome>` sem acento (ex.: `transporte_combustivel`). Grava-se só o id no lançamento, nunca o SVG.
+- **API (funções globais da tela):** `icResolver({ icone, rotulo, cor })` (ícone gravado → regras antigas de `ctVisual` → nome igual ao do catálogo → o mesmo padrão que o app já mostrava), `icBuscar(texto)` (sem acento, com sinônimos e família), `icSvg(id, {tamanho, cor})`, `icBolinha(res, peq)` (a mesma forma de `ctIcone`/`fvIc`), `icFamilias()`.
+- **Fase 3 (não feito):** logos de bancos e regras de reconhecimento de extrato (linhas “Instituições” e “Reconhecimento” da seção 3 ficam fora do catálogo).
 
 ## 2. Validação dos nomes na biblioteca (Lucide 1.70.0, testada em 08/11/2026)
 De **262 nomes distintos** da especificação: **239** existem com o nome atual; **16** existem só como nome antigo (funcionam, mas ao implementar usar o nome novo): `alert-circle`→`circle-exclamation-point`, `alert-triangle`/`triangle-alert`→`triangle-exclamation-point`, `building-2`→`building-complex`, `check-circle`→`circle-check-big`, `check-circle-2`→`circle-check`, `circle-help`→`circle-question-mark`, `file-signature`→`file-pen-line`, `file-warning`→`file-exclamation-point`, `history`→`rotate-ccw-clock`, `music`→`eighth-notes`, `parking-circle`→`circle-letter-p`, `pause-circle`→`circle-pause`, `trash-2`→`trash`, `waves`→`waves-horizontal`, `x-circle`→`circle-x`. A biblioteca renomeia ícones com frequência: por isso o catálogo grava **o nosso id** (`finance_fuel`) e o nome do Lucide fica só dentro do catálogo, fácil de trocar numa atualização; **7 não existem**:

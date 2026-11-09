@@ -37,6 +37,11 @@ Observação: `ler` e `pergunte` só passam com servidor de Claude simulado (por
 - **Tabela de coleções** (`src/colecoes.js`): coleção fora da tabela é recusada; coleções de finanças e `configDono` só abrem para o proprietário (a checagem de papel já está no servidor, vale quando existirem outros usuários).
 - **Voltar atrás:** o original de cada documento ficou em `_sistema/cfg-antes-<nome>`. Para desfazer: copiar esses registros de volta para `config` (`INSERT ... SELECT 'config', substr(id,11), dados ...`), apagar de `configDono` e apagar a marca `mig-config-dono-v1` (ou usar o Time Travel de 7 dias do D1).
 
+## Fase 2 (iniciada em 09/11/2026)
+- Esboço aprovado (versão 2, com gráficos clicáveis e cartões interativos, mesma identidade visual). Ordem aprovada: **2.1 base de ícones (FEITO)**; 2.2 peça padrão do módulo (cabeçalho, indicadores clicáveis, sub-abas, gráficos) em Iniciais, Acordos e Alvarás; 2.3 Processos, Clientes, Publicações e Agenda; 2.4 Financeiro e Construção (dashboard financeiro, análises, listas padronizadas); 2.5 seletor de ícones.
+- Regras: gráficos desenhados pelo app (SVG, sem biblioteca), usando os cálculos existentes (nada de fórmula paralela); tracejado = previsto; sub-abas iguais, que lembram a última usada; indicador não permitido ao usuário nem é desenhado; Início continua como está (o proprietário vê a síntese financeira).
+- 2.1: ver `docs/ICONES.md` (“Como a base funciona”).
+
 ## Agenda renovada (09/11/2026, antes da Fase 2)
 - Pedido do proprietário a partir do Control Jus: tocar no compromisso para ver detalhes, **copiar o número do processo** (ícone de dois retângulos; **sem botão “abrir no tribunal”**, decidido), atalhos de situação (A fazer, Em andamento, Concluído, **Cancelado**), WhatsApp **para o cliente e para a equipe**, e visual no padrão do restante do app (o primeiro esboço foi recusado por parecer antigo; esta versão foi feita direto com os componentes reais). Teste `agenda-detalhe`; testes de agenda, audiências, relatórios e importação foram ajustados (cartão `.agc`, filtros em “Filtros”, Relatório e Importar no menu ⋯).
 - Ideias ainda não feitas: exportar audiências para o calendário do iPhone (.ics), histórico do compromisso no detalhe, semana em linha do tempo por horário.

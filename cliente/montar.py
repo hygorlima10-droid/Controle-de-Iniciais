@@ -114,6 +114,13 @@ if '/*AGD-INICIO*/' in s:
 else:
     assert s.count('/*AGI-FIM*/\n') == 1
     s = s.replace('/*AGI-FIM*/\n', '/*AGI-FIM*/\n' + bloco_agd)
+ic_dados = open(R + 'cliente/icones-dados.js', encoding='utf-8').read(); ic_js = open(R + 'cliente/icones.js', encoding='utf-8').read()
+bloco_ic = '/*IC-INICIO*/\n' + ic_dados + '\n' + ic_js + '\n/*IC-FIM*/\n'
+if '/*IC-INICIO*/' in s:
+    s = re.sub(r'/\*IC-INICIO\*/.*?/\*IC-FIM\*/\n', lambda m: bloco_ic, s, flags=re.S)
+else:
+    assert s.count('/*AGD-FIM*/\n') == 1
+    s = s.replace('/*AGD-FIM*/\n', '/*AGD-FIM*/\n' + bloco_ic)
 def repm(marcador, old, new):
     if marcador in s: return
     rep(old, new)
