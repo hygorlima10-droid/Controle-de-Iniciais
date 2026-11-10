@@ -10,6 +10,7 @@ const OFX = `OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\n\n<OFX><BANKMSGSRSV1><STM
 { const l = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.1' } }); const c0 = l.headers.get('set-cookie').split(';')[0];
   for (const col of ['extratos', 'config']) for (const d of (await (await fetch(B + '/api/db/' + col, { headers: { cookie: c0 } })).json()).docs) await fetch(B + '/api/db/' + col + '/' + d.id, { method: 'DELETE', headers: { cookie: c0 } });
   for (const d of (await (await fetch(B + '/api/recebidos', { headers: { cookie: c0 } })).json()).itens) await fetch(B + '/api/recebidos/' + d.id, { method: 'DELETE', headers: { cookie: c0 } }); }
+const api0 = async (m, p, b) => { const l = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.2' } }); return fetch(B + p, { method: m, headers: { cookie: l.headers.get('set-cookie').split(';')[0], 'content-type': 'application/json' }, body: JSON.stringify(b) }); };
 const env = (n, o = {}) => fetch(B + '/api/enviar', { method: 'POST', ...o, headers: { ...(o.headers || {}) } });
 let r = await env(0, { body: 'x' }); check(r.status === 401, 'enviar sem token: 401');
 r = await env(0, { body: 'x', headers: { authorization: 'Bearer errado' } }); check(r.status === 401, 'enviar com token errado: 401');
@@ -28,13 +29,11 @@ r = await fetch(B + '/api/db/_recebidos', { headers: { cookie: ck } }); check(r.
 // tela
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 400, height: 860 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
 if (fs.existsSync(PDFJS + 'pdf.min.js')) { await page.route(/cdnjs.*pdf\.min\.js/, r => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(PDFJS + 'pdf.min.js') })); await page.route(/cdnjs.*pdf\.worker\.min\.js/, r => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(PDFJS + 'pdf.worker.min.js') })); }
-await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(1500);
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(5000);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="extratos"]').click()); await page.waitForTimeout(1200);
 const topo = () => page.evaluate(() => document.getElementById('extTopo').innerText);
 check(/Escolher extratos/.test(await topo()) && !/Drive/.test(await topo()), 'tela Extratos oferece "Escolher extratos" (sem pedir pasta do Drive)');
-check(/Recebidos pelo Compartilhar \(2\)/.test(await topo()), 'mostra os 2 arquivos recebidos pelo Compartilhar');
-await page.click('#impLerRec'); await page.waitForTimeout(2500);
-check(/Li 2 arquivo/.test(await topo()) && !/Recebidos pelo Compartilhar/.test(await topo()), 'ler os recebidos: leu 2 e limpou a lista de recebidos');
+check(/Li 2 arquivo/.test(await topo()) && !/Recebidos pelo Compartilhar/.test(await topo()), 'os 2 arquivos que estavam esperando foram lidos sozinhos ao abrir o app (leitura automática) e saíram da lista de recebidos');
 let docs = await page.evaluate(async () => (await (await fetch('/api/db/extratos')).json()).docs.filter(d => d.data.tipo === 'arquivo').map(d => d.data));
 check(docs.length === 2 && docs.every(d => d.status === 'pendente' && d.banco === 'Itaú' && d.chave === 'itau-0123-45678-9'), 'OFX: 2 extratos pendentes do Itaú, conta itau-0123-45678-9');
 check(docs[0].lanc.length === 2 && docs[0].lanc.some(l => l.v === 300000) && docs[0].lanc.some(l => l.v === -120050 && l.n === 'IMOBILIARIA XPTO'), 'OFX: valores em centavos, vírgula decimal e contraparte lidos');
@@ -66,6 +65,27 @@ await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').
 await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await page.waitForTimeout(1000);
 check(Number((await page.evaluate(() => document.getElementById('menuNExtratos').textContent)).trim() || 0) === menuAntes + 1, 'o menu Extratos passa a contar o arquivo recebido esperando leitura (+1)');
 await page.evaluate(() => document.querySelector('#drawer [data-tab="extratos"]').click()); await page.waitForTimeout(1200);
-check(/Recebidos pelo Compartilhar \(1\)/.test(await topo()) && /Entradas_Saidas_teste/.test(await topo()), 'ao abrir Extratos, o arquivo novo aparece na lista de recebidos (sem reabrir o app)');
+await page.waitForTimeout(2500);
+check(!/Recebidos pelo Compartilhar/.test(await topo()) && (await page.evaluate(async () => (await (await fetch('/api/recebidos')).json()).itens.length)) === 0, 'o arquivo novo foi lido sozinho (sem reabrir o app) e não ficou na lista de recebidos');
+check(/Li 1 arquivo/.test(await topo()) || /Nenhum arquivo novo|já tinha/.test(await topo()), 'a tela de Extratos mostra o resultado da leitura automática');
+// conta da obra: opção por conta; saldo comparado com a aba Construção e linhas só para conferência
+await api0('PUT', '/api/db/config/obra', { nome: 'Casa', criada: true, orcamentoTotal: 100000, criadoEm: new Date().toISOString(), financiamento: {}, etapas: [{ id: 'e1', nome: 'Terraplanagem', orcado: 20000, status: 'andamento', ordem: 1 }], contratos: [] });
+await api0('PUT', '/api/db/obraMov/a1', { tipo: 'aporte', origem: 'externo', data: '2026-10-05', valor: 1000, criadoEm: new Date().toISOString() });
+await page.reload(); await page.waitForTimeout(3500);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="extratos"]').click()); await page.waitForTimeout(1000);
+await page.click('#extContas'); await page.waitForTimeout(500);
+check(await page.evaluate(() => document.querySelectorAll('#extCorpo [data-ctaobra]').length) >= 1, 'Contas: cada conta tem a opção "É dinheiro da obra"');
+await page.evaluate(() => { document.querySelector('#extCorpo [data-ctaobra="itau-0123-45678-9"]').click(); }); await page.waitForTimeout(1200);
+const cfg2 = await page.evaluate(async () => (await (await fetch('/api/db/config')).json()).docs.find(d => d.id === 'extratos').data);
+check(cfg2.contas['itau-0123-45678-9'].obra === true && Object.values(cfg2.contas).filter(c => c.obra).length === 1, 'marcar a conta como dinheiro da obra fica salvo (só ela)');
+await page.click('#extGenCancelar'); await page.waitForTimeout(300);
+await page.click('#extConferir'); await page.waitForTimeout(1500);
+const conf2 = await page.evaluate(() => document.getElementById('extCorpo').innerText);
+check(/Saldo da conta da obra/.test(conf2) && /Aba Construção/.test(conf2) && /Diferença de/.test(conf2) && /não altera a PF nem a PJ/.test(conf2), 'conferência: o saldo da conta da obra é comparado com a aba Construção (mostra a diferença) e não mexe na PF/PJ');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#extCorpo .ext-arq')).filter(e => /^Saldo da P[FJ]/.test(e.innerText)).every(e => !/45678-9/.test(e.innerText))), 'o saldo da conta da obra não entra na soma do saldo da PF nem da PJ');
+check(await page.evaluate(() => { const l = Array.from(document.querySelectorAll('#extLinhas [data-lin]')).filter(e => /IMOBILIARIA XPTO/.test(e.innerText)); return l.length > 0 && l.every(e => { const s = e.querySelector('select[data-campo="act"]'); return s && (s.value === 'ignorar' || s.value === 'ja'); }); }), 'as linhas da conta da obra ficam como ignorar / já lançado (nada vira despesa da PF)');
+await page.click('#extGenCancelar'); await page.waitForTimeout(300);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="obra"]').click()); await page.waitForTimeout(1200);
+check(/Extrato da conta da obra/.test(await page.evaluate(() => document.getElementById('obraWrap').innerText)) || /Extrato da conta da obra/.test(await page.evaluate(() => document.getElementById('obraWrap').textContent)), 'na aba Construção aparece a comparação com o extrato da conta da obra');
 check(erros.length === 0, 'sem erros de script' + (erros.length ? ' -> ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? falhas + ' FALHAS' : 'tudo ok'); process.exit(falhas ? 1 : 0);

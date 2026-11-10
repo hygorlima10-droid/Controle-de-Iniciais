@@ -161,6 +161,7 @@ function mfObraResumo(r, cfg){
     '<b class="mf-big' + (r.saldo < -0.004 ? ' neg' : '') + '"' + (r.saldo < -0.004 ? ' style="color:var(--urgente,#D93B3B)"' : '') + '>' + fmtMoeda(r.saldo) + '</b>' + obBarra(r.pago, r.aPagar, r.orcamento) +
     '<div class="md-foot">Gasto ' + fmtMoeda(r.pago) + ' · ' + fmtPerc(perc) + ' do orçamento' + (r.aPagar > 0.004 ? ' · a pagar ' + fmtMoeda(r.aPagar) : '') + '</div>' +
     '<div class="md-foot">Aportes ' + fmtMoeda(r.aportado) + (r.liberado > 0.004 ? ' + liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' − devolvido ' + fmtMoeda(r.retirado) : '') + ' − gastos pagos.' + (r.sobra > 0.004 && r.etapas.length ? ' Sobra acima do que falta gastar nas etapas: ' + fmtMoeda(r.sobra) + '.' : '') + '</div></div>';
+  var cmpObra = extObraComparacaoHtml(); if (cmpObra) hero = hero.replace(/<\/div>$/, '<div class="md-foot">' + cmpObra + '</div></div>');
   var nAPagar = obraMov.filter(function(m){ return m.tipo === 'gasto' && m.status === 'apagar'; }).length;
   var kp = [
     { ir: 'sub:etapas', ic: 'hard-hat', cor: MD_COR.ouro, rot: 'Orçamento', v: fmtMoeda(r.orcamento), foot: r.orcamento > 0 ? fmtPerc(r.detalhado / r.orcamento * 100) + ' detalhado em etapas' : 'sem orçamento definido' },
