@@ -1527,6 +1527,7 @@
 
 
 
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -9610,7 +9611,7 @@
     else if (tab === 'alvaras') renderAlvaras();
     else if (tab === 'clientes') renderClientes();
     else if (tab === 'arquivados') renderArquivados();
-    else if (tab === 'extratos') renderExtratos();
+    else if (tab === 'extratos'){ renderExtratos(); if (window.__SERVIDOR) impVerRecebidos(); }   /* os arquivos mandados pelo Atalho do iPhone aparecem ao abrir a tela, sem precisar reabrir o app */
     else if (tab === 'analises') renderAnalises();
     else if (tab === 'obra') renderObra();
     else if (tab === 'publicacoes') pbRender();
@@ -9666,7 +9667,7 @@
     def('menuNPeticoes', casoAtivos().length);
     def('menuNAcordos', acordos.filter(function(a){ return !a.arquivado; }).length);
     def('menuNAlvaras', alvaras.filter(function(a){ return !a.arquivado; }).length);
-    def('menuNExtratos', extPendentes().length);
+    def('menuNExtratos', extPendentes().length + ((typeof impEstado !== 'undefined' && impEstado.recebidos) ? impEstado.recebidos.length : 0));
   }
   function abrirMenu(){
     qs('drawer').classList.add('open');
@@ -13697,7 +13698,7 @@ function impLerArquivos(files){
   return cadeia.then(function(){ return persistExtCfg({ ultimaLeitura: new Date().toISOString(), iniciado: true }); }).then(function(){ impResumir(res, falhas); }).then(function(){ impEstado.rodando = false; renderExtratos(); renderInicioExtratos(); renderPainelAtencao(); });
 }
 function impVerRecebidos(){
-  return fetch('/api/recebidos', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ impEstado.recebidos = (j && j.itens) || []; impEstado.carregou = true; renderExtratos(); }).catch(function(){ impEstado.carregou = true; });
+  return fetch('/api/recebidos', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ impEstado.recebidos = (j && j.itens) || []; impEstado.carregou = true; renderExtratos(); renderInicioExtratos(); try{ renderPainelAtencao(); }catch(e){} }).catch(function(){ impEstado.carregou = true; });
 }
 function impB64ParaBuf(b64){ var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
 function impLerRecebidos(){
@@ -13742,7 +13743,7 @@ document.addEventListener('change', function(ev){
   if (t && t.id === 'impArq'){ var fs = Array.prototype.slice.call(t.files || []); t.value = ''; impLerArquivos(fs); }
   else if (t && t.id === 'impCorte' && /^\d{4}-\d{2}-\d{2}$/.test(t.value)){ persistExtCfg({ dataCorte: t.value }).then(function(){ impEstado.info = 'Data de corte atualizada.'; renderExtratos(); }); }
 });
-if (window.__SERVIDOR) impVerRecebidos();
+if (window.__SERVIDOR){ impVerRecebidos(); document.addEventListener('visibilitychange', function(){ if (!document.hidden) impVerRecebidos(); }); }   /* ao voltar para o app (por exemplo, depois de mandar pelo Atalho), confere se chegou arquivo novo */
 
 /* ---------- telas: Extratos, Início, aviso ---------- */
 function extLinhasPendentes(){ var n = 0; extPendentes().forEach(function(d){ n += (d.lanc || []).length; }); return n; }
@@ -13802,12 +13803,12 @@ function renderExtratos(){
 }
 function renderInicioExtratos(){
   var el = qs('inicioExtratos'); if (!el) return;
-  var pend = extPendentes();
-  var gr = document.querySelector('.ini-grid'); if (gr) gr.classList.toggle('sem-extr', !pend.length);
-  if (!pend.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  var pend = extPendentes(), rec = (typeof impEstado !== 'undefined' && impEstado.recebidos) || [];
+  var gr = document.querySelector('.ini-grid'); if (gr) gr.classList.toggle('sem-extr', !pend.length && !rec.length);
+  if (!pend.length && !rec.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
   var n = 0; pend.forEach(function(d){ n += (d.lanc || []).length; });
   el.style.display = '';
-  el.innerHTML = '<div class="financeiro-secao-head"><h4>Extratos para conferir</h4><button type="button" class="btn-text" id="inicioAbrirExtratos">Abrir</button></div><div class="ini-card"><b>' + pend.length + '</b> extrato(s) lido(s) do Drive, com <b>' + n + '</b> linha(s) esperando a sua conferência.</div>';
+  el.innerHTML = '<div class="financeiro-secao-head"><h4>Extratos para conferir</h4><button type="button" class="btn-text" id="inicioAbrirExtratos">Abrir</button></div><div class="ini-card">' + (rec.length ? '<div><b>' + rec.length + '</b> arquivo(s) recebido(s) do celular esperando leitura. Abra Extratos e toque em “Ler os recebidos”.</div>' : '') + (pend.length ? '<div><b>' + pend.length + '</b> extrato(s) lido(s), com <b>' + n + '</b> linha(s) esperando a sua conferência.</div>' : '') + '</div>';
 }
 function extAvisoQuinzenal(){
   var cfg = extCfg();

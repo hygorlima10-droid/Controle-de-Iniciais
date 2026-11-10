@@ -59,5 +59,13 @@ if (pdfs.length && fs.existsSync(PDFJS + 'pdf.min.js')) {
   const conf = await page.evaluate(() => document.getElementById('extCorpo').innerText);
   check(conf.length > 200 && /R\$/.test(conf), 'a tela de conferência abre com as linhas dos extratos lidos');
 } else console.log('  (PDFs reais ou pdf.js local não encontrados: etapa dos PDFs ignorada)');
+// arquivo mandado pelo Atalho com o app JÁ aberto: aparece ao abrir a tela de Extratos, sem reabrir o app (e avisa no menu)
+const menuAntes = Number((await page.evaluate(() => document.getElementById('menuNExtratos').textContent)).trim() || 0);
+r = await env(0, { body: Buffer.from(OFX.replace('A1', 'C1').replace('A2', 'C2')), headers: { authorization: 'Bearer ' + TOKEN, 'x-nome': encodeURIComponent('Entradas_Saidas_teste'), 'content-type': 'application/pdf' } }); check(r.status === 200, 'Atalho manda mais um arquivo com o app aberto');
+await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await page.waitForTimeout(500);
+await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await page.waitForTimeout(1000);
+check(Number((await page.evaluate(() => document.getElementById('menuNExtratos').textContent)).trim() || 0) === menuAntes + 1, 'o menu Extratos passa a contar o arquivo recebido esperando leitura (+1)');
+await page.evaluate(() => document.querySelector('#drawer [data-tab="extratos"]').click()); await page.waitForTimeout(1200);
+check(/Recebidos pelo Compartilhar \(1\)/.test(await topo()) && /Entradas_Saidas_teste/.test(await topo()), 'ao abrir Extratos, o arquivo novo aparece na lista de recebidos (sem reabrir o app)');
 check(erros.length === 0, 'sem erros de script' + (erros.length ? ' -> ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? falhas + ' FALHAS' : 'tudo ok'); process.exit(falhas ? 1 : 0);
