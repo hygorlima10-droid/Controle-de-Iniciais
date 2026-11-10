@@ -292,15 +292,60 @@ function pbDesenharPecas(){
 }
 
 function pbPecaPrincipal(pc){ if (!pc) return null; for (var i = 0; i < pc.itens.length; i++) if (pc.itens[i].principal) return pc.itens[i]; return null; }
+/* ---------- seletor ▾ do campo "Descrição": todas as peças cadastradas (Fase 3, etapa 3.1) ----------
+   Serve para quando a peça sugerida não é a do andamento do processo: escolher aqui preenche descrição, dias, contagem e
+   recalcula o vencimento (mesma conta de sempre). A sugestão de cima não muda. Ao confirmar, a escolha entra no aprendizado. */
+var PB_CAT_EXEC = { 'exec-extra': 1, 'cumpr-pagar': 1, 'exeq-bens': 1, 'penhora-exec': 1, 'penhora-exeq': 1, 'leilao': 1, 'calculos': 1, 'impug-cumpr-rejeitada': 1 };
+var PB_CAT_GRUPOS = ['Manifestações e defesas', 'Recursos', 'Execução e cumprimento', 'Aprendidas com você'];
+var pbCat = { id: '', itens: [] };
+function pbCatLista(p, pc){
+  var t = pbTextos[p.id], sug = (t && t.ok && t.sug) || p.sug, vistos = {}, itens = [];
+  PC_REGRAS.forEach(function(rg){ (rg.itens || []).forEach(function(it){
+    if (it.kind === 'registro' || !(it.dias || it.dias === 'texto') || vistos[it.peca]) return;
+    vistos[it.peca] = 1;
+    var x = { rid: 'catalogo', peca: it.peca, base: it.base, kind: it.kind || 'manif', nota: '', dias: it.dias, contagem: 'uteis', origemPrazo: 'lei', principal: false, grupo: it.kind === 'recurso' ? 'Recursos' : (PB_CAT_EXEC[rg.id] ? 'Execução e cumprimento' : 'Manifestações e defesas') };
+    if (x.dias === 'texto'){ x.dias = sug && sug.dias ? sug.dias : (it.padrao || 5); x.origemPrazo = sug && sug.dias ? 'texto' : 'supletivo'; if (sug && sug.tipo === 'corridos') x.contagem = 'corridos'; }
+    itens.push(x);
+  }); });
+  if (pc && pc.instancia === 'juizado'){ try{ itens = pcJuizado(itens).filter(function(x){ return x.dias; }); }catch(e){} }
+  itens.sort(function(a, b){ return a.peca.localeCompare(b.peca, 'pt-BR'); });
+  pbAprend.forEach(function(e){ if (e.tipo === 'regra' || e.ativa === false || !e.peca) return; itens.push({ rid: 'catalogo', peca: e.peca, base: e.base || 'aprendida com você', kind: e.kind || 'manif', nota: 'você usou ' + (e.usos || 1) + ((e.usos || 1) === 1 ? ' vez' : ' vezes'), dias: e.dias || 5, contagem: e.contagem || 'uteis', origemPrazo: 'aprendida', principal: false, grupo: 'Aprendidas com você' }); });
+  itens.forEach(function(x, k){ x._k = k; });
+  return itens;
+}
+function pbCatHtml(filtro){
+  var q = pcNorm(filtro || ''), h = '';
+  PB_CAT_GRUPOS.forEach(function(g){
+    var l = pbCat.itens.filter(function(x){ return x.grupo === g && (!q || pcNorm(x.peca + ' ' + x.base).indexOf(q) >= 0); });
+    if (!l.length) return;
+    h += '<div class="pb-cat-g">' + escapeHtml(g) + '</div>' + l.map(function(x){ return '<button type="button" class="pb-cat-i" data-pbd="cat" data-k="' + x._k + '"><span>' + escapeHtml(x.peca) + '</span><small>' + x.dias + ' dias ' + (x.contagem === 'corridos' ? 'corridos' : 'úteis') + ' · ' + escapeHtml(x.base) + '</small></button>'; }).join('');
+  });
+  return h || '<div class="saldo-data" style="padding:10px 12px">Nenhuma peça com esse nome.</div>';
+}
+function pbCatAbrir(){
+  var p = pbPub(pbDetId), box = qs('pbCatBox'), bt = qs('pbCatBtn'); if (!p || !box) return;
+  if (!box.hidden){ box.hidden = true; if (bt) bt.setAttribute('aria-expanded', 'false'); return; }
+  pbCat = { id: p.id, itens: pbCatLista(p, pbPecasDe(p)) };
+  box.innerHTML = '<input type="text" id="pbCatBusca" class="pb-cat-busca" placeholder="Digite para filtrar as peças…" autocomplete="off"><div class="pb-cat-lista" id="pbCatLista">' + pbCatHtml('') + '</div>';
+  box.hidden = false; if (bt) bt.setAttribute('aria-expanded', 'true');
+  var b = qs('pbCatBusca'); if (b) b.focus();
+}
+function pbCatEscolher(k){
+  var it = pbCat.itens[k]; if (!it || pbCat.id !== pbDetId) return;
+  var st = pbPeca[pbDetId] = pbPeca[pbDetId] || {}; st.cat = JSON.parse(JSON.stringify(it)); pbDesenharDetalhe();
+  var bx = qs('pbPrazoBox'); if (bx && bx.scrollIntoView) bx.scrollIntoView();
+}
+document.addEventListener('input', function(ev){ var t = ev.target; if (t && t.id === 'pbCatBusca'){ var l = qs('pbCatLista'); if (l) l.innerHTML = pbCatHtml(t.value); } });
 function pbPecaIdx(p, pc){
-  var st = pbPeca[p.id]; if (st && typeof st.i === 'number' && pc.itens[st.i]) return st.i;
+  var st = pbPeca[p.id]; if (st && st.cat) return -1;   /* peça escolhida na lista completa: nenhuma das sugeridas fica marcada */
+  if (st && typeof st.i === 'number' && pc.itens[st.i]) return st.i;
   for (var i = 0; i < pc.itens.length; i++) if (pc.itens[i].principal) return i;
   return -1;
 }
-function pbPecaSel(p){ var pc = pbPecasDe(p); if (!pc) return null; var i = pbPecaIdx(p, pc); return i >= 0 ? pc.itens[i] : null; }
+function pbPecaSel(p){ var st0 = pbPeca[p.id]; if (st0 && st0.cat) return st0.cat; var pc = pbPecasDe(p); if (!pc) return null; var i = pbPecaIdx(p, pc); return i >= 0 ? pc.itens[i] : null; }
 function pbPecaPoloSet(id, polo){
   var p = pbPub(id); if (!p) return; var t = pbTextos[id], st = pbPeca[id] = pbPeca[id] || {};
-  st.polo = polo; st.i = null; st.pc = sugerirPecas({ tipo: p.tipo, comunic: p.comunic, classe: p.classe, orgao: p.orgao, tribunal: p.tribunal, texto: (t && t.ok && t.texto) ? t.texto : p.trecho, dest: [{ n: 'Cliente', p: polo }], diasTexto: (t && t.ok && t.sug) || p.sug });
+  st.polo = polo; st.i = null; st.cat = null; st.pc = sugerirPecas({ tipo: p.tipo, comunic: p.comunic, classe: p.classe, orgao: p.orgao, tribunal: p.tribunal, texto: (t && t.ok && t.texto) ? t.texto : p.trecho, dest: [{ n: 'Cliente', p: polo }], diasTexto: (t && t.ok && t.sug) || p.sug });
   pbDesenharDetalhe();
 }
 function pbPecaHtml(p, pc){
@@ -497,7 +542,9 @@ function pbMontarDetalhe(){
     else if (a === 'aud') pbCriarAudiencia(pbDetId);
     else if (a === 'aud-livre') pbCriarAudiencia(pbDetId, true);
     else if (a === 'tarefa') pbCriarTarefa(pbDetId);
-    else if (a === 'peca'){ var st = pbPeca[pbDetId] = pbPeca[pbDetId] || {}; st.i = parseInt(b.getAttribute('data-i'), 10); pbDesenharDetalhe(); var bx = qs('pbPrazoBox'); if (bx && bx.scrollIntoView) bx.scrollIntoView(); }
+    else if (a === 'peca'){ var st = pbPeca[pbDetId] = pbPeca[pbDetId] || {}; st.cat = null; st.i = parseInt(b.getAttribute('data-i'), 10); pbDesenharDetalhe(); var bx = qs('pbPrazoBox'); if (bx && bx.scrollIntoView) bx.scrollIntoView(); }
+    else if (a === 'catalogo') pbCatAbrir();
+    else if (a === 'cat') pbCatEscolher(parseInt(b.getAttribute('data-k'), 10));
     else if (a === 'registrar'){ var ps = pbPub(pbDetId), sl = ps && pbPecaSel(ps); if (sl) prRegistrar(ps, sl.peca + (sl.base ? ' (' + sl.base + ')' : '')); }
     else if (a === 'cadastrar') pbCadastrar(pbDetId);   /* a leitura continua aberta por baixo: depois de cadastrar, dá para marcar prazo ou lida */
     else if (a === 'irproc'){ var pi = pbPub(pbDetId), vi = pi && pbVinculo(pi.processo); if (vi) prAbrir(vi.id); }
@@ -524,7 +571,7 @@ function pbAbrirDetalhe(id, irParaPrazo){
 function pbDesenharDetalhe(){
   var p = pbPub(pbDetId), c = qs('pbCorpo'); if (!p || !c) return;
   var v = pbVinculo(p.processo), t = pbTextos[p.id], pz = pbPrazoGrupo(p), sug = (t && t.ok && t.sug) || p.sug, mem = pbMembros(p);
-  var pc = pz ? null : pbPecasDe(p), pcSel = pc ? pbPecaSel(p) : null, usaPc = !!(pcSel && pcSel.dias), stp = pbPeca[p.id] || {};
+  var pc = pz ? null : pbPecasDe(p), stp = pbPeca[p.id] || {}, pcSel = pz ? null : (pc ? pbPecaSel(p) : (stp.cat || null)), usaPc = !!(pcSel && pcSel.dias);
   var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">+ processo novo</span>') + '</div></div>';
   if (mem.length > 1) h += '<div class="pb-sec"><div class="pb-sec-t">' + mem.length + ' publicações idênticas reunidas</div><div class="saldo-data">Mesmo processo, dia e texto; só muda o destinatário ou a OAB que a encontrou. Elas são marcadas como lidas juntas.</div><div class="txt">' + escapeHtml(pbDestinatarios(p).join(', ')) + '</div></div>';
   h += '<div class="pb-sec"><div class="pb-sec-t">Texto da publicação</div>';
@@ -541,7 +588,7 @@ function pbDesenharDetalhe(){
     if (pc) h += pbPecaHtml(p, pc);
     h += '<div class="pb-sec-t">' + (usaPc ? 'Prazo da peça escolhida' : (sug ? '✦ Prazo sugerido pelo texto' : 'Prazo desta publicação')) + '</div>';
     if (sug) h += '<div class="pb-frase">“…' + escapeHtml(sug.frase) + '…”</div>'; else h += '<div class="saldo-data">Não achei um prazo no texto. Se houver, informe os dias abaixo.</div>';
-    h += '<div class="field"><label class="field-label" for="pbf_desc">Descrição</label><input type="text" id="pbf_desc" maxlength="90" value="' + escapeHtml(usaPc ? pcSel.peca : (sug ? 'Prazo de ' + sug.dias + ' dias — ' + (p.tipo || 'publicação') : (p.tipo || 'Prazo'))) + '"></div>' +
+    h += '<div class="field"><label class="field-label" for="pbf_desc">Descrição</label><div class="pb-combo"><input type="text" id="pbf_desc" maxlength="90" value="' + escapeHtml(usaPc ? pcSel.peca : (sug ? 'Prazo de ' + sug.dias + ' dias — ' + (p.tipo || 'publicação') : (p.tipo || 'Prazo'))) + '"><button type="button" class="pb-combo-b" id="pbCatBtn" data-pbd="catalogo" aria-label="Escolher uma peça cadastrada" aria-expanded="false" title="Escolher uma peça cadastrada">▾</button></div><div class="pb-cat" id="pbCatBox" hidden></div></div>' +
       '<div class="pb-dois"><div class="field"><label class="field-label" for="pbf_dias">Dias</label><input type="number" id="pbf_dias" min="1" max="365" inputmode="numeric" value="' + (usaPc ? pcSel.dias : (sug ? sug.dias : 15)) + '"></div><div class="field"><label class="field-label" for="pbf_tipo">Contagem</label><select id="pbf_tipo" class="filter-select"><option value="uteis"' + ((usaPc ? pcSel.contagem === 'uteis' : (!sug || sug.tipo === 'uteis')) ? ' selected' : '') + '>dias úteis</option><option value="corridos"' + ((usaPc ? pcSel.contagem === 'corridos' : (sug && sug.tipo === 'corridos')) ? ' selected' : '') + '>dias corridos</option></select></div></div>' +
       ((pc && pc.instancia === 'juizado') ? '' : '<div class="field"><label class="field-label" for="pbf_dobro">Prazo em dobro?</label><select id="pbf_dobro" class="filter-select" style="width:100%"><option value="">Não</option><option value="fazenda"' + (((typeof stp.dobro === 'string') ? stp.dobro : (pc ? pc.dobro : '')) === 'fazenda' ? ' selected' : '') + '>Sim: Fazenda Pública, Ministério Público ou Defensoria (CPC 180, 183 e 186)</option><option value="litis"' + (stp.dobro === 'litis' ? ' selected' : '') + '>Sim: litisconsortes com advogados de escritórios diferentes (CPC 229; não vale em processo eletrônico, §2º)</option></select></div>') +
       '<div class="pb-calc" id="pbCalc"></div><button type="button" class="btn-text" data-pbd="manual">Corrigir a data manualmente</button><div class="field" id="pbManualBox" style="display:none;"><label class="field-label" for="pbf_manual">Data do vencimento (substitui o cálculo)</label><input type="date" id="pbf_manual"></div>' +
@@ -578,7 +625,7 @@ function pbSalvarPrazo(){
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
   var pcMostrado = pbPecasDe(p);
   agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
-    peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? 'sugerida' : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
+    peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? (psel.rid === 'catalogo' ? 'escolhida' : 'sugerida') : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
     try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }
     qs('overlayPb').classList.remove('show'); toast('Prazo confirmado para ' + fmtData(venc) + '. Está na Agenda.');
@@ -668,6 +715,8 @@ window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agIt
     '.pb-texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--t3);line-height:1.5;max-height:42vh;overflow-y:auto;background:var(--surface);border-radius:10px;padding:10px 12px}.pb-frase{font-size:var(--t3);line-height:1.45;font-style:italic}' +
     '.pb-mi{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--border);padding:11px 2px;font-family:inherit;font-size:var(--t4);font-weight:600;color:var(--ink);cursor:pointer}.pb-mi:first-child{border-top:0}.pb-mi small{grid-column:2;font-weight:400;font-size:var(--t2);color:var(--ink-soft)}.pb-mi-i{grid-row:1/3;font-size:20px;text-align:center}.pb-mi:disabled{opacity:.5;cursor:default}.pb-menu{padding-top:4px;padding-bottom:4px}.pb-seg-lin .seg-btn{font-size:var(--t3)}.pb-pc{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;font-family:inherit;font-size:var(--t3);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px 11px;color:var(--ink);cursor:pointer}.pb-pc span{font-size:var(--t2);color:var(--ink-soft)}.pb-pc.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:rgba(237,161,0,.10)}' +
     '.pb-dois{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.pb-dois .field{min-width:0}.pb-dois input{width:100%;min-width:0;box-sizing:border-box}.pb-calc{display:flex;flex-direction:column}.pb-lin{display:flex;justify-content:space-between;gap:10px;font-size:var(--t3);padding:6px 0;border-top:1px solid var(--border);color:var(--ink-soft)}.pb-lin b{color:var(--ink)}.pb-lin.pb-venc{font-size:var(--t4)}.pb-lin.pb-venc b{color:var(--urgente)}' +
+    '.pb-combo{display:flex;gap:6px;align-items:stretch}.pb-combo input{flex:1;min-width:0}.pb-combo-b{flex:none;width:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--ink-soft);font-size:16px;font-weight:800;cursor:pointer}.pb-combo-b:hover{color:var(--ink)}.pb-combo-b[aria-expanded=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}' +
+    '.pb-cat{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-top:6px;overflow:hidden}.pb-cat[hidden]{display:none}.pb-cat-busca{width:100%;box-sizing:border-box;border:0;border-bottom:1px solid var(--border);padding:10px 12px;font:inherit;font-size:var(--t3);background:transparent;color:var(--ink)}.pb-cat-lista{max-height:320px;overflow-y:auto;padding:4px 4px 6px}.pb-cat-g{font-size:var(--t1);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);padding:8px 10px 2px}.pb-cat-i{display:flex;justify-content:space-between;gap:10px;align-items:baseline;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:8px 10px;font:inherit;font-size:var(--t3);color:var(--ink);cursor:pointer}.pb-cat-i small{color:var(--ink-soft);font-size:var(--t1);text-align:right}.pb-cat-i:hover{background:var(--surface-2)}' +
     '.pb-obs{font-size:var(--t2);color:var(--tutela);line-height:1.4;margin-top:6px}.pb-aviso{font-size:var(--t2);color:var(--ink-soft);line-height:1.4}.pb-prazo-ok b{font-size:var(--t7)}' +
     '.pb-oab{background:var(--surface-2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.pb-oab-top{display:flex;gap:10px;align-items:flex-end}.pb-oab-n{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-bottom:6px;font-size:var(--t3)}';
   document.head.appendChild(st);

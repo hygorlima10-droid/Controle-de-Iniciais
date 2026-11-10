@@ -96,6 +96,37 @@ await fechar();
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(700);
 await page.click('[data-pr="abrir"][data-n="' + num(5).replace(/\D/g, '') + '"]'); await page.waitForTimeout(600);
 check(/Registro · /.test(await t('#prCorpo')) && /preliminar de apelação/.test(await t('#prCorpo')), 'o registro aparece na linha do tempo do processo');
+// 9) seletor ▾ do campo Descrição: todas as peças cadastradas (Fase 3, etapa 3.1); a escolha entra no aprendizado
+await page.click('#prX'); await page.waitForTimeout(400);   // fecha a ficha do processo aberta no passo anterior
+await page.evaluate(() => document.querySelector('#drawer [data-tab="publicacoes"]').click()); await page.waitForTimeout(500);
+await page.click('#pbSeg [data-v="todas"]'); await page.waitForTimeout(500);   // abrir uma publicação a marca como lida: volta a listá-las pela sub-aba “Todas”
+await abrir('Jairo Juizado');
+await page.click('#pbCatBtn'); await page.waitForTimeout(300);
+check(/Recurso inominado/.test(await t('#pbCatLista')) && !/\nApelação\n/.test('\n' + (await t('#pbCatLista')).replace(/ \d+ dias.*\n/g, '\n')), 'no Juizado a lista mostra os prazos do Juizado (recurso inominado, não apelação)');
+await fechar();
+await abrir('Tarcio Tutela');
+const sugAntes = await t('.pb-pc.on'), nSugAntes = await page.evaluate(() => document.querySelectorAll('.pb-pc').length);
+check(await page.evaluate(() => !!document.getElementById('pbCatBtn') && document.getElementById('pbCatBox').hidden), 'o campo Descrição tem a setinha ▾ e a lista começa fechada');
+await page.click('#pbCatBtn'); await page.waitForTimeout(300);
+const lista = await t('#pbCatLista');
+if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + 'lista.png' });
+check(/MANIFESTAÇÕES E DEFESAS/i.test(lista) && /RECURSOS/i.test(lista) && /EXECUÇÃO E CUMPRIMENTO/i.test(lista) && /Contestação/.test(lista) && /Agravo de instrumento/.test(lista) && /CPC 335/.test(lista), 'a lista traz as peças agrupadas, com dias e base legal');
+await page.fill('#pbCatBusca', 'embargos de declaracao'); await page.waitForTimeout(300);
+const filtrada = await t('#pbCatLista');
+check(/Manifestação sobre os embargos de declaração/.test(filtrada) && !/Contestação/.test(filtrada), 'digitar filtra a lista (sem acento também)');
+await page.click('.pb-cat-i:has-text("Manifestação sobre os embargos de declaração")'); await page.waitForTimeout(500);
+check(await v('pbf_desc') === 'Manifestação sobre os embargos de declaração' && await v('pbf_dias') === '5' && await v('pbf_tipo') === 'uteis', 'escolher preenche descrição, dias e contagem');
+check(/Vence em/.test(await t('#pbCalc')), 'e o vencimento é recalculado');
+if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + 'escolhida.png' });
+check(await page.evaluate(() => document.querySelectorAll('.pb-pc.on').length) === 0 && await page.evaluate(() => document.querySelectorAll('.pb-pc').length) === nSugAntes && /Agravo de instrumento/.test(await t('#pbCorpo')), 'a sugestão de cima não muda (só deixa de estar marcada)');
+await page.click('.pb-pc:has-text("Agravo de instrumento")'); await page.waitForTimeout(400);
+check(await v('pbf_desc') === 'Agravo de instrumento' && await v('pbf_dias') === '15', 'voltar a uma peça sugerida desfaz a escolha da lista');
+await page.click('#pbCatBtn'); await page.waitForTimeout(300); await page.click('.pb-cat-i:has-text("Manifestação sobre os embargos de declaração")'); await page.waitForTimeout(500);
+await page.click('[data-pbd="confirmar"]'); await page.waitForTimeout(1300);
+ag = (await docs('agenda')).filter(d => d.pubId === '930003')[0];
+check(ag && ag.peca === 'Manifestação sobre os embargos de declaração' && ag.pecaOrigem === 'escolhida' && ag.dias === 5 && ag.pecaBase === 'CPC 1.023, §2º', 'o prazo na Agenda guarda a peça escolhida na lista (origem “escolhida”)');
+const apr = (await docs('pecasAprendidas')).filter(e => e.tipo === 'peca' && e.peca === 'Manifestação sobre os embargos de declaração');
+check(apr.length === 1 && apr[0].usos === 1 && apr[0].dias === 5 && apr[0].ativa !== false, 'a escolha entrou no aprendizado (1 uso)');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 for (const col of ['casos', 'agenda', 'processos', 'config']) for (const d of (await f('GET', '/api/db/' + col)).j.docs || []) await f('DELETE', '/api/db/' + col + '/' + d.id);
 await br.close(); fake.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

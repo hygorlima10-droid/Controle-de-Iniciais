@@ -42,3 +42,12 @@ Registro curto para não repetir conversa. Atualize quando algo for decidido. Fo
 - Entregue: 2.1 base de ícones, 2.2 Iniciais/Acordos/Alvarás, 2.3 Processos/Agenda/Publicações/Clientes, 2.4 Financeiro e Construção.
 - **Seletor de ícones (2.5) adiado:** o proprietário preferiu deixar o sistema escolher o ícone por enquanto.
 - Em aberto, a critério do proprietário: indicador “Custo estimado final” da obra (precisa definir a conta); cartão de totais de volta nas listas, em versão compacta; sub-aba “OABs” em Publicações.
+
+## Fase 3: decisões do proprietário (10/11/2026, a partir do esboço v2)
+- **Escopo:** seletor de peça na publicação; Kanban e todas as abas com **uma largura só** no computador (limite de 1440 px, barra do topo incluída); Análises com **Último mês (repaginado), Histórico, Semanas, Simulador e Futuro** (sem “6 meses”, “12 meses” nem “Próx. 3 meses”; o conteúdo da antiga “Próx. 3 meses” — como cada mês termina, o que deve entrar/sair, dinheiro da obra a receber, principais entradas e saídas, a receber sem data — vai para **Futuro**, repaginado no padrão); **Orçamento por categoria** (80% e 100%); **Simulador**; **Futuro** (projeção 12/24/36 meses, estimativa); **Construção** (cartões “custo estimado final” e “recursos próprios”, cartão do dinheiro da obra menor; diferença de centavos conta como “bate”); **Contas dos extratos** com logos e reconhecimento em 3 níveis; **conflito de edição** e **fim do limite de 1.000 registros**.
+- **Fora:** relatório mensal em PDF; metas com data futura; backup completo; melhorias pequenas.
+- **Fechamento do mês:** automático; o app fecha na primeira abertura do dia 1º (ou depois), com os valores do último dia do mês.
+- **Seletor de peça:** a escolha manual **entra no aprendizado** (mesmo mecanismo de hoje: escolher outra peça que não a sugerida).
+- **Logos:** o proprietário **assume o uso**. Itaú, C6, Caixa e Sicoob (arquivos baixados/enviados) ficam em `public/icones/bancos/`.
+- **Ordem:** 3.1 seletor de peça; 3.2 largura única + Kanban largo; 3.3 Semanas; 3.4 Análises reorganizadas (Histórico, fechamento automático, Último mês; sai “6/12 meses”); 3.5 Orçamento; 3.6 Simulador; 3.7 Futuro (aqui sai “Próx. 3 meses”, depois de o conteúdo estar no Futuro); 3.8 Construção; 3.9 Contas/logos/3 níveis; 3.10 conflito de edição + fim do limite.
+
