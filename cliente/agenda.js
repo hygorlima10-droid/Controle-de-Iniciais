@@ -171,9 +171,26 @@ function agMontarTela(){
     else if (a === 'pub'){ var it = agItens().filter(function(x){ return x.key === k; })[0]; if (it && it.pubId){ setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(it.pubId); }, 80); } }
     else if (a === 'acao'){ var it2 = agItens({ quadro: true }).filter(function(x){ return x.key === k; })[0]; if (it2) irParaRelacionado(it2.fonte === 'alvara' ? 'alvara' : 'peticao', it2.id); }
     else if (a === 'modo'){ agS.quadro = v; agRender(); }
+    else if (a === 'feito-toggle'){ if (e.target.closest && e.target.closest('[data-agcard]')) return; agS.feitoAberto = !agS.feitoAberto; agRender(); }
     else if (a === 'adiar') agAdiar(k);
     else if (a === 'mover') agMover(k, v);
   });
+  /* arrastar cartões do Quadro: por situação muda a situação; por urgência só dá para soltar em Concluído (a data não muda arrastando) */
+  var dragKey = '', railFechada = null;
+  function colDe(e){ return e.target && e.target.closest ? e.target.closest('[data-agcol]') : null; }
+  w.addEventListener('dragstart', function(e){
+    var c = e.target.closest ? e.target.closest('[data-agcard]') : null; if (!c) return;
+    dragKey = c.getAttribute('data-agcard'); try{ e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.effectAllowed = 'move'; }catch(x){}
+    c.classList.add('arrastado');
+    railFechada = w.querySelector('.ag-col-feito.recolhida'); if (railFechada) railFechada.classList.remove('recolhida');   /* a trilha de Concluído abre para receber o cartão */
+  });
+  w.addEventListener('dragend', function(){
+    dragKey = ''; Array.prototype.forEach.call(w.querySelectorAll('.arrastado,.drag-over'), function(x){ x.classList.remove('arrastado', 'drag-over'); });
+    if (railFechada && !agS.feitoAberto) railFechada.classList.add('recolhida'); railFechada = null;
+  });
+  w.addEventListener('dragover', function(e){ var col = colDe(e); if (!col || !dragKey) return; if (agSoltar(dragKey, col.getAttribute('data-agcol'), true)){ e.preventDefault(); col.classList.add('drag-over'); } });
+  w.addEventListener('dragleave', function(e){ var col = colDe(e); if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over'); });
+  w.addEventListener('drop', function(e){ var col = colDe(e); if (!col || !dragKey) return; e.preventDefault(); var k2 = dragKey; dragKey = ''; col.classList.remove('drag-over'); railFechada = null; agSoltar(k2, col.getAttribute('data-agcol'), false); });
 }
 function agRender(){ return prComMemo(agRenderIn); }
 function agRenderIn(){
@@ -343,13 +360,25 @@ function agCartaoQuadro(i){
     if (i.fonte === 'caso') btn += '<button type="button" class="btn-text pb-b" data-ag="acao" data-k="' + k + '">Abrir na aba Iniciais</button>';
     else if (i.fonte === 'agenda') btn += '<button type="button" class="btn-text pb-b" data-ag="abrir" data-k="' + k + '">Editar</button>';
   } else if (i.fonte !== 'alvara') btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + k + '">Reabrir</button>';
-  return '<div class="kanban-card ag-kc ' + i.cat + (i.concluido ? ' ok' : '') + '" data-agcard="' + k + '"><div class="kc-top">' + fvIc(ic[0], ic[1]) + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(i.titulo) + '</div><div class="kc-sub">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div></div></div>' +
+  return '<div class="kanban-card ag-kc ' + i.cat + (i.concluido ? ' ok' : '') + '" data-agcard="' + k + '" draggable="true"><div class="kc-top">' + fvIc(ic[0], ic[1]) + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(i.titulo) + '</div><div class="kc-sub">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div></div></div>' +
     '<div class="kc-sub" style="margin-top:6px">' + escapeHtml(agTipoLinha(i)) + '</div>' + (i.tipo === 'audiencia' && i.local ? '<div class="kc-sub">📍 ' + escapeHtml(i.local) + '</div>' : '') + (i.concluido && i.tipo === 'prazo' && i.protocoladoEm ? '<div class="kc-sub">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</div>' : '') + '<div class="kc-chips">' + tags + '</div><div class="kc-acoes">' + btn + (i.tipo === 'audiencia' && /^https?:\/\//i.test(i.link) ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala ↗</a>' : '') + '</div></div>';
+}
+/* solta um cartão do Quadro numa coluna: devolve se pode; com teste = true só confere, sem mudar nada */
+function agSoltar(key, ck, teste){
+  var i = agItens({ quadro: true }).filter(function(x){ return x.key === key; })[0]; if (!i) return false;
+  var alvo = ck === 'feito' ? 'feito' : ((agS.quadro === 'situacao' && (ck === 'afazer' || ck === 'elaboracao')) ? ck : '');
+  if (!alvo || i.fonte === 'alvara') return false;
+  if (alvo !== 'feito' && (i.fonte !== 'agenda' || i.tipo === 'audiencia')) return false;   /* “Em andamento” não existe para audiência nem para prazo vindo das Iniciais */
+  if (alvo === 'feito' ? (i.concluido && !i.cancelado) : (!i.concluido && i.situacao === alvo)) return false;   /* já está lá */
+  if (teste) return true;
+  agdSituacao(i, alvo); return true;
 }
 function agVistaQuadro(todos){
   var cols = agColunas(todos), h = '<div class="pb-seg-lin"><div class="segmented" id="agModo">' + [['urgencia', 'Por urgência'], ['situacao', 'Por situação']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.quadro === f[0] ? ' active' : '') + '" data-ag="modo" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+  h += '<div class="ag-dica">' + (agS.quadro === 'situacao' ? 'Arraste um cartão entre as colunas para mudar a situação (A fazer, Em andamento, Concluído).' : 'Arraste um cartão para Concluído para marcar como feito. Para mudar a data de um prazo, use “Adiar”.') + '</div>';
   h += '<div class="kanban-wrap ag-quadro">' + cols.map(function(c){
-    return '<div class="kanban-col ag-col-' + c.k + '" data-agcol="' + c.k + '"><div class="kanban-col-head"><h4>' + rsIconeColuna(c.t) + ' ' + escapeHtml(c.t) + ' <span class="fv-chip">' + c.l.length + '</span></h4></div>' +
+    var rail = agS.quadro !== 'situacao' && c.k === 'feito';
+    return '<div class="kanban-col ag-col-' + c.k + (rail && !agS.feitoAberto ? ' recolhida' : '') + '" data-agcol="' + c.k + '"' + (rail ? ' data-ag="feito-toggle" title="' + (agS.feitoAberto ? 'Recolher' : 'Abrir') + ' a coluna Concluído"' : '') + '><div class="kanban-col-head"><h4>' + rsIconeColuna(c.t) + ' ' + escapeHtml(c.t) + ' <span class="fv-chip">' + c.l.length + '</span></h4></div>' +
       (c.l.length ? c.l.map(agCartaoQuadro).join('') : '<div class="kanban-vazio">Nada aqui.</div>') + '</div>';
   }).join('') + '</div>';
   if (!todos.length) h += '<div class="financeiro-vazio">Nada na agenda para este filtro.</div>';
@@ -508,7 +537,7 @@ function agExcluirEd(b){
 /* ---------- estilo e partida ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '.ag-quadro{align-items:flex-start}.ag-quadro .kanban-col{min-width:250px}.ag-kc.ok{opacity:.7}.ag-kc .kc-acoes{flex-wrap:wrap}.ag-col-atrasado .kanban-col-head h4{color:var(--urgente)}' +
+  st.textContent = '.ag-quadro{align-items:flex-start}@media(max-width:999px){.ag-quadro .kanban-col{min-width:250px}}@media(min-width:1000px){.ag-quadro .ag-col-feito.recolhida{flex:0 0 56px;min-width:56px;padding:12px 6px;cursor:pointer;align-items:center}.ag-quadro .ag-col-feito.recolhida .kanban-col-head h4{writing-mode:vertical-rl;transform:rotate(180deg);margin:0}.ag-quadro .ag-col-feito.recolhida .ag-kc,.ag-quadro .ag-col-feito.recolhida .kanban-vazio{display:none}}.ag-dica{font-size:var(--t2);color:var(--ink-soft);margin:0 2px 8px}.ag-kc[draggable=true]{cursor:grab}.ag-kc.arrastado{opacity:.45}.ag-kc.ok{opacity:.7}.ag-kc .kc-acoes{flex-wrap:wrap}.ag-col-atrasado .kanban-col-head h4{color:var(--urgente)}' +
     '.ag-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;border-radius:12px;background:var(--surface-2);line-height:1.15}.ag-dt b{font-size:var(--t5)}.ag-dt span{font-size:var(--t1);font-weight:700;color:var(--ink-soft)}.ag-dt.atr{background:rgba(217,59,59,.12)}.ag-dt.atr b,.ag-dt.atr span{color:var(--urgente)}.ag-dt.hoje{background:rgba(183,121,30,.15)}.ag-dt.hoje b,.ag-dt.hoje span{color:var(--tutela)}' +
     '.ag-cartao{padding:14px 16px}.ag-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ag-tit{display:flex;align-items:center;gap:10px;font-size:var(--t4)}.ag-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}' +
     '.ag-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.ag-lin-tx{display:flex;flex-direction:column;min-width:0}.ag-lin-tx b{font-size:var(--t4);overflow-wrap:anywhere}.ag-lin-tx span{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}' +

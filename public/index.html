@@ -83,7 +83,8 @@
   input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-  .wrap{max-width:960px;margin:0 auto;padding:0 20px;}
+  :root{--larg:1440px;}   /* largura máxima única, no computador, de todas as telas e da barra do topo (Fase 3, etapa 3.2) */
+  .wrap{max-width:var(--larg);margin:0 auto;padding:0 20px;}
 
   /* ============ HEADER ============ */
   header.top{
@@ -715,8 +716,8 @@
   .relacionados-item button{background:none;border:none;color:var(--accent);font-weight:700;font-size:var(--t3);cursor:pointer;padding:0;}
 
   /* ============ FINANCEIRO ============ */
-  .financeiro-colunas{display:grid;grid-template-columns:1fr;gap:16px;max-width:780px;}
-  .fin-secao{display:flex;flex-direction:column;gap:14px;max-width:780px;}
+  .financeiro-colunas{display:grid;grid-template-columns:1fr;gap:16px;max-width:none;}
+  .fin-secao{display:flex;flex-direction:column;gap:14px;max-width:none;}
   .fin-fab-menu{position:fixed;right:18px;bottom:92px;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 8px 24px rgba(0,0,0,0.28);padding:6px;flex-direction:column;min-width:220px;}
   .fin-fab-menu button{background:none;border:none;text-align:left;padding:11px 12px;font-size:var(--t4);font-weight:600;color:var(--ink);cursor:pointer;border-radius:8px;}
   .fin-fab-menu button:hover{background:var(--surface-2);}
@@ -879,7 +880,7 @@
   body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:60;}
   .main{min-width:0;}
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--bg);border-bottom:1px solid var(--border);}
-  .tb-in{max-width:960px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:8px;}
+  .tb-in{max-width:var(--larg);margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:8px;}
   .tb-btn{width:38px;height:38px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;position:relative;}
   .tb-btn:hover{color:var(--ink);border-color:var(--ink-soft);}
   .tb-btn.ativo{color:var(--accent);border-color:var(--accent);}
@@ -1006,7 +1007,7 @@
   .rep-acao{display:flex;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap;}
 
   /* ===== Construção ===== */
-  .ob-wrap{display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:820px;margin:0 auto;}
+  .ob-wrap{display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:none;margin:0 auto;}
   .ob-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
   @media (min-width:700px){ .ob-cards{grid-template-columns:repeat(4,minmax(0,1fr));} }
   .ob-cards .val{font-weight:700;font-size:var(--t6);font-variant-numeric:tabular-nums;} .ob-cards .val.neg{color:var(--danger);}
@@ -1024,7 +1025,7 @@
   .ob-gasto-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
   .ob-gasto-val{display:flex;flex-direction:column;align-items:flex-end;gap:2px;white-space:nowrap;} .ob-gasto-val span{display:flex;gap:8px;}
   /* ===== Análises ===== */
-  .an-wrap{--an-1:#2a78d6;--an-2:#eb6834;--an-3:#1baf7a;--an-ref:#8a93ad;position:relative;display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:820px;margin:0 auto;}
+  .an-wrap{--an-1:#2a78d6;--an-2:#eb6834;--an-3:#1baf7a;--an-ref:#8a93ad;position:relative;display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:none;margin:0 auto;}
   :root[data-theme="dark"] .an-wrap{--an-1:#3987e5;--an-2:#d95926;--an-3:#199e70;--an-ref:#8890ac;}
   .an-topo{display:flex;flex-direction:column;gap:6px;}
   .an-ult-nav{display:flex;align-items:center;justify-content:space-between;margin:10px 4px 2px;font-size:var(--t5);} .an-ult-nav .icon-btn:disabled{opacity:.3}
@@ -1069,7 +1070,7 @@
   .an-tab-rolar{overflow-x:auto;margin-top:6px;} .an-tab table{border-collapse:collapse;width:100%;min-width:300px;}
   .an-tab th,.an-tab td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:left;font-weight:600;white-space:nowrap;} .an-tab th.n,.an-tab td.n{text-align:right;font-variant-numeric:tabular-nums;}
   .an-tab thead th{color:var(--ink-soft);font-weight:600;}
-  .ext-wrap{display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:820px;margin:0 auto;}
+  .ext-wrap{display:flex;flex-direction:column;gap:14px;padding-top:12px;max-width:none;margin:0 auto;}
   .ext-topo-tit{font-size:var(--t5);margin-bottom:4px;}
   .ext-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
   .ext-card-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;}
@@ -1115,8 +1116,8 @@
   /* as cores, raios e fonte do tema ficam em /tema.css (ligado depois deste bloco) */
   body{font-size:var(--t4);padding-bottom:120px;}
   h1,h2,h3,h4,.tb-ttl b,.dr-name,.hero-val,.kpi-val,.stat .val,.resumo-item .val,.ini-div-grid .val,.ob-cards .val{font-family:var(--font-display);}
-  .wrap{max-width:1080px;padding:0 28px;}
-  .tb-in{max-width:1080px;padding:16px 28px;gap:12px;}
+  .wrap{max-width:var(--larg);padding:0 28px;}
+  .tb-in{max-width:var(--larg);padding:16px 28px;gap:12px;}
   .topbar{border-bottom:none;}
   .tb-btn{border-radius:14px;}
   .tb-ttl b{font-size:var(--t6);font-weight:600;}
@@ -1141,6 +1142,7 @@
   .fab{background:var(--gold-btn);color:var(--gold-ink);box-shadow:0 12px 28px rgba(201,133,0,0.38);}
   .btn-text,.tb-hoje{color:var(--accent);}
   .kanban-wrap{gap:18px;}
+  @media (min-width:1000px){ .kanban-wrap{gap:12px;} .kanban-wrap .kanban-col{flex:1 1 0;min-width:190px;} .kanban-wrap .kanban-add{flex:0 0 96px;} }   /* as colunas dividem a largura (Fase 3, 3.2): todas ficam à vista para arrastar */
   .kanban-col{border-radius:var(--radius-md);padding:16px;flex-basis:290px;border-top-width:3px;}
   .kanban-card{border-radius:16px;padding:14px 15px;background:var(--surface-2);}
   .kanban-col.fase-banco,.fase-tag.fase-banco{border-top-color:#8B5CF6;}
@@ -1159,7 +1161,7 @@
   .meta-barra-fill{background:var(--c-gold);border-radius:99px;}
   .meta-barra-fill.completa{background:var(--c-green);}
   .ob-pago{background:var(--c-gold);} .ob-apagar{background:var(--c-blue);opacity:.6;}
-  .an-wrap{--an-1:#EDA100;--an-2:#2A78D6;--an-3:#1BAF7A;--an-ref:#9A9AA3;max-width:960px;gap:20px;}
+  .an-wrap{--an-1:#EDA100;--an-2:#2A78D6;--an-3:#1BAF7A;--an-ref:#9A9AA3;max-width:none;gap:20px;}
   :root[data-theme="dark"] .an-wrap{--an-1:#C98500;--an-2:#3987E5;--an-3:#199E70;--an-ref:#8D8D95;}
   /* menu lateral: logo, itens e navegação */
   .drawer{padding:22px 14px 16px;border-right:1px solid var(--border);}
@@ -1454,6 +1456,7 @@
 <symbol id="ic-quadro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></symbol>
 <symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+
 
 
 
@@ -17783,9 +17786,26 @@ function agMontarTela(){
     else if (a === 'pub'){ var it = agItens().filter(function(x){ return x.key === k; })[0]; if (it && it.pubId){ setActiveTab('publicacoes'); setTimeout(function(){ pbAbrirDetalhe(it.pubId); }, 80); } }
     else if (a === 'acao'){ var it2 = agItens({ quadro: true }).filter(function(x){ return x.key === k; })[0]; if (it2) irParaRelacionado(it2.fonte === 'alvara' ? 'alvara' : 'peticao', it2.id); }
     else if (a === 'modo'){ agS.quadro = v; agRender(); }
+    else if (a === 'feito-toggle'){ if (e.target.closest && e.target.closest('[data-agcard]')) return; agS.feitoAberto = !agS.feitoAberto; agRender(); }
     else if (a === 'adiar') agAdiar(k);
     else if (a === 'mover') agMover(k, v);
   });
+  /* arrastar cartões do Quadro: por situação muda a situação; por urgência só dá para soltar em Concluído (a data não muda arrastando) */
+  var dragKey = '', railFechada = null;
+  function colDe(e){ return e.target && e.target.closest ? e.target.closest('[data-agcol]') : null; }
+  w.addEventListener('dragstart', function(e){
+    var c = e.target.closest ? e.target.closest('[data-agcard]') : null; if (!c) return;
+    dragKey = c.getAttribute('data-agcard'); try{ e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.effectAllowed = 'move'; }catch(x){}
+    c.classList.add('arrastado');
+    railFechada = w.querySelector('.ag-col-feito.recolhida'); if (railFechada) railFechada.classList.remove('recolhida');   /* a trilha de Concluído abre para receber o cartão */
+  });
+  w.addEventListener('dragend', function(){
+    dragKey = ''; Array.prototype.forEach.call(w.querySelectorAll('.arrastado,.drag-over'), function(x){ x.classList.remove('arrastado', 'drag-over'); });
+    if (railFechada && !agS.feitoAberto) railFechada.classList.add('recolhida'); railFechada = null;
+  });
+  w.addEventListener('dragover', function(e){ var col = colDe(e); if (!col || !dragKey) return; if (agSoltar(dragKey, col.getAttribute('data-agcol'), true)){ e.preventDefault(); col.classList.add('drag-over'); } });
+  w.addEventListener('dragleave', function(e){ var col = colDe(e); if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over'); });
+  w.addEventListener('drop', function(e){ var col = colDe(e); if (!col || !dragKey) return; e.preventDefault(); var k2 = dragKey; dragKey = ''; col.classList.remove('drag-over'); railFechada = null; agSoltar(k2, col.getAttribute('data-agcol'), false); });
 }
 function agRender(){ return prComMemo(agRenderIn); }
 function agRenderIn(){
@@ -17955,13 +17975,25 @@ function agCartaoQuadro(i){
     if (i.fonte === 'caso') btn += '<button type="button" class="btn-text pb-b" data-ag="acao" data-k="' + k + '">Abrir na aba Iniciais</button>';
     else if (i.fonte === 'agenda') btn += '<button type="button" class="btn-text pb-b" data-ag="abrir" data-k="' + k + '">Editar</button>';
   } else if (i.fonte !== 'alvara') btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="reabrir" data-k="' + k + '">Reabrir</button>';
-  return '<div class="kanban-card ag-kc ' + i.cat + (i.concluido ? ' ok' : '') + '" data-agcard="' + k + '"><div class="kc-top">' + fvIc(ic[0], ic[1]) + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(i.titulo) + '</div><div class="kc-sub">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div></div></div>' +
+  return '<div class="kanban-card ag-kc ' + i.cat + (i.concluido ? ' ok' : '') + '" data-agcard="' + k + '" draggable="true"><div class="kc-top">' + fvIc(ic[0], ic[1]) + '<div class="kc-tit"><div class="kc-nome">' + escapeHtml(i.titulo) + '</div><div class="kc-sub">' + escapeHtml((i.cliente || '') + (i.cliente && i.processo ? ' · ' : '') + (i.processo || '')) + '</div></div></div>' +
     '<div class="kc-sub" style="margin-top:6px">' + escapeHtml(agTipoLinha(i)) + '</div>' + (i.tipo === 'audiencia' && i.local ? '<div class="kc-sub">📍 ' + escapeHtml(i.local) + '</div>' : '') + (i.concluido && i.tipo === 'prazo' && i.protocoladoEm ? '<div class="kc-sub">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</div>' : '') + '<div class="kc-chips">' + tags + '</div><div class="kc-acoes">' + btn + (i.tipo === 'audiencia' && /^https?:\/\//i.test(i.link) ? '<a class="btn btn-ghost pb-b" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala ↗</a>' : '') + '</div></div>';
+}
+/* solta um cartão do Quadro numa coluna: devolve se pode; com teste = true só confere, sem mudar nada */
+function agSoltar(key, ck, teste){
+  var i = agItens({ quadro: true }).filter(function(x){ return x.key === key; })[0]; if (!i) return false;
+  var alvo = ck === 'feito' ? 'feito' : ((agS.quadro === 'situacao' && (ck === 'afazer' || ck === 'elaboracao')) ? ck : '');
+  if (!alvo || i.fonte === 'alvara') return false;
+  if (alvo !== 'feito' && (i.fonte !== 'agenda' || i.tipo === 'audiencia')) return false;   /* “Em andamento” não existe para audiência nem para prazo vindo das Iniciais */
+  if (alvo === 'feito' ? (i.concluido && !i.cancelado) : (!i.concluido && i.situacao === alvo)) return false;   /* já está lá */
+  if (teste) return true;
+  agdSituacao(i, alvo); return true;
 }
 function agVistaQuadro(todos){
   var cols = agColunas(todos), h = '<div class="pb-seg-lin"><div class="segmented" id="agModo">' + [['urgencia', 'Por urgência'], ['situacao', 'Por situação']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.quadro === f[0] ? ' active' : '') + '" data-ag="modo" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+  h += '<div class="ag-dica">' + (agS.quadro === 'situacao' ? 'Arraste um cartão entre as colunas para mudar a situação (A fazer, Em andamento, Concluído).' : 'Arraste um cartão para Concluído para marcar como feito. Para mudar a data de um prazo, use “Adiar”.') + '</div>';
   h += '<div class="kanban-wrap ag-quadro">' + cols.map(function(c){
-    return '<div class="kanban-col ag-col-' + c.k + '" data-agcol="' + c.k + '"><div class="kanban-col-head"><h4>' + rsIconeColuna(c.t) + ' ' + escapeHtml(c.t) + ' <span class="fv-chip">' + c.l.length + '</span></h4></div>' +
+    var rail = agS.quadro !== 'situacao' && c.k === 'feito';
+    return '<div class="kanban-col ag-col-' + c.k + (rail && !agS.feitoAberto ? ' recolhida' : '') + '" data-agcol="' + c.k + '"' + (rail ? ' data-ag="feito-toggle" title="' + (agS.feitoAberto ? 'Recolher' : 'Abrir') + ' a coluna Concluído"' : '') + '><div class="kanban-col-head"><h4>' + rsIconeColuna(c.t) + ' ' + escapeHtml(c.t) + ' <span class="fv-chip">' + c.l.length + '</span></h4></div>' +
       (c.l.length ? c.l.map(agCartaoQuadro).join('') : '<div class="kanban-vazio">Nada aqui.</div>') + '</div>';
   }).join('') + '</div>';
   if (!todos.length) h += '<div class="financeiro-vazio">Nada na agenda para este filtro.</div>';
@@ -18120,7 +18152,7 @@ function agExcluirEd(b){
 /* ---------- estilo e partida ---------- */
 (function(){
   var st = document.createElement('style');
-  st.textContent = '.ag-quadro{align-items:flex-start}.ag-quadro .kanban-col{min-width:250px}.ag-kc.ok{opacity:.7}.ag-kc .kc-acoes{flex-wrap:wrap}.ag-col-atrasado .kanban-col-head h4{color:var(--urgente)}' +
+  st.textContent = '.ag-quadro{align-items:flex-start}@media(max-width:999px){.ag-quadro .kanban-col{min-width:250px}}@media(min-width:1000px){.ag-quadro .ag-col-feito.recolhida{flex:0 0 56px;min-width:56px;padding:12px 6px;cursor:pointer;align-items:center}.ag-quadro .ag-col-feito.recolhida .kanban-col-head h4{writing-mode:vertical-rl;transform:rotate(180deg);margin:0}.ag-quadro .ag-col-feito.recolhida .ag-kc,.ag-quadro .ag-col-feito.recolhida .kanban-vazio{display:none}}.ag-dica{font-size:var(--t2);color:var(--ink-soft);margin:0 2px 8px}.ag-kc[draggable=true]{cursor:grab}.ag-kc.arrastado{opacity:.45}.ag-kc.ok{opacity:.7}.ag-kc .kc-acoes{flex-wrap:wrap}.ag-col-atrasado .kanban-col-head h4{color:var(--urgente)}' +
     '.ag-dt{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;border-radius:12px;background:var(--surface-2);line-height:1.15}.ag-dt b{font-size:var(--t5)}.ag-dt span{font-size:var(--t1);font-weight:700;color:var(--ink-soft)}.ag-dt.atr{background:rgba(217,59,59,.12)}.ag-dt.atr b,.ag-dt.atr span{color:var(--urgente)}.ag-dt.hoje{background:rgba(183,121,30,.15)}.ag-dt.hoje b,.ag-dt.hoje span{color:var(--tutela)}' +
     '.ag-cartao{padding:14px 16px}.ag-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.ag-tit{display:flex;align-items:center;gap:10px;font-size:var(--t4)}.ag-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}' +
     '.ag-lin{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.ag-lin-tx{display:flex;flex-direction:column;min-width:0}.ag-lin-tx b{font-size:var(--t4);overflow-wrap:anywhere}.ag-lin-tx span{font-size:var(--t2);color:var(--ink-soft);overflow-wrap:anywhere}' +
