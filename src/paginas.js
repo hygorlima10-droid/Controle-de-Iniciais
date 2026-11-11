@@ -27,11 +27,11 @@ button.entrar[disabled]{filter:grayscale(.3) brightness(.95);cursor:wait}
 `;
 /* opcoes: { titulo, sub, acao, campos:[{name,type,label,auto,valor,senha}], botao, ocupado, msg, nota, link:{href,txt} } */
 export const pagina = (o) => `<!doctype html><html lang="pt-BR" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#18181b"><title>Horus</title>
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=2"><link rel="shortcut icon" href="/favicon.ico?v=2"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2"><link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3"><link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png?v=3"><link rel="shortcut icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3"><link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/tema.css?v=1">
 <style>${ESTILO}</style></head><body>
-<main class="lg"><img class="marca" src="/icon-192.png?v=2" alt="Horus" width="88" height="88">
+<main class="lg"><img class="marca" src="/icon-192.png?v=3" alt="Horus" width="88" height="88">
 <form method="post" action="${esc(o.acao)}" id="f"><h1>${esc(o.titulo || 'Horus')}</h1><p class="sub">${esc(o.sub || '')}</p>
 ${(o.campos || []).map((c, i) => `<label for="c${i}">${esc(c.label)}</label><div class="campo"><input type="${c.senha ? 'password' : esc(c.type || 'text')}" name="${esc(c.name)}" id="c${i}" autocomplete="${esc(c.auto || 'off')}" value="${esc(c.valor || '')}"${c.senha ? ' minlength="1"' : ''}${i === 0 ? ' autofocus' : ''} required>${c.senha ? `<button type="button" class="olho" aria-label="Mostrar senha" data-o="c${i}">${OLHO}</button>` : ''}</div>`).join('')}
 <button type="submit" class="entrar" id="b" data-t="${esc(o.botao || 'Entrar')}">${esc(o.botao || 'Entrar')}</button>${o.msg ? `<div class="erro" role="alert">${esc(o.msg)}</div>` : ''}${o.nota ? `<div class="nota">${o.nota}</div>` : ''}${o.link ? `<a class="lk" href="${esc(o.link.href)}">${esc(o.link.txt)}</a>` : ''}</form>

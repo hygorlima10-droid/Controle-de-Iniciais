@@ -133,6 +133,8 @@ Patrimônio líquido com "vs. mês passado", rosca com ícones (nas contas, rese
 Em **Construção**, os botões de ação (Gasto, Aporte, Liberação, Devolver) seguem o modelo da faixa de ações do Início (ícone em cima, texto embaixo), e há ícones próprios por tipo de etapa (terraplanagem, fundação, alvenaria, cobertura, hidráulica, elétrica, pintura, pisos, esquadrias, acabamento, paisagismo…) e de mão de obra (pedreiro, eletricista, encanador, pintor, carpinteiro, gesseiro, azulejista, serralheiro, vidraceiro, jardineiro, engenheiro…), definidos por palavras no nome (`OB_REGRAS`).
 **Clientes** e **Arquivados** usam o mesmo cabeçalho (número principal, selo e dois cartões com ícone), ícone nos cartões e selos coloridos (atraso, última cobrança, promessa, pendência). Teste: `test/clientes-arquivados-layout.test.mjs`.
 
+**Logo oficial (11/11/2026):** a imagem enviada pelo proprietário (dourada, efeito 3D, fundo escuro) gera `icon-512.png`, `icon-192.png`, `apple-touch-icon.png` (tela de início do iPhone), `icon-maskable-512.png` (Android, com margem maior), `favicon-32/48.png` e `favicon.ico` (recortados mais de perto, para o ícone pequeno ficar legível), além da logo embutida no menu lateral e na barra do topo (WebP dentro de `public/index.html`). Os endereços dos ícones levam `?v=3`: ao trocar a imagem de novo, suba o número em `public/index.html`, `public/manifest.webmanifest`, `src/paginas.js` e `src/index.js` para o navegador e o iPhone buscarem o arquivo novo.
+
 Ícone da aba do navegador e dos favoritos: `public/favicon.ico`, `favicon-32.png` e `favicon-48.png` são públicos (sem login) e a página de login também declara o ícone, para o navegador achá-lo mesmo antes de entrar.
 
 ## Tema único e tela de login
