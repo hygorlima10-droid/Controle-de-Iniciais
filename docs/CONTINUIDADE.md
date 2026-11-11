@@ -105,3 +105,7 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
   - **Agenda → Quadro:** a coluna “Concluído” (só no modo por urgência) começa como **trilha estreita** (`.recolhida`), abre ao arrastar um cartão para ela ou ao tocar na trilha (`agS.feitoAberto`). **Arrastar cartões foi acrescentado** (antes só Iniciais e Alvarás arrastavam): por situação, soltar em A fazer / Em andamento / Concluído muda a situação (`agdSituacao`); por urgência só dá para soltar em Concluído (prazo abre a pergunta da data do protocolo, como o botão); a data **não** muda arrastando (use “Adiar”); audiência não vai para “Em andamento”; alvará não arrasta (`agSoltar`).
 - **Próximo: 3.3** Semanas (fluxo de caixa semanal) em Análises.
 
+## Logos em três versões e tela de abertura (11/11/2026)
+- `public/logo/logo-dark.png`, `logo-transparent.png`, `logo-white.png` (a transparente e a branca vieram de arquivo enviado pelo proprietário; a branca foi refeita sobre branco puro a partir da transparente, para tirar uma mancha cinza do original). Usos: menu e botão de menu (transparente, sem quadrado), abertura e entrada (escuro), relatórios (branco).
+- Tela de abertura unificada com a de boas-vindas: 2,8 s, círculo girando, fecha ao toque; teste `logos-abertura` (grupo principal). Imagem de abertura nativa do iPhone (apple-touch-startup-image) **não** foi criada: o proprietário aceitou a mesma tela redimensionada dentro do app.
+- Próximo: Fase 3, etapa 3.3 (Semanas), após o OK do proprietário.

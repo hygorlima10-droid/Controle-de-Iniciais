@@ -62,7 +62,7 @@ const PAGINA = (msg) => `<!doctype html><html lang="pt-BR" data-theme="light"><h
 body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;
 background:radial-gradient(760px 420px at 50% -8%,rgba(237,161,0,.18),transparent 62%),var(--bg)}
 .lg{width:min(380px,100%);text-align:center}
-.lg .marca{margin:0 auto;position:relative;z-index:1}
+.lg .marca{margin:0 auto;position:relative;z-index:1;border-radius:26%;box-shadow:0 10px 28px rgba(0,0,0,.35)}
 form{background:var(--surface);border-radius:var(--radius-lg);padding:60px 24px 24px;margin-top:-44px;box-shadow:var(--shadow);text-align:left}
 h1{font-size:1.5rem;line-height:1.2;margin:0 0 6px;text-align:center;font-weight:700;letter-spacing:-.01em}
 .sub{margin:0 0 22px;text-align:center;color:var(--ink-soft);font-size:.875rem}
@@ -78,7 +78,7 @@ button.entrar[disabled]{filter:grayscale(.3) brightness(.95);cursor:wait}
 .erro{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(220,47,47,.1);color:var(--urgente);font-size:.8125rem;font-weight:600;text-align:center}
 .rodape{margin-top:18px;color:var(--ink-soft);font-size:.75rem}
 </style></head><body>
-<main class="lg"><img class="marca" src="/icon-192.png?v=3" alt="Horus" width="88" height="88">
+<main class="lg"><img class="marca" src="/logo/logo-dark.png?v=1" alt="Horus" width="96" height="96">
 <form method="post" action="/login" id="f"><h1>Horus</h1><p class="sub">Digite a senha para entrar</p>
 <div class="campo"><input type="password" name="senha" id="s" autocomplete="current-password" placeholder="Senha" aria-label="Senha" autofocus required>
 <button type="button" class="olho" id="o" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
@@ -521,7 +521,7 @@ async function tratar(request, env, ctx) {
   const url = new URL(request.url);
   const dev = env.ALLOW_NO_AUTH === '1', antigo = MODO_ANTIGO(env);
   if (!dev && (!env.SENHA || String(env.SENHA).length < 12)) return new Response('Defina o segredo SENHA (mínimo 12 caracteres) no Cloudflare.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
-  if (ICONES.has(url.pathname)) return env.ASSETS.fetch(request);   // ícones e manifesto: públicos (o iPhone os busca sem sessão)
+  if (ICONES.has(url.pathname) || url.pathname.startsWith('/logo/')) return env.ASSETS.fetch(request);   // ícones e manifesto: públicos (o iPhone os busca sem sessão)
   const deps = { legadoValido: (r) => sessaoValida(r, env), criarLegado: () => criarSessao(env), avisar: (e, aviso) => { try { ctx && ctx.waitUntil ? ctx.waitUntil(enviarAviso(e, aviso).catch((x) => console.error('aviso', x))) : enviarAviso(e, aviso).catch(() => {}); } catch (x) { console.error(x); } } };
   if (!antigo) { const pg = await paginasDeAcesso(request, env, deps); if (pg) return pg; }
   else {
