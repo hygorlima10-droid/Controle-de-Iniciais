@@ -29,7 +29,7 @@ const clicaKpi = async re => { await page.evaluate(re => Array.from(document.que
 await entrar();
 // ---- Financeiro
 await page.evaluate(() => document.querySelector('#btbar [data-tab="financeiro"]').click()); await page.waitForTimeout(1200);
-check(await on('#headFinanceiro') === 'Visão geral' && /Visão geral\s*Divisão do mês\s*PJ\s*PF\s*Patrimônio\s*Análises/.test((await t('#headFinanceiro')).replace(/\n/g, ' ')), 'Financeiro: sub-abas Visão geral, Divisão do mês, PJ, PF, Patrimônio e Análises; abre na Visão geral');
+check(await on('#headFinanceiro') === 'Visão geral' && /Visão geral\s*Divisão do mês\s*PJ\s*PF\s*Patrimônio\s*Orçamento\s*Análises/.test((await t('#headFinanceiro')).replace(/\n/g, ' ')), 'Financeiro: sub-abas Visão geral, Divisão do mês, PJ, PF, Patrimônio, Orçamento e Análises; abre na Visão geral');
 let tx = await t('#finResumo');
 check(/PATRIMÔNIO LÍQUIDO/i.test(tx) && /R\$\s*15\.700,00/.test(tx), 'patrimônio líquido = PJ 9.000 + PF 200 + reserva 1.000 + conta da obra 5.500 = R$ 15.700 (o mesmo da aba Patrimônio)');
 check(/R\$\s*9\.000,00/.test(await kpi('Saldo da PJ')) && /R\$\s*200,00/.test(await kpi('Saldo da PF')) && /R\$\s*4\.000,00/.test(await kpi('Recebido em')), 'indicadores: saldo da PJ 9.000, saldo da PF 200, recebido no mês 4.000');

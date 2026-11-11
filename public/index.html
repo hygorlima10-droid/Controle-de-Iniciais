@@ -1610,6 +1610,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -1648,6 +1649,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="pj" title="Hygor (PJ)"><svg><use href="#ic-brief"/></svg><span class="lab">Hygor (PJ)</span></button>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="pf" title="Pessoa física"><svg><use href="#ic-user"/></svg><span class="lab">Pessoa física</span></button>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="patrimonio" title="Patrimônio e metas"><svg><use href="#ic-trend"/></svg><span class="lab">Patrimônio e metas</span></button>
+      <button type="button" class="dr-it" data-tab="financeiro" data-fin="orcamento" title="Orçamento por categoria"><svg><use href="#ic-pie"/></svg><span class="lab">Orçamento</span></button>
       <button type="button" class="dr-it" data-tab="analises" title="Análises e projeção"><svg><use href="#ic-chart"/></svg><span class="lab">Análises</span></button>
       <button type="button" class="dr-it" data-tab="obra" title="Construção da casa"><svg><use href="#ic-house"/></svg><span class="lab">Construção</span></button>
       <button type="button" class="dr-it" data-tab="extratos" title="Extratos do banco"><svg><use href="#ic-bank"/></svg><span class="lab">Extratos do banco</span><span class="dr-n red" id="menuNExtratos"></span></button>
@@ -3350,7 +3352,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   var editingSaldoColuna = null;
   var DESPESA_VENCENDO_DIAS = 5;
   var finTab = 'geral';
-  try{ var ftSalva = localStorage.getItem('controlePeticoes.finTab.v1'); if (['geral','pj','pf','patrimonio'].indexOf(ftSalva) >= 0) finTab = ftSalva; }catch(e){}
+  try{ var ftSalva = localStorage.getItem('controlePeticoes.finTab.v1'); if (['geral','pj','pf','patrimonio','orcamento'].indexOf(ftSalva) >= 0) finTab = ftSalva; }catch(e){}
   var menusAbertos = {};
   var mostrarPagas = { pf:false, pj:false };
   var metas = [];
@@ -9710,7 +9712,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
      MENU LATERAL, TELA INÍCIO E FILTROS RECOLHIDOS
      ============================================================ */
   var TITULOS_TELA = { inicio:'Início', peticoes:'Iniciais', acordos:'Acordos', alvaras:'Alvarás', clientes:'Clientes', arquivados:'Arquivados', extratos:'Extratos', analises:'Análises', obra:'Construção', publicacoes:'Publicações', agenda:'Agenda', processos:'Processos', configuracoes:'Configurações', financeiro:'Financeiro' };
-  var FIN_NOMES = { resumo:'Finanças', geral:'Divisão do mês', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio' };
+  var FIN_NOMES = { resumo:'Finanças', geral:'Divisão do mês', pj:'Hygor (PJ)', pf:'Minha PF', patrimonio:'Patrimônio', orcamento:'Orçamento' };
   var atencaoExpandida = false;
   var menuAberto = false;
   function ehTelaLarga(){ return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }
@@ -10053,7 +10055,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   function restaurarConfig(cfgImportada){
     if (cfgImportada === undefined || cfgImportada === null) return Promise.resolve();
     var ps = [];
-    ['planejamento', 'personalizacao', 'relatorioMurilo', 'modelosHonorario', 'extratos', 'obra', 'fechamentos'].forEach(function(k){
+    ['planejamento', 'personalizacao', 'relatorioMurilo', 'modelosHonorario', 'extratos', 'obra', 'fechamentos', 'orcamento'].forEach(function(k){
       var novo = cfgImportada[k];
       if (novo) ps.push(comRepeticao(function(){ return configRef.doc(k).set(novo); }, 4));
       else if (config[k]) ps.push(comRepeticao(function(){ return configRef.doc(k).delete(); }, 4));
@@ -22208,11 +22210,11 @@ document.addEventListener('click', function(ev){
      anPatrimonioEm, anProjecao, ctColetar e obraResumo. Projeção aparece tracejada e nunca é somada ao dinheiro disponível.
    ============================================================ */
 var mfS = { sel: {}, obra: null };
-var MF_ABAS = [['resumo', 'Visão geral'], ['geral', 'Divisão do mês'], ['pj', 'PJ'], ['pf', 'PF'], ['patrimonio', 'Patrimônio'], ['analises', 'Análises']];
+var MF_ABAS = [['resumo', 'Visão geral'], ['geral', 'Divisão do mês'], ['pj', 'PJ'], ['pf', 'PF'], ['patrimonio', 'Patrimônio'], ['orcamento', 'Orçamento'], ['analises', 'Análises']];
 /* chamada no começo de setActiveTab: na primeira vez decide em que sub-aba o Financeiro abre (lê o armazenamento direto, porque roda antes do resto carregar) */
 function mfInit(){
   if (mfInit.ok) return; mfInit.ok = 1;
-  try{ var o = JSON.parse(localStorage.getItem('horus.subaba.v1') || '{}'), s0 = o && o.sub && o.sub.financeiro; finTab = ['geral', 'pj', 'pf', 'patrimonio'].indexOf(s0) >= 0 ? s0 : 'resumo'; }catch(e){ finTab = 'resumo'; }
+  try{ var o = JSON.parse(localStorage.getItem('horus.subaba.v1') || '{}'), s0 = o && o.sub && o.sub.financeiro; finTab = ['geral', 'pj', 'pf', 'patrimonio', 'orcamento'].indexOf(s0) >= 0 ? s0 : 'resumo'; }catch(e){ finTab = 'resumo'; }
 }
 function mfLembrar(){ try{ mdLembrar('financeiro', finTab); }catch(e){} }
 function mfIr(v){
@@ -22239,6 +22241,7 @@ function mfAplicar(){
   var hb = mfBarra(finTab); if (head.getAttribute('data-h') !== finTab){ head.innerHTML = hb; head.setAttribute('data-h', finTab); }
   var sec = document.getElementById('finResumo');
   if (!sec){ sec = document.createElement('div'); sec.id = 'finResumo'; sec.className = 'md-painel'; sec.setAttribute('data-mf', 'fin'); corpo.insertBefore(sec, qs('finGeral')); }
+  try{ orcAplicar(); }catch(e){ console.error('orçamento', e); }
   sec.style.display = finTab === 'resumo' ? '' : 'none';
   if (finTab !== 'resumo' || activeTab !== 'financeiro'){ sec.innerHTML = ''; return; }
   try{ sec.innerHTML = mfResumo(); }catch(e){ console.error('visão geral do financeiro', e); sec.innerHTML = '<div class="empty"><strong>Não consegui montar a visão geral</strong>As outras sub-abas continuam funcionando.</div>'; }
@@ -22328,6 +22331,13 @@ function mfResumo(){
     if (d.faltaRes > 0.005) at.push({ ic: 'piggy-bank', cor: MD_COR.verde, t: 'Aporte na reserva', s: 'planejado, ainda não feito', v: fmtMoeda(d.faltaRes), ir: 'aba:geral' });
     d.alertas.filter(function(a){ return a.nivel === 'aviso'; }).forEach(function(a){ at.push({ ic: 'info', cor: MD_COR.ouro, t: a.texto, s: 'aviso da divisão do mês', v: '', ir: 'aba:geral', longo: true }); });
   }
+  if (ehAtual){
+    try{
+      var oa = orcAlertas(mA);
+      oa.est.forEach(function(l){ var ex = r2(l.gasto - l.lim); at.push({ ic: 'triangle-alert', cor: MD_COR.verm, t: 'Orçamento: ' + l.k + (ex > 0.004 ? ' estourou' : ' chegou no limite'), s: fmtMoeda(l.gasto) + ' de ' + fmtMoeda(l.lim) + ' (' + Math.round(l.pct) + '%)', v: ex > 0.004 ? fmtMoeda(ex) : '', ir: 'aba:orcamento', neg: true }); });
+      if (oa.aten.length) at.push({ ic: 'gauge', cor: MD_COR.ouro, t: 'Passaram de 80% do limite: ' + orcNomes(oa.aten), s: 'orçamento do mês', v: '', ir: 'aba:orcamento', longo: true });
+    }catch(e){ console.error('orçamento', e); }
+  }
   var hAt = at.slice(0, 6).map(function(x){ return '<button type="button" class="md-at" data-md-ir="' + x.ir + '">' + mdIc(x.ic, x.cor) + '<span class="tx"><b' + (x.longo ? ' style="white-space:normal;font-weight:600"' : '') + '>' + escapeHtml(x.t) + '</b><span>' + escapeHtml(x.s) + '</span></span>' + (x.v ? '<span class="vl' + (x.neg ? ' neg' : '') + '">' + x.v + '</span>' : '') + '</button>'; }).join('') || '<div class="md-vazio">Nada vencido, nada vencendo em 7 dias e nada pendente no plano.</div>';
   g += mdCard('Precisa de atenção' + (at.length ? ' · ' + at.length : ''), '<div class="md-ats">' + hAt + '</div>' + (at.length > 6 ? '<div class="md-foot">e mais ' + (at.length - 6) + '.</div>' : ''));
   return h + '<div class="md-grid">' + g + '</div>';
@@ -22392,6 +22402,7 @@ function mfObraResumo(r, cfg){
 
 /* ---------------- cliques ---------------- */
 function mfClique(qual, ev){
+  if (qual === 'orc'){ orcClique(ev); return; }
   var t = ev.target, c = function(s){ return t.closest ? t.closest(s) : null; }, b;
   if (qual === 'fin'){
     if ((b = c('[data-md-per]'))){ mdS.per = Number(b.getAttribute('data-md-per')) === 12 ? 12 : 6; mfS.sel.fin = null; mdGravar(); renderFinanceiro(); return; }
@@ -22433,6 +22444,153 @@ document.addEventListener('click', function(ev){
 });
 (function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { mfS: mfS, mfIr: mfIr }); })();
 mfInit();
+
+
+/* ============================================================
+   ORÇAMENTO POR CATEGORIA (prefixo orc) — Fase 3, etapa 3.5 (só o proprietário)
+   - Limite mensal por categoria (as mesmas categorias da tela "Para onde o dinheiro foi": categorias das despesas e "Dia a dia · …").
+   - O gasto vem dos mesmos lançamentos de hoje: despesas pagas (PJ e PF somadas, sem transferências) + dia a dia dos extratos.
+     O que ainda vai vencer não conta como gasto; entra só como aviso ("com o que ainda vai vencer, passa do limite").
+   - Alertas em 80% e 100%: aparecem aqui e em "Precisa de atenção" na Visão geral. O orçamento NUNCA altera lançamentos.
+   - Guardado em config/orcamento: { limites: { 'Categoria': { 'AAAA-MM': valor | null } } }. O limite vale a partir do mês em que foi
+     definido e continua nos meses seguintes até ser mudado (null = sem limite a partir dali).
+   ============================================================ */
+var orcS = { cat: null };
+function orcDados(){ var o = config.orcamento; return (o && o.limites && typeof o.limites === 'object') ? o.limites : {}; }
+function orcLimite(cat, m){
+  var h = orcDados()[cat]; if (!h) return null;
+  var ks = Object.keys(h).filter(function(k){ return k <= m; }).sort(); if (!ks.length) return null;
+  var v = Number(h[ks[ks.length - 1]]); return v > 0.004 ? r2(v) : null;
+}
+function orcSalvar(cat, m, valor){
+  var l = JSON.parse(JSON.stringify(orcDados())); l[cat] = l[cat] || {}; l[cat][m] = valor > 0.004 ? r2(valor) : null;
+  var dados = { limites: l }; config.orcamento = dados;
+  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('orcamento').set(dados));
+  saveLocalConfig(); return Promise.resolve();
+}
+/* gasto do mês por rótulo de categoria: pago (despesas pagas, parciais e dia a dia) e a pagar (despesas ainda abertas) */
+function orcColeta(m){
+  var out = {};
+  comMes(m, function(){
+    ['pj', 'pf'].forEach(function(col){
+      getDespesasParaMes(col).forEach(function(it){
+        if (it.despesa.transferenciaId) return;
+        var v = valorDespesaItem(it); if (!(v > 0.004)) return;
+        var rot = CATEGORIA_LABEL[catIdValida(it.despesa.categoria)] || 'Outros', x = out[rot] = out[rot] || { gasto: 0, aPagar: 0 };
+        if (it.pago) x.gasto += v; else { var sp = it.somaParcial || 0; x.gasto += sp; x.aPagar += Math.max(0, v - sp); }
+      });
+    });
+  });
+  var dd = anDiaADiaMes(m).cats;
+  Object.keys(dd).forEach(function(c){ if (dd[c] > 0.004) out['Dia a dia · ' + c] = { gasto: dd[c], aPagar: 0 }; });
+  return out;
+}
+function orcLinhas(m){
+  var col = orcColeta(m), cats = {};
+  Object.keys(col).forEach(function(k){ cats[k] = 1; });
+  Object.keys(orcDados()).forEach(function(k){ if (orcLimite(k, m)) cats[k] = 1; });
+  return Object.keys(cats).map(function(k){
+    var c = col[k] || { gasto: 0, aPagar: 0 }, lim = orcLimite(k, m), g = r2(c.gasto), ap = r2(c.aPagar);
+    return { k: k, gasto: g, aPagar: ap, lim: lim, pct: lim ? g / lim * 100 : null, prev: r2(g + ap) };
+  }).filter(function(x){ return x.lim || x.gasto > 0.004 || x.aPagar > 0.004; });
+}
+function orcEstourou(l){ return !!l.lim && l.gasto >= l.lim - 0.004; }
+function orcPassou80(l){ return !!l.lim && !orcEstourou(l) && l.gasto >= l.lim * 0.8 - 0.004; }
+function orcAlertas(m){
+  var L = orcLinhas(m).filter(function(l){ return l.lim; });
+  return { est: L.filter(orcEstourou).sort(function(a, b){ return b.pct - a.pct; }), aten: L.filter(orcPassou80).sort(function(a, b){ return b.pct - a.pct; }), total: L.length };
+}
+function orcNomes(l){ return l.slice(0, 2).map(function(x){ return x.k; }).join(' e ') + (l.length > 2 ? ' e outras' : ''); }
+function orcMsg(l){
+  if (!l.lim) return '';
+  if (orcEstourou(l)){
+    var ex = r2(l.gasto - l.lim);
+    return '<span class="orc-msg ruim">' + (ex > 0.004 ? 'Estourou em ' + fmtMoeda(ex) : 'Limite atingido') + '</span>';
+  }
+  if (orcPassou80(l)) return '<span class="orc-msg aten">Já passou de 80%: restam ' + fmtMoeda(r2(l.lim - l.gasto)) + '</span>';
+  if (l.aPagar > 0.004 && l.prev > l.lim + 0.004) return '<span class="orc-msg aten">Com o que ainda vai vencer (' + fmtMoeda(l.aPagar) + '), passa do limite: previsto ' + fmtMoeda(l.prev) + '</span>';
+  return '';
+}
+function orcLinhaHtml(l, por, m){
+  var cor = !l.lim ? 'var(--ink-soft)' : (orcEstourou(l) ? 'var(--urgente)' : (orcPassou80(l) ? '#D99A00' : 'var(--normal)')), pct = l.lim ? Math.round(l.pct) : null;
+  var itens = por[l.k] ? ctLista(por[l.k]) : '<div class="saldo-data">Sem lançamentos neste mês.</div>';
+  return '<details class="orc-row" data-ct-chave="' + escapeHtml(l.k) + '"' + (ctAbertos[l.k] ? ' open' : '') + '><summary>' +
+    '<div class="orc-l1">' + ctIcone(l.k) + '<span class="orc-nm">' + escapeHtml(l.k) + '</span><span class="orc-v"><b>' + fmtMoeda(l.gasto) + '</b>' + (l.lim ? ' <small>de ' + fmtMoeda(l.lim).replace(',00', '') + '</small> <em class="orc-pct" style="color:' + cor + '">' + pct + '%</em>' : ' <small>sem limite</small> <em class="orc-def">definir ›</em>') + '</span></div>' +
+    (l.lim ? '<div class="orc-bar"><i style="width:' + Math.min(100, l.pct).toFixed(1) + '%;background:' + cor + '"></i></div>' : '') + orcMsg(l) + '</summary>' +
+    '<div class="ct-det"><div class="orc-ed"><label>Limite mensal (R$)</label><input type="number" min="0" step="0.01" inputmode="decimal" value="' + (l.lim || '') + '" placeholder="ex.: 1500"><button type="button" class="btn btn-primary" data-orc-salvar="' + escapeHtml(l.k) + '">Salvar</button>' + (l.lim ? '<button type="button" class="btn btn-ghost" data-orc-sem="' + escapeHtml(l.k) + '">Tirar o limite</button>' : '') + '</div>' +
+    '<div class="saldo-data">Vale a partir de ' + escapeHtml(mesLabel(m)) + ' e continua nos meses seguintes até você mudar.</div>' + itens + '</div></details>';
+}
+function orcRender(){
+  var m = mesSelecionado, linhas = orcLinhas(m), com = linhas.filter(function(l){ return l.lim; }).sort(function(a, b){ return b.pct - a.pct; }), sem = linhas.filter(function(l){ return !l.lim; }).sort(function(a, b){ return b.gasto - a.gasto; });
+  var por = ctColetar([m]), orcado = r2(com.reduce(function(t, l){ return t + l.lim; }, 0)), gasto = r2(com.reduce(function(t, l){ return t + l.gasto; }, 0));
+  var est = com.filter(orcEstourou), aten = com.filter(orcPassou80), h = '';
+  var kp = function(rot, ic, cor, v, cls, foot){ return '<div class="md-card md-kpi an-kpi-i"><div class="md-h"><span class="md-k">' + mdIc(ic, cor) + '<span>' + rot + '</span></span></div><b class="md-v' + (cls ? ' ' + cls : '') + '">' + v + '</b><div class="md-foot">' + foot + '</div></div>'; };
+  h += '<div class="md-kpis an-kpis4">' +
+    kp('Orçado no mês', 'clipboard-list', MD_COR.ouro, fmtMoeda(orcado), '', com.length + (com.length === 1 ? ' categoria com limite' : ' categorias com limite')) +
+    kp('Gasto até agora', 'wallet', MD_COR.azul, fmtMoeda(gasto), '', orcado > 0 ? Math.round(gasto / orcado * 100) + '% do orçado' : 'defina limites abaixo') +
+    kp('Estouradas', 'triangle-alert', MD_COR.verm, String(est.length), est.length ? 'neg' : '', est.length ? escapeHtml(orcNomes(est)) : 'nenhuma') +
+    kp('Passaram de 80%', 'gauge', MD_COR.ouro, String(aten.length), '', aten.length ? escapeHtml(orcNomes(aten)) : 'nenhuma') + '</div>';
+  var esq = '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Limite × gasto · ' + escapeHtml(mesLabel(m)) + '</h4></div>' +
+    '<div class="saldo-data">Toque numa categoria para ver os lançamentos e mudar o limite. O limite vale para os meses seguintes até você mudar.</div>' +
+    (com.length ? com.map(function(l){ return orcLinhaHtml(l, por, m); }).join('') : '<div class="financeiro-vazio">Nenhum limite definido ainda. Toque em “definir” numa categoria abaixo.</div>') +
+    (sem.length ? '<div class="plano-tit" style="margin-top:14px;">Sem limite definido</div>' + sem.map(function(l){ return orcLinhaHtml(l, por, m); }).join('') : '') + '</section>';
+  /* categoria × mês */
+  var cats = linhas.map(function(l){ return l.k; });
+  if (!orcS.cat || cats.indexOf(orcS.cat) < 0) orcS.cat = com.length ? com[0].k : (cats[0] || null);
+  var dir = '', nota = function(n, t){ return '<div class="an-sem-nota"><span>' + n + '</span><div>' + t + '</div></div>'; };
+  dir += '<section class="ini-card an-card"><div class="an-tit"><h4>Como funciona</h4></div>' +
+    nota(1, 'O gasto vem <b>dos mesmos lançamentos de hoje</b> (despesas pagas e dia a dia), por categoria, somando PJ e PF. O que ainda vai vencer só aparece como aviso.') +
+    nota(2, 'Alertas em <b>80% e 100%</b>: aparecem aqui e em “Precisa de atenção”, na Visão geral.') +
+    nota(3, '<b>O orçamento nunca altera lançamentos.</b> Estourar só avisa.') +
+    nota(4, 'Tocar numa linha abre os lançamentos daquela categoria no mês.') + '</section>';
+  if (orcS.cat){
+    var ms = anMesesAte(6), S = [{ key: 'gasto', nome: 'Gasto', cor: 'var(--accent)' }, { key: 'lim', nome: 'Limite', cor: 'var(--an-ref, #8D8D95)' }];
+    anTips = [];
+    var itens = ms.map(function(x){ var c = orcColeta(x)[orcS.cat] || { gasto: 0 }; return { m: x, rotuloLongo: mesLabel(x), parcial: x === todayISO().slice(0, 7), v: { gasto: r2(c.gasto), lim: orcLimite(orcS.cat, x) || 0 } }; });
+    dir += '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Categoria × mês</h4><select class="orc-sel" data-orc-cat="1" aria-label="Escolher a categoria">' + cats.map(function(k){ return '<option value="' + escapeHtml(k) + '"' + (k === orcS.cat ? ' selected' : '') + '>' + escapeHtml(k) + '</option>'; }).join('') + '</select></div>' +
+      anLegenda(S) + anBarras({ w: Math.max(280, Math.min(460, (qs('bodyFinanceiro').clientWidth || 360) - 60)), itens: itens, series: S, empilhado: false, rotulo: 'Gasto e limite de ' + orcS.cat + ' por mês' }) + '</section>';
+  }
+  h += '<div class="orc-grid">' + esq + '<div class="orc-dir">' + dir + '</div></div>';
+  return h;
+}
+function orcAplicar(){
+  var corpo = qs('bodyFinanceiro'); if (!corpo) return;
+  var sec = document.getElementById('finOrcamento');
+  if (!sec){ sec = document.createElement('div'); sec.id = 'finOrcamento'; sec.className = 'md-painel'; sec.setAttribute('data-mf', 'orc'); corpo.insertBefore(sec, qs('finGeral')); }
+  sec.style.display = finTab === 'orcamento' ? '' : 'none';
+  if (finTab !== 'orcamento' || activeTab !== 'financeiro'){ sec.innerHTML = ''; return; }
+  try{ sec.innerHTML = orcRender(); }catch(e){ console.error('orçamento', e); sec.innerHTML = '<div class="empty"><strong>Não consegui montar o orçamento</strong>As outras sub-abas continuam funcionando.</div>'; }
+}
+function orcClique(ev){
+  var t = ev.target, c = function(s){ return t.closest ? t.closest(s) : null; }, b;
+  if ((b = c('[data-orc-salvar]'))){
+    var inp = b.parentNode.querySelector('input'), v = Number(String(inp.value).replace(',', '.'));
+    if (!(v > 0)){ toast('Digite um limite maior que zero (ou use “Tirar o limite”).'); return; }
+    var cat = b.getAttribute('data-orc-salvar');
+    Promise.resolve(orcSalvar(cat, mesSelecionado, v)).then(function(){ renderFinanceiro(); toast('Limite de ' + cat + ' salvo.'); }).catch(function(e){ console.error('orçamento', e); toast('Não consegui salvar. Tente de novo.'); });
+    return;
+  }
+  if ((b = c('[data-orc-sem]'))){
+    var cat2 = b.getAttribute('data-orc-sem');
+    Promise.resolve(orcSalvar(cat2, mesSelecionado, null)).then(function(){ renderFinanceiro(); toast('Limite de ' + cat2 + ' retirado a partir deste mês.'); }).catch(function(e){ console.error('orçamento', e); toast('Não consegui salvar. Tente de novo.'); });
+  }
+}
+document.addEventListener('change', function(ev){
+  var s = ev.target && ev.target.closest ? ev.target.closest('[data-orc-cat]') : null; if (!s) return;
+  orcS.cat = s.value; orcAplicar();
+});
+(function(){
+  var st = document.createElement('style'); st.id = 'orcCss';
+  st.textContent = '.orc-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;align-items:start}.orc-dir{display:flex;flex-direction:column;gap:12px}.orc-grid .an-card{margin:0}@media(max-width:999px){.orc-grid{grid-template-columns:minmax(0,1fr)}}' +
+    '.orc-row{border-top:1px solid var(--border);padding:10px 0}.orc-row:first-of-type{border-top:0}.orc-row>summary{list-style:none;cursor:pointer;display:block}.orc-row>summary::-webkit-details-marker{display:none}' +
+    '.orc-l1{display:flex;align-items:center;gap:10px}.orc-nm{flex:1;min-width:0;font-weight:600;font-size:var(--t4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.orc-v{white-space:nowrap;font-size:var(--t3)}.orc-v b{font-size:var(--t4)}.orc-v small{color:var(--ink-soft)}' +
+    '.orc-pct{font-style:normal;font-weight:800;font-size:var(--t2);margin-left:4px}.orc-def{font-style:normal;color:var(--accent);font-weight:700;font-size:var(--t2)}' +
+    '.orc-bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:8px 0 4px 46px}.orc-bar i{display:block;height:100%;border-radius:99px}' +
+    '.orc-msg{display:block;margin-left:46px;font-size:var(--t2);font-weight:600}.orc-msg.ruim{color:var(--urgente)}.orc-msg.aten{color:#B7791E}' +
+    '.orc-ed{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}.orc-ed label{font-size:var(--t2);color:var(--ink-soft);font-weight:600;width:100%}.orc-ed input{height:40px;width:140px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);padding:0 12px;font:inherit}' +
+    '.orc-sel{height:36px;max-width:60%;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;padding:0 8px}';
+  document.head.appendChild(st);
+})();
 
 /*MD-FIM*/
 

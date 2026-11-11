@@ -6,11 +6,11 @@
      anPatrimonioEm, anProjecao, ctColetar e obraResumo. Projeção aparece tracejada e nunca é somada ao dinheiro disponível.
    ============================================================ */
 var mfS = { sel: {}, obra: null };
-var MF_ABAS = [['resumo', 'Visão geral'], ['geral', 'Divisão do mês'], ['pj', 'PJ'], ['pf', 'PF'], ['patrimonio', 'Patrimônio'], ['analises', 'Análises']];
+var MF_ABAS = [['resumo', 'Visão geral'], ['geral', 'Divisão do mês'], ['pj', 'PJ'], ['pf', 'PF'], ['patrimonio', 'Patrimônio'], ['orcamento', 'Orçamento'], ['analises', 'Análises']];
 /* chamada no começo de setActiveTab: na primeira vez decide em que sub-aba o Financeiro abre (lê o armazenamento direto, porque roda antes do resto carregar) */
 function mfInit(){
   if (mfInit.ok) return; mfInit.ok = 1;
-  try{ var o = JSON.parse(localStorage.getItem('horus.subaba.v1') || '{}'), s0 = o && o.sub && o.sub.financeiro; finTab = ['geral', 'pj', 'pf', 'patrimonio'].indexOf(s0) >= 0 ? s0 : 'resumo'; }catch(e){ finTab = 'resumo'; }
+  try{ var o = JSON.parse(localStorage.getItem('horus.subaba.v1') || '{}'), s0 = o && o.sub && o.sub.financeiro; finTab = ['geral', 'pj', 'pf', 'patrimonio', 'orcamento'].indexOf(s0) >= 0 ? s0 : 'resumo'; }catch(e){ finTab = 'resumo'; }
 }
 function mfLembrar(){ try{ mdLembrar('financeiro', finTab); }catch(e){} }
 function mfIr(v){
@@ -37,6 +37,7 @@ function mfAplicar(){
   var hb = mfBarra(finTab); if (head.getAttribute('data-h') !== finTab){ head.innerHTML = hb; head.setAttribute('data-h', finTab); }
   var sec = document.getElementById('finResumo');
   if (!sec){ sec = document.createElement('div'); sec.id = 'finResumo'; sec.className = 'md-painel'; sec.setAttribute('data-mf', 'fin'); corpo.insertBefore(sec, qs('finGeral')); }
+  try{ orcAplicar(); }catch(e){ console.error('orçamento', e); }
   sec.style.display = finTab === 'resumo' ? '' : 'none';
   if (finTab !== 'resumo' || activeTab !== 'financeiro'){ sec.innerHTML = ''; return; }
   try{ sec.innerHTML = mfResumo(); }catch(e){ console.error('visão geral do financeiro', e); sec.innerHTML = '<div class="empty"><strong>Não consegui montar a visão geral</strong>As outras sub-abas continuam funcionando.</div>'; }
@@ -126,6 +127,13 @@ function mfResumo(){
     if (d.faltaRes > 0.005) at.push({ ic: 'piggy-bank', cor: MD_COR.verde, t: 'Aporte na reserva', s: 'planejado, ainda não feito', v: fmtMoeda(d.faltaRes), ir: 'aba:geral' });
     d.alertas.filter(function(a){ return a.nivel === 'aviso'; }).forEach(function(a){ at.push({ ic: 'info', cor: MD_COR.ouro, t: a.texto, s: 'aviso da divisão do mês', v: '', ir: 'aba:geral', longo: true }); });
   }
+  if (ehAtual){
+    try{
+      var oa = orcAlertas(mA);
+      oa.est.forEach(function(l){ var ex = r2(l.gasto - l.lim); at.push({ ic: 'triangle-alert', cor: MD_COR.verm, t: 'Orçamento: ' + l.k + (ex > 0.004 ? ' estourou' : ' chegou no limite'), s: fmtMoeda(l.gasto) + ' de ' + fmtMoeda(l.lim) + ' (' + Math.round(l.pct) + '%)', v: ex > 0.004 ? fmtMoeda(ex) : '', ir: 'aba:orcamento', neg: true }); });
+      if (oa.aten.length) at.push({ ic: 'gauge', cor: MD_COR.ouro, t: 'Passaram de 80% do limite: ' + orcNomes(oa.aten), s: 'orçamento do mês', v: '', ir: 'aba:orcamento', longo: true });
+    }catch(e){ console.error('orçamento', e); }
+  }
   var hAt = at.slice(0, 6).map(function(x){ return '<button type="button" class="md-at" data-md-ir="' + x.ir + '">' + mdIc(x.ic, x.cor) + '<span class="tx"><b' + (x.longo ? ' style="white-space:normal;font-weight:600"' : '') + '>' + escapeHtml(x.t) + '</b><span>' + escapeHtml(x.s) + '</span></span>' + (x.v ? '<span class="vl' + (x.neg ? ' neg' : '') + '">' + x.v + '</span>' : '') + '</button>'; }).join('') || '<div class="md-vazio">Nada vencido, nada vencendo em 7 dias e nada pendente no plano.</div>';
   g += mdCard('Precisa de atenção' + (at.length ? ' · ' + at.length : ''), '<div class="md-ats">' + hAt + '</div>' + (at.length > 6 ? '<div class="md-foot">e mais ' + (at.length - 6) + '.</div>' : ''));
   return h + '<div class="md-grid">' + g + '</div>';
@@ -190,6 +198,7 @@ function mfObraResumo(r, cfg){
 
 /* ---------------- cliques ---------------- */
 function mfClique(qual, ev){
+  if (qual === 'orc'){ orcClique(ev); return; }
   var t = ev.target, c = function(s){ return t.closest ? t.closest(s) : null; }, b;
   if (qual === 'fin'){
     if ((b = c('[data-md-per]'))){ mdS.per = Number(b.getAttribute('data-md-per')) === 12 ? 12 : 6; mfS.sel.fin = null; mdGravar(); renderFinanceiro(); return; }
