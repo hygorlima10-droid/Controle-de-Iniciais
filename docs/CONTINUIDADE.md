@@ -103,9 +103,16 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
   - **Largura:** a variável CSS `--larg: 1440px` (em `public/index.html`) vale para `.wrap` e `.tb-in` (barra do topo); os limites antigos (1080, 960, 820 e 780 px de `.ob-wrap`, `.an-wrap`, `.ext-wrap`, `.financeiro-colunas`, `.fin-secao`) foram retirados. Em notebook de 1440 px o conteúdo usa toda a largura ao lado do menu; em monitor maior, 1440 px centralizado. Celular e tablet não mudam.
   - **Kanban:** no computador (≥ 1000 px) `.kanban-wrap .kanban-col` divide a largura (`flex:1 1 0; min-width:190px`), então Iniciais → Quadro, Alvarás → Fases e Agenda → Quadro mostram todas as colunas sem rolar de lado.
   - **Agenda → Quadro:** a coluna “Concluído” (só no modo por urgência) começa como **trilha estreita** (`.recolhida`), abre ao arrastar um cartão para ela ou ao tocar na trilha (`agS.feitoAberto`). **Arrastar cartões foi acrescentado** (antes só Iniciais e Alvarás arrastavam): por situação, soltar em A fazer / Em andamento / Concluído muda a situação (`agdSituacao`); por urgência só dá para soltar em Concluído (prazo abre a pergunta da data do protocolo, como o botão); a data **não** muda arrastando (use “Adiar”); audiência não vai para “Em andamento”; alvará não arrasta (`agSoltar`).
-- **Próximo: 3.3** Semanas (fluxo de caixa semanal) em Análises.
+- **3.3 feita** (ver seção abaixo). **Próximo: 3.4** Análises reorganizadas.
 
 ## Logos em três versões e tela de abertura (11/11/2026)
 - `public/logo/logo-dark.png`, `logo-transparent.png`, `logo-white.png` (a transparente e a branca vieram de arquivo enviado pelo proprietário; a branca foi refeita sobre branco puro a partir da transparente, para tirar uma mancha cinza do original). Usos: menu e botão de menu (transparente, sem quadrado), abertura e entrada (escuro), relatórios (branco).
 - Tela de abertura unificada com a de boas-vindas: 2,8 s, círculo girando, fecha ao toque; teste `logos-abertura` (grupo principal). Imagem de abertura nativa do iPhone (apple-touch-startup-image) **não** foi criada: o proprietário aceitou a mesma tela redimensionada dentro do app.
-- Próximo: Fase 3, etapa 3.3 (Semanas), após o OK do proprietário.
+
+## Fase 3, etapa 3.3: Semanas (fluxo de caixa semanal) — feita em 11/11/2026
+- Nova sub-aba **Semanas** em Finanças > Análises (por ora é o 5º botão do seletor `#anPeriodoSeg`; a etapa 3.4 reorganiza para Último mês | Histórico | Semanas | Simulador | Futuro).
+- Código em `public/index.html`, junto das demais funções `an*`: `anSemanas(n)` (dados), `anGraficoSemanas` (SVG), `renderAnaliseSemanas`. Usa `anProjecao(4)` como fonte (agora cada saída sem data carrega `mes`).
+- Regras: semanas de segunda a domingo; a 1ª começa na semana de hoje e recebe o que já venceu e não foi pago; parte do caixa de hoje (PJ + PF, sem repasse a parceiros); soma parcelas/acordos com data e despesas não pagas; receitas fixas e despesas sem dia certo e o dia a dia (média dos extratos) são **espalhados pelos dias do mês**; **ficam de fora** alvarás, atrasados e valores sem data (listados em "O que a semana não conta"). Nunca altera lançamentos nem a divisão do mês.
+- Tela: aviso (vermelho se alguma semana fecha negativa, citando as maiores saídas; verde com o ponto mais baixo se não), gráfico 10 ou 12 semanas (barras tracejadas de entrada/saída + linha do saldo), semana selecionada (toque no gráfico ou setas ‹ ›) com a lista de entradas e saídas, e o card "O que a semana não conta".
+- Teste: `analises-semanas` (grupo principal); `analises-ultimo` passou a esperar 5 botões.
+- Fica para depois (não pedido): abrir o lançamento ao tocar numa linha da lista (o esboço previa; hoje a linha só mostra o item).

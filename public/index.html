@@ -1439,6 +1439,35 @@
     .stats .stat .lbl{white-space:nowrap;overflow:visible;font-size:var(--t1);}
     .stats .stat .val{white-space:nowrap;overflow-wrap:normal;}
   }
+
+  /* ===== Análises: Semanas (fluxo de caixa semanal) ===== */
+  #anPeriodoSeg{grid-template-columns:repeat(5,minmax(0,1fr));}
+  @media (max-width:560px){#anPeriodoSeg{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  .an-sem-ent{fill:var(--normal);fill-opacity:.16;stroke:var(--normal);stroke-width:1.4;stroke-dasharray:4 3;}
+  .an-sem-sai{fill:var(--urgente);fill-opacity:.14;stroke:var(--urgente);stroke-width:1.4;stroke-dasharray:4 3;}
+  .an-sem-linha{stroke:var(--accent);}
+  .an-sem-pt{fill:var(--accent);stroke:var(--surface);stroke-width:1.5;}
+  .an-sem-pt.neg{fill:var(--urgente);}
+  .an-sem-sel{fill:var(--accent);fill-opacity:.09;}
+  .an-sem-rot-sel{font-weight:700;}
+  .an-sem-i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1.4px dashed var(--normal);background:rgba(23,137,90,.16);}
+  .an-sem-i.sai{border-color:var(--urgente);background:rgba(217,59,59,.14);}
+  .an-sem-i.lin{border:0;height:3px;border-radius:2px;background:var(--accent);vertical-align:3px;}
+  .an-sem-aviso{display:flex;flex-direction:column;gap:6px;align-items:flex-start;border-radius:var(--radius-lg,16px);padding:14px 16px;margin:0 0 12px;font-size:var(--t3);line-height:1.4;}
+  .an-sem-aviso.neg{background:rgba(217,59,59,.1);color:var(--urgente);}
+  .an-sem-aviso.ok{background:rgba(23,137,90,.1);color:var(--normal);}
+  .an-sem-aviso span{color:inherit;opacity:.92;}
+  .an-sem-aviso .btn{margin-top:4px;}
+  .an-sem-mais{border:0;background:none;color:var(--accent);font-weight:700;font-size:var(--t2);cursor:pointer;padding:4px 0;}
+  .an-sem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;align-items:start;}
+  .an-sem-grid .an-card{margin:0;}
+  .an-sem-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .an-sem-nav h4{flex:1;margin:0;text-align:center;}
+  .an-sem-tot{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 10px;font-size:var(--t2);color:var(--ink-soft);}
+  .an-sem-tot b{color:var(--ink);}
+  .an-sem-tot b.an-bom{color:var(--normal);} .an-sem-tot b.an-mau{color:var(--urgente);}
+  .an-sem-nota{display:flex;gap:10px;align-items:flex-start;margin:10px 0;font-size:var(--t3);line-height:1.45;}
+  .an-sem-nota > span{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:var(--t2);display:flex;align-items:center;justify-content:center;}
 </style>
 <link rel="stylesheet" href="/tema.css?v=1">
 </head>
@@ -14072,7 +14101,7 @@ function anProjecao(n){
           if (it.pago || it.despesa.transferenciaId) return;
           var v = Math.max(0, valorDespesaItem(it) - (it.somaParcial || 0));
           t += v;
-          if (v > 0.004) eventos.saidas.push({ data: it.vencimento || null, nome: it.despesa.nome + ' (' + (col === 'pf' ? 'PF' : 'PJ') + ')', valor: r2(v), tipo: 'despesa' });
+          if (v > 0.004) eventos.saidas.push({ data: it.vencimento || null, nome: it.despesa.nome + ' (' + (col === 'pf' ? 'PF' : 'PJ') + ')', valor: r2(v), tipo: 'despesa', mes: m });
         });
         getReceitasManuaisParaMes(col).forEach(function(it){
           if (it.receita.transferenciaId || it.recebido || !it.recorrente) return;
@@ -14265,7 +14294,7 @@ function anMarcarObra(chave){
   }).catch(function(err){ console.error('erro ao marcar', err); toast('Não consegui salvar. Tente de novo.'); });
 }
 function anSegBotoes(){
-  return [['ult', 'Último mês'], [6, '6 meses'], [12, '12 meses'], ['proj', 'Próx. 3 meses']].map(function(o){
+  return [['ult', 'Último mês'], [6, '6 meses'], [12, '12 meses'], ['proj', 'Próx. 3 meses'], ['sem', 'Semanas']].map(function(o){
     return '<button type="button" data-an-periodo="' + o[0] + '" class="seg-btn' + (anPeriodo === o[0] ? ' active' : '') + '">' + o[1] + '</button>';
   }).join('');
 }
@@ -14435,6 +14464,131 @@ function renderAnaliseProjecao(el){
   el.innerHTML = h + '<div id="anTip" class="an-tip" role="status" style="display:none;"></div>';
   anTipEl = qs('anTip');
 }
+/* ---------- visão "Semanas": fluxo de caixa semanal (Fase 3, etapa 3.3) ----------
+   Mesmas regras da projeção dos próximos meses, só que semana a semana (segunda a domingo):
+   parte do caixa de hoje (PJ + PF, sem o que é dos parceiros), soma parcelas e acordos com data e despesas ainda não pagas,
+   espalha pelo mês o que não tem dia certo (receitas fixas, despesas sem vencimento e o dia a dia pela média dos extratos)
+   e deixa de fora alvarás, atrasados e valores sem data. É previsão: nunca altera lançamentos nem a divisão do mês. */
+var anSemN = 10, anSemSel = null;
+function anSegunda(iso){ var d = new Date(iso + 'T00:00:00'); return somarDias(iso, -((d.getDay() + 6) % 7)); }
+function anDM(iso){ return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
+function anSemanas(n){
+  var hoje = todayISO(), m0 = hoje.slice(0, 7), pr = anProjecao(4), seg0 = anSegunda(hoje), sem = [], i;
+  for (i = 0; i < n; i++){ var ini = somarDias(seg0, 7 * i); sem.push({ i: i, ini: ini, fim: somarDias(ini, 6), parc: 0, fixas: 0, desp: 0, despAprox: 0, dia: 0, itens: [] }); }
+  var ultimo = sem[n - 1].fim;
+  function idx(d){ if (d < sem[0].ini) return 0; for (var k = 0; k < n; k++) if (d <= sem[k].fim) return k; return -1; }
+  var nao = { atrasados: { v: 0, q: 0 }, alvaras: { v: 0, q: 0 } }, porDia = {};
+  /* o que não tem dia certo é espalhado pelos dias do mês (no mês atual, só pelos dias que faltam) */
+  function espalhar(mes, valor, campo){
+    if (!(valor > 0.004)) return;
+    var d = mes === m0 ? hoje : mes + '-01', fimM = anUltimoDia(mes), dias = [];
+    for (; d <= fimM; d = somarDias(d, 1)) dias.push(d);
+    dias.forEach(function(x){ porDia[x] = porDia[x] || {}; porDia[x][campo] = (porDia[x][campo] || 0) + valor / dias.length; });
+  }
+  pr.eventos.entradas.forEach(function(e){
+    if (e.tipo === 'fixa'){ espalhar(e.mes, e.valor, 'fixas'); return; }
+    if (e.atrasado){ nao.atrasados.v += e.valor; nao.atrasados.q++; return; }
+    if (e.tipo === 'alvara'){ if (e.data <= ultimo){ nao.alvaras.v += e.valor; nao.alvaras.q++; } return; }
+    var k = idx(e.data); if (k < 0) return;
+    sem[k].parc += e.valor; sem[k].itens.push({ data: e.data, nome: e.nome, valor: e.valor, sinal: 1 });
+  });
+  pr.eventos.saidas.forEach(function(e){
+    if (!e.data){ espalhar(e.mes, e.valor, 'despAprox'); return; }
+    var k = idx(e.data); if (k < 0) return;
+    sem[k].desp += e.valor; sem[k].itens.push({ data: e.data, nome: e.nome, valor: e.valor, sinal: -1 });
+  });
+  for (i = 0; i < 4; i++){ var mm = deslocarMes(m0, i); espalhar(mm, pr.mediaDD * (i === 0 ? (1 - fracaoMesDecorrida()) : 1), 'dia'); }
+  Object.keys(porDia).forEach(function(d){
+    var k = d > ultimo ? -1 : idx(d); if (k < 0) return;
+    ['fixas', 'despAprox', 'dia'].forEach(function(c){ sem[k][c] += porDia[d][c] || 0; });
+  });
+  var saldo = pr.ini, primeiraNeg = null, menor = null;
+  sem.forEach(function(s){
+    s.fixas = r2(s.fixas); s.despAprox = r2(s.despAprox); s.dia = r2(s.dia); s.parc = r2(s.parc); s.desp = r2(s.desp);
+    s.itens.sort(function(a, b){ return a.data.localeCompare(b.data); });
+    if (s.fixas > 0.004) s.itens.push({ data: null, nome: 'Receitas fixas sem dia certo', valor: s.fixas, sinal: 1, aprox: true });
+    if (s.despAprox > 0.004) s.itens.push({ data: null, nome: 'Despesas sem dia de vencimento', valor: s.despAprox, sinal: -1, aprox: true });
+    if (s.dia > 0.004) s.itens.push({ data: null, nome: 'Dia a dia (média dos extratos)', valor: s.dia, sinal: -1, aprox: true });
+    s.ent = r2(s.parc + s.fixas); s.sai = r2(s.desp + s.despAprox + s.dia);
+    saldo = r2(saldo + s.ent - s.sai); s.saldo = saldo;
+    if (primeiraNeg === null && saldo < -0.004) primeiraNeg = s.i;
+    if (menor === null || saldo < sem[menor].saldo) menor = s.i;
+  });
+  nao.atrasados.v = r2(nao.atrasados.v); nao.alvaras.v = r2(nao.alvaras.v);
+  return { ini: pr.ini, sem: sem, nao: nao, primeiraNeg: primeiraNeg, menor: menor, mediaDD: pr.mediaDD, semData: pr.semData, semDataQ: pr.semDataLista.length, repasseHoje: pr.repasseHoje };
+}
+function anGraficoSemanas(S, w, sel){
+  var H = 236, L = 46, R = 8, T = 14, B = 26, pw = w - L - R, ph = H - T - B, n = S.sem.length, min = 0, max = 0;
+  S.sem.forEach(function(s){ max = Math.max(max, s.ent, s.saldo); min = Math.min(min, -s.sai, s.saldo); });
+  var esc = anEscala(min, max), y = function(v){ return T + ph - (v - esc.lo) / (esc.hi - esc.lo) * ph; }, bw = pw / n, cx = function(i){ return L + bw * i + bw / 2; };
+  var s = '<svg class="an-svg" viewBox="0 0 ' + w + ' ' + H + '" width="100%" role="img" aria-label="Entradas, saídas e saldo previsto por semana">';
+  esc.ticks.forEach(function(t){
+    s += '<line class="an-grid' + (t === 0 ? ' an-zero' : '') + '" x1="' + L + '" x2="' + (w - R) + '" y1="' + y(t) + '" y2="' + y(t) + '"/><text class="an-eixo" x="' + (L - 6) + '" y="' + (y(t) + 3.5) + '" text-anchor="end">' + anFmtEixo(t) + '</text>';
+  });
+  if (sel !== null && S.sem[sel]) s += '<rect class="an-sem-sel" x="' + (L + bw * sel) + '" y="' + T + '" width="' + bw + '" height="' + ph + '" rx="6"/>';
+  var larg = Math.min(26, bw * 0.5), d = '', passoRot = bw < 34 ? 2 : 1;   /* celular: um rótulo sim, outro não, para não se atropelarem */
+  S.sem.forEach(function(sm, i){
+    if (sm.ent > 0.004) s += '<rect class="an-sem-ent" x="' + (cx(i) - larg / 2) + '" y="' + y(sm.ent) + '" width="' + larg + '" height="' + Math.max(1, y(0) - y(sm.ent)) + '" rx="3"/>';
+    if (sm.sai > 0.004) s += '<rect class="an-sem-sai" x="' + (cx(i) - larg / 2) + '" y="' + y(0) + '" width="' + larg + '" height="' + Math.max(1, y(-sm.sai) - y(0)) + '" rx="3"/>';
+    d += (i ? 'L' : 'M') + cx(i) + ',' + y(sm.saldo);
+  });
+  s += '<path d="' + d + '" fill="none" class="an-sem-linha" stroke-width="2.2" stroke-linejoin="round"/>';
+  S.sem.forEach(function(sm, i){
+    s += '<circle cx="' + cx(i) + '" cy="' + y(sm.saldo) + '" r="' + (i === sel ? 5.5 : 3.6) + '" class="an-sem-pt' + (sm.saldo < -0.004 ? ' neg' : '') + '"/>';
+    if (i % passoRot === 0) s += '<text class="an-eixo' + (i === sel ? ' an-sem-rot-sel' : '') + '" x="' + cx(i) + '" y="' + (H - 7) + '" text-anchor="middle">' + anDM(sm.ini) + '</text>';
+    var tip = '<b>Semana de ' + anDM(sm.ini) + '</b> a ' + anDM(sm.fim) + '<br>Entra: <b>' + fmtMoeda(sm.ent) + '</b><br>Sai: <b>' + fmtMoeda(sm.sai) + '</b><br>Saldo previsto: <b>' + (sm.saldo < 0 ? '−' : '') + fmtMoeda(Math.abs(sm.saldo)) + '</b>';
+    s += '<rect class="an-hit" x="' + (L + bw * i) + '" y="' + T + '" width="' + bw + '" height="' + (ph + B) + '" data-an-sem="' + i + '" data-tip="' + anTip(tip) + '"/>';
+  });
+  return s + '</svg>';
+}
+function anSemLinha(it, hoje){
+  var atras = it.data && it.data < hoje;
+  var sub = it.aprox ? 'estimativa, espalhada pelo mês' : (it.sinal > 0 ? 'prevista ' : 'vence ') + fmtData(it.data) + (atras ? ' · atrasado' : '');
+  return '<div class="ob-gasto"><div class="ob-gasto-info"><b>' + escapeHtml(it.nome) + '</b><span class="saldo-data">' + sub + '</span></div>' +
+    '<div class="ob-gasto-val"><strong class="' + (it.sinal > 0 ? 'an-bom' : 'an-mau') + '">' + (it.sinal > 0 ? '+ ' : '− ') + fmtMoeda(it.valor) + '</strong></div></div>';
+}
+function renderAnaliseSemanas(el){
+  var w = Math.max(280, Math.floor((el.clientWidth || 360) - 30)), hoje = todayISO(), S = anSemanas(anSemN), h = '';
+  if (anSemSel === null || anSemSel >= S.sem.length) anSemSel = S.primeiraNeg !== null ? S.primeiraNeg : 0;
+  var sm = S.sem[anSemSel], fmtS = function(v){ return (v < 0 ? '−' : '') + fmtMoeda(Math.abs(v)); };
+  h += '<div class="an-topo"><div class="segmented" id="anPeriodoSeg" role="group" aria-label="Período">' + anSegBotoes() + '</div>' +
+    '<div class="saldo-data">Semana a semana (segunda a domingo), de ' + escapeHtml(anDM(S.sem[0].ini)) + ' a ' + escapeHtml(anDM(S.sem[S.sem.length - 1].fim)) + ' · só com o que está cadastrado no app</div></div>';
+  if (S.primeiraNeg !== null){
+    var k = S.primeiraNeg, saem = [];
+    S.sem.slice(0, k + 1).forEach(function(x){ x.itens.forEach(function(it){ if (it.sinal < 0 && !it.aprox) saem.push(it); }); });
+    saem.sort(function(a, b){ return b.valor - a.valor; });
+    var top = saem.slice(0, 2).map(function(it){ return escapeHtml(it.nome) + ' (' + fmtMoeda(it.valor) + ', ' + anDM(it.data) + ')'; });
+    h += '<div class="an-sem-aviso neg"><b>Atenção: a semana de ' + anDM(S.sem[k].ini) + ' fecha com saldo previsto de ' + fmtS(S.sem[k].saldo) + '.</b>' +
+      (top.length ? '<span>Até lá saem, entre outras, ' + top.join(' e ') + '.</span>' : '') +
+      '<button type="button" class="btn btn-primary" data-an-sem-ver="' + k + '">Ver os lançamentos da semana</button></div>';
+  } else {
+    var mn = S.sem[S.menor];
+    h += '<div class="an-sem-aviso ok"><b>Nas próximas ' + S.sem.length + ' semanas o saldo previsto não fica negativo.</b><span>O ponto mais baixo é ' + fmtS(mn.saldo) + ', na semana de ' + anDM(mn.ini) + '.</span></div>';
+  }
+  var serLeg = '<div class="an-leg"><span><i class="an-sem-i ent"></i>Entradas previstas</span><span><i class="an-sem-i sai"></i>Saídas previstas</span><span><i class="an-sem-i lin"></i>Saldo previsto (linha)</span><span class="saldo-data">Tracejado = previsão</span></div>';
+  h += '<section class="ini-card an-card"><div class="an-tit"><h4>Entradas, saídas e saldo previsto · próximas ' + S.sem.length + ' semanas</h4>' +
+    '<button type="button" class="an-sem-mais" data-an-sem-n="' + (anSemN === 10 ? 12 : 10) + '">' + (anSemN === 10 ? '12 semanas ›' : '10 semanas ›') + '</button></div>' +
+    '<div class="saldo-data">Começa com o caixa de hoje: ' + fmtMoeda(S.ini) + ' (PJ + PF' + (S.repasseHoje > 0.004 ? ', sem os ' + fmtMoeda(S.repasseHoje) + ' que são de advogados parceiros' : '') + '). Toque numa semana para ver os lançamentos.</div>' +
+    anGraficoSemanas(S, w, anSemSel) + serLeg +
+    anTabela(['Semana', 'Entra', 'Sai', 'Saldo previsto'], S.sem.map(function(x){ return [escapeHtml(anDM(x.ini)), fmtMoeda(x.ent), fmtMoeda(x.sai), fmtS(x.saldo)]; })) + '</section>';
+  var ent = sm.itens.filter(function(it){ return it.sinal > 0; }), sai = sm.itens.filter(function(it){ return it.sinal < 0; });
+  h += '<div class="an-sem-grid"><section class="ini-card an-card" id="anSemLista"><div class="an-tit an-sem-nav"><button type="button" class="icon-btn" data-an-sem-nav="-1" aria-label="Semana anterior"' + (anSemSel === 0 ? ' disabled' : '') + '>‹</button>' +
+    '<h4>Semana de ' + anDM(sm.ini) + ' · o que entra e sai</h4><button type="button" class="icon-btn" data-an-sem-nav="1" aria-label="Próxima semana"' + (anSemSel === S.sem.length - 1 ? ' disabled' : '') + '>›</button></div>' +
+    '<div class="saldo-data">' + escapeHtml(fmtData(sm.ini)) + ' a ' + escapeHtml(fmtData(sm.fim)) + (anSemSel === 0 ? ' · esta semana inclui o que já venceu e ainda não foi pago' : '') + '</div>' +
+    '<div class="an-sem-tot"><span>Entra <b class="an-bom">' + fmtMoeda(sm.ent) + '</b></span><span>Sai <b class="an-mau">' + fmtMoeda(sm.sai) + '</b></span><span>Saldo no fim <b class="' + (sm.saldo < 0 ? 'an-mau' : '') + '">' + fmtS(sm.saldo) + '</b></span></div>' +
+    (sm.itens.length ? (ent.length ? '<div class="plano-tit">Entradas</div>' + ent.map(function(it){ return anSemLinha(it, hoje); }).join('') : '') + (sai.length ? '<div class="plano-tit" style="margin-top:12px;">Saídas</div>' + sai.map(function(it){ return anSemLinha(it, hoje); }).join('') : '') : '<div class="financeiro-vazio">Nada previsto para esta semana.</div>') + '</section>';
+  var fora = [];
+  if (S.nao.alvaras.q) fora.push('alvarás com data (' + fmtMoeda(S.nao.alvaras.v) + ', ' + S.nao.alvaras.q + ')');
+  if (S.nao.atrasados.q) fora.push('cobranças atrasadas (' + fmtMoeda(S.nao.atrasados.v) + ', ' + S.nao.atrasados.q + ')');
+  if (S.semDataQ) fora.push('valores a receber sem data (' + fmtMoeda(S.semData) + ', ' + S.semDataQ + ')');
+  var nota = function(n, t){ return '<div class="an-sem-nota"><span>' + n + '</span><div>' + t + '</div></div>'; };
+  h += '<section class="ini-card an-card"><div class="an-tit"><h4>O que a semana não conta</h4></div>' +
+    nota(1, fora.length ? '<b>Ficam de fora do saldo:</b> ' + fora.join('; ') + '. Entram na previsão quando ganharem data e deixarem de ser alvará ou atraso.' : '<b>Alvarás, atrasados e valores sem data:</b> hoje não há nenhum cadastrado; quando houver, ficam de fora do saldo e aparecem aqui.') +
+    nota(2, S.mediaDD > 0 ? '<b>Dia a dia</b> entra pela média dos últimos meses lidos nos extratos (' + fmtMoeda(S.mediaDD) + ' por mês), espalhada pelos dias. Receitas fixas e despesas sem dia certo também são espalhadas pelo mês.' : '<b>Dia a dia</b> ainda não entra, por falta de um mês completo de extratos. Receitas fixas e despesas sem dia certo são espalhadas pelo mês.') +
+    nota(3, '<b>É previsão:</b> nunca vira saldo disponível nem altera a divisão do mês. Também não entram a obra, as transferências entre PF e PJ e os aportes na reserva.') + '</section></div>';
+  el.innerHTML = h + '<div id="anTip" class="an-tip" role="status" style="display:none;"></div>';
+  anTipEl = qs('anTip');
+}
 function renderAnalises(){
   mfBarraAnalises();
   var el = qs('anWrap');
@@ -14446,6 +14600,7 @@ function renderAnalises(){
   }
   if (anPeriodo === 'ult'){ renderAnaliseUltimo(el); return; }
   if (anPeriodo === 'proj'){ renderAnaliseProjecao(el); return; }
+  if (anPeriodo === 'sem'){ renderAnaliseSemanas(el); return; }
   var w = Math.floor((el.clientWidth || 360) - 30), hoje = todayISO(), m0 = hoje.slice(0, 7), meses = anMesesVisiveis();
   var S1 = 'var(--an-1)', S2 = 'var(--an-2)', S3 = 'var(--an-3)';
   var pri = anPrimeiroDia(), priParcial = pri.slice(8) > '05';
@@ -14561,7 +14716,15 @@ function anMostrarTip(ev, alvo){
     if (at){ anMarcarObra(at.getAttribute('data-an-atip')); return; }
     var v = ev.target.closest ? ev.target.closest('[data-an-visao]') : null;
     if (v){ anVisaoDesp = v.getAttribute('data-an-visao'); renderAnalises(); return; }
-    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = (pv === 'proj' || pv === 'ult') ? pv : parseInt(pv, 10); renderAnalises(); return; }
+    var ss = ev.target.closest ? ev.target.closest('[data-an-sem]') : null;
+    if (ss){ anSemSel = parseInt(ss.getAttribute('data-an-sem'), 10); renderAnalises(); return; }
+    var sv = ev.target.closest ? ev.target.closest('[data-an-sem-ver]') : null;
+    if (sv){ anSemSel = parseInt(sv.getAttribute('data-an-sem-ver'), 10); renderAnalises(); var al = qs('anSemLista'); if (al && al.scrollIntoView) al.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    var sn = ev.target.closest ? ev.target.closest('[data-an-sem-n]') : null;
+    if (sn){ anSemN = parseInt(sn.getAttribute('data-an-sem-n'), 10); renderAnalises(); return; }
+    var sg = ev.target.closest ? ev.target.closest('[data-an-sem-nav]') : null;
+    if (sg && !sg.disabled){ anSemSel = Math.max(0, (anSemSel || 0) + parseInt(sg.getAttribute('data-an-sem-nav'), 10)); renderAnalises(); return; }
+    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = (pv === 'proj' || pv === 'ult' || pv === 'sem') ? pv : parseInt(pv, 10); renderAnalises(); return; }
     var un = ev.target.closest ? ev.target.closest('[data-an-ult]') : null;
     if (un && !un.disabled){ anMesUlt = deslocarMes(anMesUlt || deslocarMes(todayISO().slice(0, 7), -1), parseInt(un.getAttribute('data-an-ult'), 10)); renderAnalises(); return; }
     var a = ev.target.closest ? ev.target.closest('[data-tip]') : null;

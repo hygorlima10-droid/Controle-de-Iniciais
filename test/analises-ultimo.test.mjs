@@ -20,7 +20,7 @@ await page.evaluate(() => document.querySelector('[data-tab="analises"]').click(
 const txt = () => page.evaluate(() => document.getElementById('anWrap').innerText);
 let t = await txt();
 check(await page.evaluate(() => document.querySelector('#anPeriodoSeg .active').textContent) === 'Último mês', 'a aba abre já em "Último mês"');
-check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|6 meses|12 meses|Próx. 3 meses', 'seletor com os 4 botões, Último mês primeiro');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|6 meses|12 meses|Próx. 3 meses|Semanas', 'seletor com os 5 botões, Último mês primeiro');
 check(/R\$\s*10\.000,00/.test(t) && /R\$\s*5\.500,00/.test(t), 'mostra o recebido (10.000) e o gasto (5.500) do último mês fechado');
 check(/Sobrou[\s\S]*4\.500,00/.test(t), 'sobrou R$ 4.500');
 check(/Comparado com a sua média/.test(t) && /▲/.test(t), 'compara com a média dos meses anteriores com setas');
