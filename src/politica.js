@@ -9,7 +9,7 @@ import { chaveOab } from './advogados.js';
 
 export const PAPEIS = ['proprietario', 'advogado', 'estagiario'];
 export const PERMISSOES = ['excluir', 'verTotais', 'verPublicacoes', 'verAgendas'];   // excluir: apagar registros; verTotais: totais e indicadores de honorários; verPublicacoes / verAgendas: o estagiário vê as publicações e as agendas de todo o escritório
-const LIGADAS_ESTAGIARIO = new Set(['verPublicacoes', 'verAgendas']);   // ligadas por padrão para estagiário (o proprietário desliga por pessoa)
+const LIGADAS = { estagiario: new Set(['verPublicacoes', 'verAgendas']), advogado: new Set(['verTotais']) };   // ligadas por padrão (o proprietário desliga por pessoa): estagiário vê publicações e agendas; advogado vê os totais dos seus processos
 const PARTICIPACAO = new Set(['casos', 'termosAcordo', 'alvaras', 'processos']);   // registros que têm `advogados`
 const COM_PROCESSO = new Set(['prazosPub']);                                         // registros ligados a um processo pelo número
 const LIVRES = new Set(['pecasAprendidas']);                                        // aprendizado de peças: do escritório todo
@@ -25,7 +25,7 @@ export function normalizarUsuario(u) {
   const papel = PAPEIS.includes(u.papel) ? u.papel : 'estagiario';
   const oabs = [...new Set((Array.isArray(u.oabs) ? u.oabs : []).map((o) => (typeof o === 'string' ? chaveOab(o.split('/')[0], o.split('/')[1]) : o && chaveOab(o.numero, o.uf))).filter((k) => k && k.length > 3))];
   const perm = u.permissoes && typeof u.permissoes === 'object' ? u.permissoes : {};
-  const permissoes = {}; for (const p of PERMISSOES) permissoes[p] = papel === 'proprietario' ? true : (papel === 'estagiario' && LIGADAS_ESTAGIARIO.has(p) ? perm[p] !== false : perm[p] === true);
+  const permissoes = {}; for (const p of PERMISSOES) permissoes[p] = papel === 'proprietario' ? true : (LIGADAS[papel] && LIGADAS[papel].has(p) ? perm[p] !== false : perm[p] === true);
   return { id: u.id, nome: u.nome || '', papel, oabs, permissoes };
 }
 export const ehDono = (auth) => !auth || !auth.usuario || auth.usuario.papel === 'proprietario';

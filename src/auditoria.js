@@ -60,6 +60,7 @@ export async function limparSeguranca(env) {
   const agora = Date.now();
   await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND atualizado < ?').bind(COL_LIX, agora - DIAS_LIXEIRA * 864e5).run();
   await env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND atualizado < ?').bind(COL_AUD, agora - DIAS_REGISTRO * 864e5).run();
+  await env.DB.prepare("DELETE FROM docs WHERE colecao = '_convites' AND json_extract(dados, '$.expira') < ?").bind(agora).run();   // convites vencidos
 }
 
 export async function auditoriaRotas(request, env) {

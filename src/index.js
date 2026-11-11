@@ -10,6 +10,7 @@ import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
 import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono } from './politica.js';
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
+import { usuariosRotas } from './usuarios.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
 
@@ -529,7 +530,7 @@ const ROTAS = {
   lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
-  seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
+  seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
   eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ papel, nome, oabs, permissoes }) => ({ papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);
