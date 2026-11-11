@@ -1619,6 +1619,11 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -13113,8 +13118,8 @@ var EXT_REGRAS_CAT = [
 ];
 function extChaveRegra(l){ return EX.norm(l.s).replace(/\d{1,2}\/\d{1,2}/g, '').replace(/[0-9]/g, '').split(' ').filter(Boolean).slice(0, 2).join(' '); }
 function extCategoria(l, regras){
-  var k = extChaveRegra(l);
-  if (k && regras[k]) return regras[k];
+  var k = extChaveRegra(l), rg = k ? regras[k] : null;
+  if (rg){ if (typeof rg === 'string') return rg; if (rg.t === 'cat' && rg.cat) return rg.cat; }
   var t = EX.norm(l.s + ' ' + l.n);
   for (var i = 0; i < EXT_REGRAS_CAT.length; i++) if (EXT_REGRAS_CAT[i][1].test(t)) return EXT_REGRAS_CAT[i][0];
   return 'Outros';
@@ -13203,7 +13208,7 @@ function extConstruirRevisao(){
       cand.forEach(function(c){ pares.push({ f: f, c: c }); });
     });
     pares.sort(function(a, b){ return b.c.score - a.c.score || a.f.v.d.localeCompare(b.f.v.d); });
-    var usadas = {};
+    var usadas = excRegrasCobranca(filaCob, unidades, cfg.regras, decidir);
     pares.forEach(function(p){
       var f = p.f, v = f.v, c = p.c;
       if (v.act !== 'pend' || usadas[c.u.chave]) return;
@@ -13316,6 +13321,11 @@ function extConstruirRevisao(){
     }
     var cd = extCandidatasDespesa(v);
     v.cand = { despesas: cd };
+    var rgd = cfg.regras[excChave(v.l)];
+    if (rgd && typeof rgd === 'object' && rgd.t === 'desp'){
+      var ach = excAcharDespesa(v, rgd.nome);
+      if (ach){ v.sel.desp = ach.d.id + '|' + ach.mes; v.regra = rgd; decidir(v, 'desp', 'regra que você ensinou: "' + ach.d.nome + '"'); return; }
+    }
     if (cd.length){
       v.sel.desp = cd[0].d.id + '|' + cd[0].mes;
       var fortes = cd.filter(function(c){ return c.igual; });
@@ -13324,6 +13334,7 @@ function extConstruirRevisao(){
     }
     var cat = extCategoria(v.l, cfg.regras);
     v.sel.cat = cat; v.sel.nome = v.l.n || v.l.s;
+    if (cfg.regras[extChaveRegra(v.l)]){ v.regra = cfg.regras[extChaveRegra(v.l)]; v.motivo = 'regra que você ensinou: ' + cat; }
     if (v.coluna === 'pf') decidir(v, 'dia', 'gasto do dia a dia');
     else if (cat !== 'Outros' && cat !== 'Tarifas e juros') decidir(v, 'dia', 'gasto do dia a dia pago pela PJ');
   });
@@ -13489,6 +13500,7 @@ function extConfirmar(){
       if (!g || new Date(doc.emitido) > new Date(g.emitido)) contas[doc.chave] = Object.assign({}, contas[doc.chave], { ultimoSaldo: { valor: doc.saldoAtual, emitido: doc.emitido } });
     });
     feitos.forEach(function(v){ if (v.act === 'dia' && v.sel.cat && v.catAlterada){ var k = extChaveRegra(v.l); if (k) regras[k] = v.sel.cat; } });
+    excAprender(feitos, regras);
     var ocfg = obraCfg(), regrasObra = Object.assign({}, ocfg.extrato.regras), mudouObra = false;
     feitos.forEach(function(v){ if (v.act === 'obraAporte' || v.act === 'obraGasto' || v.act === 'obraRetirada'){ var k2 = extObraChave(v.l); if (k2){ regrasObra[k2] = { act: v.act, etapa: (v.sel && v.sel.etapa) || '' }; mudouObra = true; } } });
     if (mudouObra) persistObraCfg({ extrato: Object.assign({}, ocfg.extrato, { regras: regrasObra }) });
@@ -13639,7 +13651,7 @@ function extHtmlLinha(v, i){
   return '<div class="ext-lin ' + grupo + '" data-lin="' + i + '">' +
     '<div class="ext-lin-top"><span class="num">' + escapeHtml(fmtData(v.d)) + '</span><span class="ext-desc">' + escapeHtml(v.l.s) + (quem ? '<small>' + escapeHtml(quem) + '</small>' : '') + '</span><b class="num ' + (neg ? 'neg' : 'pos') + '">' + extMoeda(v.v) + '</b></div>' +
     '<div class="ext-lin-acao">' + extSelectHtml('data-i="' + i + '" data-campo="act"', extOpcoes(v).map(function(a){ return [a, EXT_ACT_ROTULO[a]]; }), v.act) + '<span class="ext-extra" data-extra="' + i + '">' + extLinhaExtra(v, i) + '</span></div>' +
-    (v.motivo ? '<div class="ext-motivo">' + escapeHtml(v.motivo) + '</div>' : '') + '</div>';
+    excMotivoHtml(v) + '</div>';
 }
 function extContarGrupos(){
   var c = { decidir: 0, prontas: 0, resolvidas: 0 };
@@ -13649,11 +13661,11 @@ function extContarGrupos(){
 function extDesenharConferencia(){
   var rev = extRev; if (!rev) return;
   var cfg = extCfg(), c = extContarGrupos();
-  var html = '<div class="parcela-sum">Nada é gravado até você tocar em <b>Confirmar</b>. As linhas em "Decidir depois" continuam pendentes para a próxima vez. O valor de cada linha vem do extrato; o app só sugere.</div>';
+  var html = '<div class="parcela-sum">Nada é gravado até você tocar em <b>Confirmar</b>. As linhas em "Decidir depois" continuam pendentes para a próxima vez. O valor de cada linha vem do extrato; o app só sugere.</div>' + excResumoNiveis(rev.views);
   /* arquivos: conta (PJ/PF) e saldo */
   extPendentes().forEach(function(doc){
     var conta = rev.contas.filter(function(x){ return x.chave === doc.chave; })[0];
-    html += '<div class="ext-arq"><div class="ext-arq-top"><b>' + escapeHtml(extRotuloConta(doc.chave)) + '</b><span class="saldo-data">' + escapeHtml(fmtData(doc.de || '')) + ' a ' + escapeHtml(fmtData(doc.ate || '')) + '</span></div>' +
+    html += '<div class="ext-arq"><div class="ext-arq-top"><b class="exc-tit">' + excLogo(doc.chave, 30) + ' ' + escapeHtml(extRotuloConta(doc.chave)) + '</b><span class="saldo-data">' + escapeHtml(fmtData(doc.de || '')) + ' a ' + escapeHtml(fmtData(doc.ate || '')) + '</span></div>' +
       '<div class="ext-chips"><span class="ext-chip">' + (doc.lanc || []).length + ' linha(s) nova(s)</span>' + (doc.nRep ? '<span class="ext-chip">' + doc.nRep + ' já importada(s)</span>' : '') + (doc.nDescartadas ? '<span class="ext-chip">' + doc.nDescartadas + ' anterior(es) ao corte, descartada(s)</span>' : '') + '<span class="ext-chip ' + (doc.saldoFecha ? 'ok' : 'bad') + '">' + (doc.saldoFecha ? 'saldo fecha' : 'o saldo não fecha em ' + doc.nDiverg + ' ponto(s)') + '</span></div>' +
       '<label class="ext-saldo-lab"><input type="checkbox" data-conta-obra="' + escapeHtml(doc.chave) + '"' + (conta && conta.obra ? ' checked' : '') + '><span>É dinheiro da obra <small>(o saldo é comparado com a aba Construção; as linhas ficam só para conferência)</small></span></label>' +
       (conta && !conta.confirmada && !conta.obra ? '<div class="ext-conta">Esta conta é: ' + extSelectHtml('data-conta="' + escapeHtml(doc.chave) + '"', [['pj', 'PJ (empresa)'], ['pf', 'PF (pessoa física)']], conta.coluna) + '</div>' : '') +
@@ -13737,7 +13749,7 @@ document.addEventListener('change', function(ev){
     if (el){ var novo = document.createElement('div'); novo.innerHTML = extHtmlLinha(v, Number(i)); el.parentNode.replaceChild(novo.firstChild, el); }
     extAtualizarContadoresFiltro();
   } else if (campo === 'cat'){ v.sel.cat = t.value; v.catAlterada = true; }
-  else if (campo) { v.sel[campo] = t.value; }
+  else if (campo) { v.sel[campo] = t.value; if (campo === 'desp' || campo === 'unit') v.destAlterado = true; }
 });
 document.addEventListener('input', function(ev){
   var t = ev.target;
@@ -13985,29 +13997,7 @@ document.addEventListener('click', function(ev){
   else if (b.id === 'inicioAbrirExtratos') setActiveTab('extratos');
   else if (b.hasAttribute('data-ext-reler')){ extApagar(b.getAttribute('data-ext-reler')).then(function(){ extSincronizar({ manual: true }); }); }
 });
-function extAbrirContas(){
-  var cfg = extCfg(), chaves = Object.keys(cfg.contas);
-  extAbrirGen('Contas dos extratos', chaves.length ? chaves.map(function(k){
-    var c = cfg.contas[k];
-    return '<div class="plan-linha"><span>' + escapeHtml(c.rotulo || k) + '</span>' + extSelectHtml('data-ctaconf="' + escapeHtml(k) + '"', [['pj', 'PJ (empresa)'], ['pf', 'PF (pessoa física)']], c.coluna) + '</div>' +
-      '<label class="ext-saldo-lab" style="margin:0 0 10px"><input type="checkbox" data-ctaobra="' + escapeHtml(k) + '"' + (c.obra ? ' checked' : '') + '><span>É dinheiro da obra <small>(o saldo é comparado com a aba Construção)</small></span></label>';
-  }).join('') + '<div class="parcela-sum">Mudar aqui vale para as próximas leituras.</div>' : '<div class="parcela-sum">Nenhuma conta identificada ainda.</div>', '<button type="button" class="btn btn-primary" id="extGenCancelar">Fechar</button>');
-  qs('extGenCancelar').addEventListener('click', extFecharGen);
-  Array.prototype.forEach.call(qs('extCorpo').querySelectorAll('[data-ctaobra]'), function(s){
-    s.addEventListener('change', function(){
-      var contas = Object.assign({}, extCfg().contas), k = s.getAttribute('data-ctaobra');
-      contas[k] = Object.assign({}, contas[k], { obra: s.checked });
-      persistExtCfg({ contas: contas }).then(function(){ renderExtratos(); try{ renderObra(); }catch(e){} });
-    });
-  });
-  Array.prototype.forEach.call(qs('extCorpo').querySelectorAll('[data-ctaconf]'), function(s){
-    s.addEventListener('change', function(){
-      var contas = Object.assign({}, extCfg().contas), k = s.getAttribute('data-ctaconf');
-      contas[k] = Object.assign({}, contas[k], { coluna: s.value, confirmada: true });
-      persistExtCfg({ contas: contas });
-    });
-  });
-}
+function extAbrirContas(){ excAbrirContas(); }
 qs('extFechar').addEventListener('click', extFecharGen);
 qs('overlayExt').addEventListener('click', function(e){ if (e.target === qs('overlayExt')) extFecharGen(); });
 
@@ -20690,6 +20680,7 @@ var CF_LINHAS = [
   { id: 'notif', ic: '🔔', t: 'Notificações e lembretes do iPhone', s: 'avisos de prazos, publicações e compromissos', go: function(){ if (typeof ntAbrir === 'function') ntAbrir(); } },
   { id: 'backup', ic: '💾', t: 'Backup e restauração', s: 'cópias, restaurar com segurança, voltar', go: function(){ var b = qs('backupBtn'); if (b) b.click(); } },
   { id: 'csv', ic: '📤', t: 'Exportar lista (CSV)', s: 'Iniciais, acordos, alvarás, clientes', go: function(){ var b = qs('exportBtn'); if (b) b.click(); } },
+  { id: 'extregras', ic: '🏦', t: 'Extratos: regras que você ensinou', s: 'palavras do favorecido → despesa, cobrança ou categoria', go: function(){ if (typeof excAbrirRegras === 'function') excAbrirRegras(); } },
   { id: 'seguranca', ic: '🔒', t: 'Segurança', s: 'sessões abertas, trocar a senha, avisos de acesso', go: function(){ sgSegAbrir(); } },
   { id: 'lixeira', ic: '🗑', t: 'Lixeira', s: 'restaurar o que foi excluído (30 dias)', go: function(){ sgLixAbrir(); } },
   { id: 'registro', ic: '🧾', t: 'Registro de ações', s: 'quem fez o quê, quando', go: function(){ sgRegAbrir(); } },
@@ -22922,6 +22913,187 @@ document.addEventListener('click', function(ev){
     '.fut-prem th,.fut-prem td{padding:6px 8px;text-align:left}.fut-prem input{height:38px;width:100%;min-width:110px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font:inherit;padding:0 10px}' +
     '.fut-sec{margin:22px 2px 10px}.fut-sec h3{margin:0 0 2px;font-size:var(--t5,1.1rem);font-weight:800}' +
     '.md-per{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px}.md-per button{border:0;background:none;border-radius:8px;padding:6px 12px;font:inherit;font-size:var(--t2);font-weight:600;color:var(--ink-soft);cursor:pointer}.md-per button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}';
+  document.head.appendChild(st);
+})();
+
+
+/* ============================================================
+   EXTRATOS: CONTAS COM LOGO E RECONHECIMENTO EM 3 NÍVEIS (prefixo exc) — Fase 3, etapa 3.9
+   - Cadastro de contas: cada conta ganha logo (ou selo com a inicial), apelido, tipo (PJ, PF ou dinheiro da obra) e o último saldo lido.
+     Logos em public/icones/bancos/ (Itaú, C6, Caixa, Sicoob); banco sem logo continua com o selo. A conta da obra segue comparando o saldo com a aba Construção.
+   - Reconhecimento de cada linha do extrato em 3 níveis: Exata (nome e valor batem, ou regra que você ensinou), Parecida (sugestão para confirmar)
+     e Sem correspondência (você decide). O app SÓ SUGERE: nunca muda o texto do extrato e nada é lançado sem o seu Confirmar.
+   - Regras aprendidas: quando você corrige a despesa, a cobrança ou a categoria de uma linha e confirma, o app guarda "palavras do favorecido → destino"
+     (config extratos.regras). Em Configurações > "Extratos: regras que você ensinou" dá para ver, editar e apagar.
+   ============================================================ */
+var EXC_BANCOS = [['itau', 'Itaú', /ITA[UÚ]|UNIBANCO/, 'itau.svg'], ['c6', 'C6 Bank', /\bC6\b/, 'c6.png'], ['caixa', 'Caixa', /\bCAIXA\b|\bCEF\b/, 'caixa.png'], ['sicoob', 'Sicoob', /SICOOB/, 'sicoob.png']];
+function excBanco(txt){
+  var t = EX.norm(String(txt || ''));
+  for (var i = 0; i < EXC_BANCOS.length; i++) if (EXC_BANCOS[i][2].test(t)) return { id: EXC_BANCOS[i][0], nome: EXC_BANCOS[i][1], arq: EXC_BANCOS[i][3] };
+  return null;
+}
+function excLogo(chave, tam){
+  var c = extCfg().contas[chave] || {}, b = excBanco((c.banco || '') + ' ' + (c.rotulo || '') + ' ' + chave); tam = tam || 40;
+  if (b) return '<span class="exc-logo" style="width:' + tam + 'px;height:' + tam + 'px"><img src="/icones/bancos/' + b.arq + '" alt="' + escapeHtml(b.nome) + '" loading="lazy"></span>';
+  var nome = String(c.rotulo || c.banco || chave), ini = EX.norm(nome).replace(/[^A-Z0-9]/g, '').slice(0, 1) || '?';
+  return '<span class="exc-logo exc-selo" style="width:' + tam + 'px;height:' + tam + 'px;background:' + CT_PALETA[ctHash(EX.norm(nome)) % CT_PALETA.length] + '" aria-hidden="true">' + escapeHtml(ini) + '</span>';
+}
+function excTipoChip(c){ return c.obra ? '<span class="exc-chip obra">dinheiro da obra</span>' : '<span class="exc-chip">' + (c.coluna === 'pj' ? 'PJ' : 'PF') + '</span>'; }
+function excAbrirContas(){
+  var cfg = extCfg(), chaves = Object.keys(cfg.contas), cmp = null;
+  try{ cmp = extObraComparacao(extPendentes()); }catch(e){}
+  var cards = chaves.map(function(k){
+    var c = cfg.contas[k], g = c.ultimoSaldo, sub;
+    if (c.obra && cmp && cmp.app !== null){ var bate = Math.abs(cmp.dif) <= 0.10; sub = 'extrato ' + extMoeda(cmp.extrato) + ' · app ' + fmtMoeda(cmp.app) + ' · ' + (bate ? '<b class="exc-ok">bate</b>' : '<b class="exc-dif">difere ' + fmtMoeda(Math.abs(cmp.dif)) + '</b>'); }
+    else sub = g ? 'saldo ' + extMoeda(g.valor) + ' · lido em ' + escapeHtml(extFmtQuando(g.emitido)) : 'ainda sem extrato';
+    return '<div class="exc-conta">' + excLogo(k, 44) + '<div class="exc-tx"><input type="text" class="exc-apelido" data-ctaapelido="' + escapeHtml(k) + '" value="' + escapeHtml(c.rotulo || k) + '" maxlength="60" aria-label="Apelido da conta"><span class="saldo-data">' + sub + '</span></div>' + excTipoChip(c) +
+      '<div class="exc-ctl">' + extSelectHtml('data-ctaconf="' + escapeHtml(k) + '"', [['pj', 'PJ (empresa)'], ['pf', 'PF (pessoa física)']], c.coluna) +
+      '<label class="ext-saldo-lab"><input type="checkbox" data-ctaobra="' + escapeHtml(k) + '"' + (c.obra ? ' checked' : '') + '><span>É dinheiro da obra <small>(o saldo é comparado com a aba Construção)</small></span></label></div></div>';
+  }).join('');
+  extAbrirGen('Contas dos extratos',
+    '<div class="exc-aviso"><b>Cadastro de contas.</b> Cada conta ganha logo (ou selo), apelido, tipo (PJ, PF ou dinheiro da obra) e o último saldo lido. A conta da obra continua comparando o saldo com a aba Construção.</div>' +
+    (chaves.length ? '<div class="exc-lista">' + cards + '</div><div class="parcela-sum">Mudar aqui vale para as próximas leituras. Logos oficiais para Itaú, C6, Caixa e Sicoob; banco sem logo fica com o selo da inicial.</div>' : '<div class="parcela-sum">Nenhuma conta identificada ainda. Elas aparecem quando o primeiro extrato for lido.</div>'),
+    '<button type="button" class="btn btn-primary" id="extGenCancelar">Fechar</button>', true);
+  qs('extGenCancelar').addEventListener('click', extFecharGen);
+  var corpo = qs('extCorpo');
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-ctaobra]'), function(s){
+    s.addEventListener('change', function(){
+      var contas = Object.assign({}, extCfg().contas), k = s.getAttribute('data-ctaobra');
+      contas[k] = Object.assign({}, contas[k], { obra: s.checked });
+      persistExtCfg({ contas: contas }).then(function(){ renderExtratos(); try{ renderObra(); }catch(e){} excAbrirContas(); });
+    });
+  });
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-ctaconf]'), function(s){
+    s.addEventListener('change', function(){
+      var contas = Object.assign({}, extCfg().contas), k = s.getAttribute('data-ctaconf');
+      contas[k] = Object.assign({}, contas[k], { coluna: s.value, confirmada: true });
+      persistExtCfg({ contas: contas }).then(function(){ excAbrirContas(); });
+    });
+  });
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-ctaapelido]'), function(s){
+    s.addEventListener('change', function(){
+      var contas = Object.assign({}, extCfg().contas), k = s.getAttribute('data-ctaapelido'), v = s.value.trim();
+      if (!v) { s.value = contas[k].rotulo || k; return; }
+      contas[k] = Object.assign({}, contas[k], { rotulo: v });
+      persistExtCfg({ contas: contas }).then(function(){ excAbrirContas(); renderExtratos(); });
+    });
+  });
+}
+/* ---- níveis de reconhecimento de uma linha ---- */
+function excNivel(v){
+  var m = v.motivo || '', a = v.act;
+  if (v.regra) return { n: 'exata', txt: /^regra/.test(m) ? m : 'regra que você ensinou' + (a === 'dia' && v.sel && v.sel.cat ? ': ' + v.sel.cat : '') + (m ? ' · ' + m : '') };
+  if (a === 'pend' || a === 'recNova' || a === 'despNova') return { n: 'sem', txt: m || (v.v > 0 ? 'decidir: escolha a cobrança ou lance como receita' : 'decidir: escolha a despesa, a categoria ou lance como despesa nova') };
+  if (a === 'dia'){
+    if (v.catAlterada || /tarifas|em lote/.test(m)) return { n: 'exata', txt: m || 'categoria escolhida por você' };
+    var dc = v.cand && v.cand.despesas && v.cand.despesas[0];
+    if (dc) return { n: 'parecida', txt: 'parece a despesa "' + dc.d.nome + '" (confirme: troque a ação da linha para a despesa)' };
+    if (!v.sel || !v.sel.cat || v.sel.cat === 'Outros') return { n: 'sem', txt: 'decidir: escolha a categoria' };
+    return { n: 'parecida', txt: 'categoria sugerida pelo texto do extrato: ' + v.sel.cat + ' (confirme)' };
+  }
+  if (/\(confirme\)|sugest/i.test(m) || a === 'pfpj') return { n: 'parecida', txt: m };
+  return { n: 'exata', txt: m };
+}
+var EXC_NV_ROT = { exata: 'Exata', parecida: 'Parecida', sem: 'Sem correspondência' };
+function excMotivoHtml(v){
+  var n = excNivel(v);
+  return '<div class="ext-motivo"><span class="exc-nv exc-nv-' + n.n + '">' + EXC_NV_ROT[n.n] + '</span>' + (n.txt ? ' ' + escapeHtml(n.txt) : '') + '</div>';
+}
+function excResumoNiveis(views){
+  var c = { exata: 0, parecida: 0, sem: 0 };
+  views.forEach(function(v){ c[excNivel(v).n]++; });
+  return '<div class="exc-resumo"><span class="exc-nv exc-nv-exata">Exata ' + c.exata + '</span><span class="exc-nv exc-nv-parecida">Parecida ' + c.parecida + '</span><span class="exc-nv exc-nv-sem">Sem correspondência ' + c.sem + '</span>' +
+    '<small>no momento da leitura · <b>3 níveis</b>: exata (nome e valor, ou regra que você ensinou), parecida (sugestão para confirmar) e sem correspondência. O app só sugere: nunca muda o texto do extrato e nada é lançado sem o seu Confirmar. Quando você corrige, ele guarda a regra (Configurações > Extratos: regras que você ensinou).</small></div>';
+}
+/* ---- regras que o app aprendeu ---- */
+/* chave das regras de despesa e de cobrança: as primeiras palavras do NOME do favorecido (quando há); sem nome, as primeiras palavras do texto */
+function excChave(l){
+  var n = EX.norm(l.n || '').replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(Boolean).slice(0, 3).join(' ');
+  return n ? 'F:' + n : extChaveRegra(l);
+}
+function excAcharDespesa(v, nome){
+  var mes = v.d.slice(0, 7), achou = null, alvo = EX.norm(nome);
+  comMes(mes, function(){ getDespesasParaMes(v.coluna).forEach(function(it){ if (!achou && !it.pago && !it.despesa.transferenciaId && EX.norm(it.despesa.nome) === alvo) achou = { d: it.despesa, mes: mes }; }); });
+  return achou;
+}
+/* cobranças: uma regra "palavras → cliente" escolhe a cobrança desse cliente (a que tem o mesmo valor, se houver, ou a mais antiga) */
+function excRegrasCobranca(fila, unidades, regras, decidir){
+  var usadas = {};
+  fila.forEach(function(f){
+    var v = f.v; if (v.act !== 'pend') return;
+    var rg = regras[excChave(v.l)]; if (!rg || typeof rg !== 'object' || rg.t !== 'cli') return;
+    var abs = Math.abs(v.v) / 100, us = unidades.filter(function(u){ return !usadas[u.chave] && EX.norm(u.cliente) === EX.norm(rg.cliente); });
+    if (!us.length) return;
+    var u = us.filter(function(x){ return Math.abs(restanteUn(x) - abs) < 0.005 || Math.abs(x.valor - abs) < 0.005; })[0] || us.sort(function(a, b){ return String(a.data || '9999').localeCompare(String(b.data || '9999')); })[0];
+    usadas[u.chave] = true; v.sel.unit = u.chave; v.regra = rg;
+    decidir(v, 'rec', 'regra que você ensinou: ' + u.cliente + ' · ' + u.label);
+  });
+  return usadas;
+}
+function excAprender(feitos, regras){
+  var mudou = false;
+  feitos.forEach(function(v){
+    var k = excChave(v.l); if (!k || !v.destAlterado) return;
+    if (v.act === 'desp' && v.sel.desp){
+      var id = String(v.sel.desp).split('|')[0], d = despesas.filter(function(x){ return x.id === id; })[0];
+      if (d){ regras[k] = { t: 'desp', nome: d.nome }; mudou = true; }
+    } else if (v.act === 'rec' && v.sel.unit){
+      var u = listarUnidades().filter(function(x){ return x.chave === v.sel.unit; })[0];
+      if (u){ regras[k] = { t: 'cli', cliente: u.cliente }; mudou = true; }
+    }
+  });
+  return mudou;
+}
+function excDestinoRegra(r){
+  if (typeof r === 'string') return { tipo: 'Categoria', txt: r, edita: 'cat' };
+  if (r && r.t === 'cat') return { tipo: 'Categoria', txt: r.cat, edita: 'cat' };
+  if (r && r.t === 'desp') return { tipo: 'Despesa', txt: r.nome, edita: 'texto' };
+  if (r && r.t === 'cli') return { tipo: 'Cobrança de', txt: r.cliente, edita: 'texto' };
+  return { tipo: 'Regra', txt: '', edita: '' };
+}
+function excAbrirRegras(){
+  var cfg = extCfg(), ks = Object.keys(cfg.regras).sort(), oc = (typeof obraCfg === 'function') ? obraCfg() : null, ro = oc && oc.extrato ? oc.extrato.regras : {}, kso = Object.keys(ro || {}).sort();
+  var linhas = ks.map(function(k){
+    var d = excDestinoRegra(cfg.regras[k]), campo = d.edita === 'cat' ? extSelectHtml('data-exr-cat="' + escapeHtml(k) + '"', EXT_CATS.map(function(c){ return [c, c]; }), d.txt) : '<input type="text" class="ext-sel" data-exr-txt="' + escapeHtml(k) + '" value="' + escapeHtml(d.txt) + '" maxlength="80" aria-label="Destino da regra">';
+    return '<div class="exc-regra"><span class="exc-palavras">' + escapeHtml(k.toLowerCase()) + '</span><span class="exc-seta">→</span><span class="exc-dest"><small>' + d.tipo + '</small>' + campo + '</span><button type="button" class="btn btn-ghost" data-exr-del="' + escapeHtml(k) + '">Apagar</button></div>';
+  }).join('');
+  var linhasObra = kso.map(function(k){
+    var r = ro[k] || {}, rot = r.act === 'obraGasto' ? 'Gasto da obra' : (r.act === 'obraAporte' ? 'Aporte para a obra' : 'Devolução da obra');
+    return '<div class="exc-regra"><span class="exc-palavras">' + escapeHtml(String(k).toLowerCase()) + '</span><span class="exc-seta">→</span><span class="exc-dest"><small>Construção</small>' + escapeHtml(rot) + (r.etapa ? ' · etapa' : '') + '</span><button type="button" class="btn btn-ghost" data-exr-delobra="' + escapeHtml(k) + '">Apagar</button></div>';
+  }).join('');
+  extAbrirGen('Extratos: regras que você ensinou',
+    '<div class="exc-aviso">O app <b>só sugere</b>. Quando você corrige a despesa, a cobrança ou a categoria de uma linha e confirma, ele guarda a regra (palavras do favorecido → destino) e passa a reconhecer essa linha como <b>Exata</b> nas próximas leituras. Aqui você vê, edita e apaga as regras. Apagar uma regra não mexe em nenhum lançamento.</div>' +
+    ((ks.length || kso.length) ? (linhas ? '<div class="exc-regras">' + linhas + '</div>' : '') + (linhasObra ? '<div class="plano-tit" style="margin-top:14px">Da obra</div><div class="exc-regras">' + linhasObra + '</div>' : '') : '<div class="financeiro-vazio">Nenhuma regra ainda. Quando você corrigir uma sugestão e confirmar a conferência, ela aparece aqui.</div>'),
+    '<button type="button" class="btn btn-primary" id="extGenCancelar">Fechar</button>', true);
+  qs('extGenCancelar').addEventListener('click', extFecharGen);
+  var corpo = qs('extCorpo'), grava = function(r){ return persistExtCfg({ regras: r }).then(function(){ excAbrirRegras(); }); };
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-exr-cat]'), function(s){ s.addEventListener('change', function(){ var r = Object.assign({}, extCfg().regras); r[s.getAttribute('data-exr-cat')] = s.value; grava(r); }); });
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-exr-txt]'), function(s){
+    s.addEventListener('change', function(){
+      var k = s.getAttribute('data-exr-txt'), r = Object.assign({}, extCfg().regras), v = s.value.trim(); if (!v || !r[k]) return;
+      r[k] = r[k].t === 'cli' ? { t: 'cli', cliente: v } : { t: 'desp', nome: v }; grava(r);
+    });
+  });
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-exr-del]'), function(b){ b.addEventListener('click', function(){ var r = Object.assign({}, extCfg().regras); delete r[b.getAttribute('data-exr-del')]; grava(r); toast('Regra apagada.'); }); });
+  Array.prototype.forEach.call(corpo.querySelectorAll('[data-exr-delobra]'), function(b){
+    b.addEventListener('click', function(){
+      var k = b.getAttribute('data-exr-delobra'), o = obraCfg(), r = Object.assign({}, o.extrato.regras); delete r[k];
+      Promise.resolve(persistObraCfg({ extrato: Object.assign({}, o.extrato, { regras: r }) })).then(function(){ excAbrirRegras(); toast('Regra apagada.'); });
+    });
+  });
+}
+(function(){
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { excNivel: excNivel, excBanco: excBanco, excAbrirRegras: excAbrirRegras, excAprender: excAprender, excChave: excChave });
+  var st = document.createElement('style'); st.id = 'excCss';
+  st.textContent = '.exc-logo{display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:12px;background:#fff;border:1px solid var(--border);overflow:hidden;padding:4px;box-sizing:border-box}.exc-logo img{width:100%;height:100%;object-fit:contain;display:block}.exc-selo{color:#fff;font-weight:800;font-size:1.1rem;border:0}' +
+    '.exc-aviso{background:rgba(23,137,90,.1);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:var(--t3);line-height:1.45}' +
+    '.exc-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}.exc-conta{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 12px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px}.exc-tx{display:flex;flex-direction:column;gap:2px;min-width:0}' +
+    '.exc-apelido{border:0;background:transparent;font:inherit;font-weight:700;font-size:var(--t4);color:var(--ink);padding:2px 0;min-width:0;width:100%;border-bottom:1px dashed transparent}.exc-apelido:focus{outline:0;border-bottom-color:var(--accent)}.exc-ctl{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;border-top:1px solid var(--border);padding-top:8px}' +
+    '.exc-chip{font-size:var(--t1);font-weight:700;border-radius:99px;padding:3px 10px;background:var(--surface-2);color:var(--ink-soft)}.exc-chip.obra{background:rgba(201,133,0,.16);color:#9A6700}.exc-ok{color:#17895A}.exc-dif{color:var(--urgente)}' +
+    '.exc-nv{display:inline-block;font-size:var(--t1);font-weight:800;border-radius:99px;padding:2px 9px;margin-right:4px}.exc-nv-exata{background:rgba(23,137,90,.14);color:#17895A}.exc-nv-parecida{background:rgba(201,133,0,.16);color:#9A6700}.exc-nv-sem{background:var(--surface-2);color:var(--ink-soft)}' +
+    '.exc-resumo{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 10px}.exc-resumo small{flex:1 1 100%;color:var(--ink-soft);line-height:1.4;font-size:var(--t2)}' +
+    '.exc-regras{display:flex;flex-direction:column;gap:8px}.exc-regra{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.2fr) auto;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 12px}.exc-palavras{font-weight:700;overflow:hidden;text-overflow:ellipsis}.exc-seta{color:var(--ink-soft)}.exc-dest{display:flex;flex-direction:column;gap:2px;min-width:0}.exc-dest small{color:var(--ink-soft)}.exc-dest .ext-sel{width:100%}' +
+    '@media(max-width:640px){.exc-regra{grid-template-columns:minmax(0,1fr) auto}.exc-seta{display:none}.exc-dest{grid-column:1/-1}}';
   document.head.appendChild(st);
 })();
 
