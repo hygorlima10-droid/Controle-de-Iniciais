@@ -30,4 +30,6 @@ INSERT INTO docs (colecao,id,dados,atualizado) VALUES
 ('despesas','d1','{"descricao":"Aluguel","valor":1000}',1),
 ('configDono','planejamento','{"x":1}',1),
 ('config','personalizacao','{"tema":"claro"}',1),
-('config','importacaoAuto','{"ativo":true}',1);
+('config','importacaoAuto','{"ativo":true}',1),
+('_usuarios','u6','{"nome":"Edu Estagiario","email":"edu@teste.local","papel":"estagiario","ativo":true,"permissoes":{"verPublicacoes":false,"verAgendas":false}}',1),
+('_sessoes','639cd95972604bdb797bc1f40d1b1f3e9753bcac3764967f78832b5d5ec17aad','{"usuario":"u6","criada":1,"ultimo":10794431299518,"expira":10794431299518,"rotulo":"teste"}',1);

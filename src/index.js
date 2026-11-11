@@ -7,7 +7,7 @@ import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } fr
 import { datajudRotas } from './datajud.js';
 import { loteRotas } from './lote.js';
 import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
-import { checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono } from './politica.js';
+import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono } from './politica.js';
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
@@ -524,7 +524,7 @@ const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png
    Raiz que não está aqui é recusada; /api/enviar é a única pública (tem token próprio). */
 const ROTAS = {
   ler: ['proprietario', (r, e, p) => ler(r, e, p)], recebidos: ['proprietario', (r, e, p) => recebidos(r, e, p)], anexos: ['proprietario', (r, e, p) => anexos(r, e, p)],
-  notif: ['proprietario', (r, e, p) => notif(r, e, p)], djen: ['proprietario', (r, e, p) => djenRotas(r, e, p)], datajud: ['proprietario', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
+  notif: ['proprietario', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p, au) => checarRotaDjen(p, r.method, au) || djenRotas(r, e, p)], datajud: ['proprietario', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
   db: ['sessao', (r, e, p, au) => api(r, e, p, au)],
   lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],

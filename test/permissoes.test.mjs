@@ -1,10 +1,10 @@
 // Testa a política de acesso por papel (Fase 5, etapa 5.1): proprietário, advogado (por participação) e estagiário.
 // Banco semeado com test/semente-permissoes.sql (cinco pessoas com sessão pronta). O test/rodar.mjs sobe o servidor:  node test/rodar.mjs permissoes
 const B = process.env.BASE || 'http://127.0.0.1:8816';
-const TOK = { dono: 'tok-dono-0000000000000000000000000001', ana: 'tok-adv-ana-00000000000000000000000002', bruno: 'tok-adv-bruno-000000000000000000000003', caio: 'tok-est-caio-0000000000000000000000004', dani: 'tok-est-dani-0000000000000000000000005' };
+const TOK = { dono: 'tok-dono-0000000000000000000000000001', ana: 'tok-adv-ana-00000000000000000000000002', bruno: 'tok-adv-bruno-000000000000000000000003', caio: 'tok-est-caio-0000000000000000000000004', dani: 'tok-est-dani-0000000000000000000000005', edu: 'tok-est-edu-00000000000000000000000000006' };
 let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
 const quem = (n) => async (m, p, b) => { const x = await fetch(B + p, { method: m, headers: { cookie: 'sessao=' + TOK[n], 'content-type': 'application/json' }, body: b !== undefined ? JSON.stringify(b) : undefined }); let j = null; try { j = await x.json(); } catch (e) { /* sem corpo */ } return { s: x.status, j }; };
-const dono = quem('dono'), ana = quem('ana'), bruno = quem('bruno'), caio = quem('caio'), dani = quem('dani');
+const dono = quem('dono'), ana = quem('ana'), bruno = quem('bruno'), caio = quem('caio'), dani = quem('dani'), edu = quem('edu');
 const ids = (r) => (r.j && r.j.docs ? r.j.docs.map((d) => d.id).sort().join(',') : '?' + r.s);
 
 console.log('\n— quem é quem');
@@ -14,7 +14,7 @@ check((await caio('GET', '/api/eu')).j.permissoes.excluir === false && (await da
 console.log('\n— áreas só do proprietário (advogado e estagiário recebem 403)');
 for (const [nome, u] of [['advogada', ana], ['estagiário', caio]]) {
   let tudo = true; const lista = [];
-  for (const p of ['/api/db/despesas', '/api/db/receitasManuais', '/api/db/saldos', '/api/db/metas', '/api/db/extratos', '/api/db/obraMov', '/api/db/configDono', '/api/db/config/planejamento', '/api/db/config/importacaoAuto', '/api/backup', '/api/backups', '/api/lixeira', '/api/auditoria', '/api/seguranca', '/api/ler', '/api/recebidos', '/api/djen/status', '/api/datajud/x', '/api/notif/x', '/api/restaurar']) { const r = await u('GET', p); if (r.s !== 403 && r.s !== 404 && r.s !== 405) { tudo = false; lista.push(p + '=' + r.s); } }
+  for (const p of ['/api/db/despesas', '/api/db/receitasManuais', '/api/db/saldos', '/api/db/metas', '/api/db/extratos', '/api/db/obraMov', '/api/db/configDono', '/api/db/config/planejamento', '/api/db/config/importacaoAuto', '/api/backup', '/api/backups', '/api/lixeira', '/api/auditoria', '/api/seguranca', '/api/ler', '/api/recebidos', '/api/datajud/x', '/api/notif/x', '/api/restaurar']) { const r = await u('GET', p); if (r.s !== 403 && r.s !== 404 && r.s !== 405) { tudo = false; lista.push(p + '=' + r.s); } }
   check(tudo, nome + ' não abre finanças, configurações, backup, lixeira, registro de ações nem Diário/DataJud' + (lista.length ? ' → ' + lista.join(' ') : ''));
   check((await u('POST', '/api/db/despesas', { descricao: 'x', valor: 1 })).s === 403 && (await u('PUT', '/api/db/configDono/planejamento', { x: 2 })).s === 403 && (await u('PUT', '/api/db/config/planejamento', { x: 2 })).s === 403 && (await u('PUT', '/api/db/config/importacaoAuto', { ativo: false })).s === 403, nome + ' não grava finanças nem configurações');
   check((await u('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'despesas', id: 'zz', dados: { v: 1 } }] })).s === 403, nome + ' não grava finanças pelo lote');
@@ -51,6 +51,13 @@ check(ag.s === 200 && ids(await bruno('GET', '/api/db/agenda')) === 'g2' && (awa
 check((await ana('PUT', '/api/db/agenda/g2', { tipo: 'tarefa', titulo: 'mexeu', compartilhada: true })).s === 403, 'tarefa compartilhada de outro só quem criou altera');
 check((await ana('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'casos', id: 'c2', dados: { cliente: 'x', advogados: [{ oab: '11111/GO' }] } }] })).s === 404, 'o lote segue as mesmas regras');
 
+console.log('\n— estagiário: publicações e agendas de todo o escritório (com opção de desligar)');
+check((await caio('GET', '/api/eu')).j.permissoes.verPublicacoes === true && (await caio('GET', '/api/eu')).j.permissoes.verAgendas === true, 'estagiário já vem com publicações e agendas ligadas');
+check((await caio('GET', '/api/djen/lista')).s === 200 && (await caio('GET', '/api/djen/estado')).s === 200, 'estagiário lê as publicações');
+check((await caio('POST', '/api/djen/buscar', {})).s === 403 && (await caio('PUT', '/api/djen/oabs', {})).s === 403 && (await caio('POST', '/api/djen/marcar', {})).s === 403, 'mas não altera nada nelas');
+check((await ana('GET', '/api/djen/lista')).s === 403, 'advogado ainda não (vem na 5.3, filtrado por OAB)');
+check((await edu('GET', '/api/djen/lista')).s === 403, 'com a permissão desligada, o estagiário não abre as publicações');
+check(ids(await edu('GET', '/api/db/agenda')) === 'g2,g3' && ids(await edu('GET', '/api/db/casos')).includes('c4') && ids(await edu('GET', '/api/db/casos')).includes('c2'), 'com a de agendas desligada ele vê só a própria, as compartilhadas e as de processos (g1 do dono e g4 da Ana, particulares, somem), mas o resto do escritório continua');
 console.log('\n— estagiário');
 check((await caio('POST', '/api/db/casos', { cliente: 'Do estagiário', numeroProcesso: '0000008-88.2024.8.09.0008' })).s === 200, 'estagiário lança Inicial');
 check((await caio('PUT', '/api/db/casos/c1', { cliente: 'Editado pelo estagiário', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '11111/GO' }] })).s === 200, 'estagiário edita registro de qualquer advogado');
