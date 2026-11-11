@@ -40,7 +40,9 @@ await api('PUT', 'extratos/arq_x', { tipo: 'arquivo', fileId: 'x', titulo: 'x.pd
 const br = await chromium.launch();
 const achados = [];
 const RUIM = /undefined|NaN|\[object|Invalid Date|R\$\s*-0,00|null\b/;
-for (const vp of [{ nome: 'computador', w: 1280, h: 900 }, { nome: 'celular', w: 390, h: 844 }]) {
+/* cada tela leva uns 2 minutos: o computador e o celular rodam em testes separados (homologacao-celular chama este arquivo com __VP = 'celular') */
+const VPS = { computador: { nome: 'computador', w: 1280, h: 900 }, celular: { nome: 'celular', w: 390, h: 844 } };
+for (const vp of [VPS[globalThis.__VP || 'computador']]) {
   const ctx = await br.newContext({ viewport: { width: vp.w, height: vp.h } }); const page = await ctx.newPage(); const erros = [], reqs = [];
   page.on('pageerror', e => erros.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/fonts\.|Failed to load resource/.test(m.text())) erros.push('console: ' + m.text()); });
   page.on('response', x => { if (x.status() >= 400 && !/fonts\.|\/api\/(ler|recebidos)/.test(x.url())) reqs.push(x.status() + ' ' + x.url().replace(B, '')); });
@@ -64,9 +66,12 @@ for (const vp of [{ nome: 'computador', w: 1280, h: 900 }, { nome: 'celular', w:
   for (const [rot, sel] of telas) {
     await abrir('#drawer ' + sel); await varrer(rot);
     // sub-abas (barra de abas do módulo e seletores de Análises)
-    const n = await page.evaluate(() => Array.from(document.querySelectorAll('.md-abas button, #anPeriodoSeg button, #obAbas button')).filter(b => b.getClientRects().length).length);
+    /* sub-abas: a barra do módulo; em Análises o seletor do período; na Construção as abas da obra; as sub-abas de Finanças já são visitadas pelo menu */
+    const SUB = rot.startsWith('fin-') ? null : (rot === 'analises' ? '#anPeriodoSeg button' : (rot === 'construcao' ? '#obAbas button' : '.md-abas button'));
+    if (!SUB) continue;
+    const n = await page.evaluate((S) => Array.from(document.querySelectorAll(S)).filter(b => b.getClientRects().length).length, SUB);
     for (let i = 0; i < Math.min(n, 8); i++) {
-      const nome = await page.evaluate((i) => { const b = Array.from(document.querySelectorAll('.md-abas button, #anPeriodoSeg button, #obAbas button')).filter(b => b.getClientRects().length)[i]; if (!b) return null; b.click(); return b.innerText.replace(/\s+/g, ' ').trim().slice(0, 24); }, i);
+      const nome = await page.evaluate(([S, i]) => { const b = Array.from(document.querySelectorAll(S)).filter(b => b.getClientRects().length)[i]; if (!b) return null; b.click(); return b.innerText.replace(/\s+/g, ' ').trim().slice(0, 24); }, [SUB, i]);
       if (nome === null) break; await page.waitForTimeout(900); await varrer(rot + ' › ' + nome);
     }
   }

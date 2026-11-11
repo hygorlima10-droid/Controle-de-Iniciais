@@ -95,7 +95,7 @@ Teste local: `node test/ler.test.mjs` (usa um Claude simulado).
 
 ## Análises: visão "Último mês"
 
-Novo primeiro botão no seletor da aba Análises (Último mês · 6 meses · 12 meses · Próx. 3 meses); a aba abre já nele. Mostra o mês fechado mais recente (setas ‹ › para outros meses): recebi, gastei e sobrou, comparação com a média dos até 6 meses fechados anteriores, origem das receitas, gastos por categoria (toque para ver as despesas), "o que mais mudou", o quadro dos 4 cenários (mês, média 6 m, média 12 m, próximos 3 meses) e uma leitura rápida. Só leitura: não grava nada. Teste: `test/analises-ultimo.test.mjs`.
+O seletor da aba Análises é **Último mês · Histórico · Semanas · Simulador · Futuro** (ver "Fase 3" abaixo); a aba abre no Último mês. Ele mostra o mês fechado mais recente (setas ‹ › para outros meses): recebi, gastei, sobrou e patrimônio, cada um comparado com a média, de onde veio, para onde foi, o que mais mudou e os quatro cenários lado a lado.
 
 ## Tipografia unificada
 
@@ -236,3 +236,15 @@ A janela do texto completo agora tem os mesmos caminhos do cartão: **Cadastrar 
 - **Ao cadastrar um processo** (pela publicação ou digitando o número em Processos), o app consulta o Diário Oficial pelo número (`/api/djen/processo`) e preenche o que estiver vazio: **autor, réu, tribunal e órgão (vara ou câmara), classe/natureza, partes ("Autor x Réu") e valor da causa**, quando constam nas publicações. A linha de status diz o que aconteceu; tudo pode ser corrigido antes de salvar. Os campos Autor, Réu e Valor da causa ficam no processo; o **réu aparece no cartão** para diferenciar vários processos do mesmo cliente.
 - Os dados saem do **texto** das publicações (`extrairDados` em `src/djen.js`: "Polo Ativo/Passivo", "Requerente(s)/Requerido(s)", autor/réu, agravante/agravado etc., "Natureza/Ação" e "Valor da causa"); o que o tribunal não escreve fica em branco. Publicações novas guardam autor, réu e natureza.
 - **Processos já cadastrados** não mudam: a leitura diária continua só para publicações e prazos. Se quiser completar um deles, a ficha tem "Buscar dados no Diário Oficial" (só completa campos vazios).
+
+## Fase 3 (novos recursos financeiros e operacionais) — detalhes em `docs/CONTINUIDADE.md`
+- **Publicações:** seletor de peça na ficha (a escolha entra no aprendizado). **Layout:** largura única de 1440 px no computador e Kanban em tela cheia.
+- **Análises:** *Último mês* repaginado; *Histórico* (6 meses, 12 meses, Ano, Tudo, comparar dois meses, meses fechados e exportar CSV) com **fechamento automático** dos meses (`config/fechamentos`); *Semanas* (fluxo de caixa semanal com aviso de saldo negativo); *Simulador* (e se: receita, despesa, transferência e aporte, sem gravar nada; liga com o Pergunte ao app); *Futuro* (projeção patrimonial de 12/24/36 meses em três cenários, só estimativa, premissas editáveis em `config/futuro`, mais o caixa dos próximos 3 meses).
+- **Finanças › Orçamento** por categoria, com alertas de 80% e 100% (`config/orcamento`); o orçamento nunca altera lançamentos.
+- **Construção › Resumo:** card compacto da conta da obra, *Custo estimado final* e *Recursos próprios necessários*.
+- **Extratos:** contas com logo, apelido e tipo; reconhecimento das linhas em 3 níveis (exata, parecida, sem correspondência) e regras aprendidas editáveis em Configurações.
+- **Servidor:** listas sem limite de 1.000 registros (páginas "depois do id X", `?resumo=1`) e **conflito de edição** entre aparelhos (`?base=` e 409; o app pergunta qual versão vale).
+- **Identidade visual:** logo oficial em três versões (`public/logo/`), tela de abertura.
+
+## Fase 4 (homologação da versão individual) — ver `docs/HOMOLOGACAO.md`
+Varredura automática de todas as abas e sub-abas no computador e no celular (`node test/rodar.mjs homologacao` e `homologacao-celular`).

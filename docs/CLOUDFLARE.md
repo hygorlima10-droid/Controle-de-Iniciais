@@ -23,7 +23,7 @@ Sinais de segurança no banco: 3 falhas de token em `/api/enviar` em 03/11 (um �
 - **Jurisdição dos dados:** o banco existente roda nos EUA; o D1 permite criar bancos com jurisdição `us` (e outras) só na criação. Informação útil para a LGPD do escritório; não é urgente.
 
 ## Efeito no plano
-- **Carregar coleções em lotes** (limite de 1.000 registros): **sem urgência**; maior coleção real tem 259. Fica para quando alguma passar de ~700.
+- **Carregar coleções em lotes** (limite de 1.000 registros): **feito na Fase 3 (3.10)**; as listas são lidas em páginas até acabar.
 - **Cópia fora do banco:** rebaixada. Com Time Travel (7/30 dias) + backups baixados pelo app + cópias de segurança automáticas, o risco é baixo. R2 só se o proprietário ativar.
 - **Backup semanal:** o primeiro cron (segunda 04:00, horário de Brasília) ainda não rodou; conferir na segunda-feira que `_backups` ganhou o backup do dia.
 
