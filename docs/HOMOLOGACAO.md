@@ -10,11 +10,11 @@ Objetivo: deixar a versão de uma pessoa só redonda antes de abrir o app a outr
 - **Agenda:** cartão "Dia de trabalhar na peça" padronizado (apontado pelo proprietário em uso real).
 - **Suíte completa** de testes rodada ao final (ver CONTINUIDADE).
 
-## Observações para decidir (não são defeitos)
-- Links de texto com "+" (ex.: "+ Nova despesa", "+ Etapa", "+ Gasto", "+ Lançar receita"). O proprietário pediu que o padrão "+ Algo" tracejado não seja mais usado nos botões novos (Simulador); esses links são antigos e continuam como estavam.
-- O botão redondo "+" flutuante no celular fica por cima do canto direito do conteúdo ao rolar (links à direita podem ficar atrás dele até rolar mais).
-- Título "Divisão do mês" aparece cortado ("Divisão d…") no cabeçalho do celular por causa do seletor de mês.
-- O aviso de conflito de edição mostra só o horário, não qual aparelho alterou.
+## Decisões do proprietário (11/11) e o que foi feito
+- **Links com "+" padronizados:** todos os rótulos de texto com "+" viraram texto direto, no mesmo padrão dos demais botões (ex.: "+ Etapa" → "Adicionar etapa", "+ Gasto" → "Adicionar gasto", "+ Nova despesa" → "Nova despesa", "+ Lançar receita" → "Lançar receita", "+ Nova meta" → "Nova meta", "+ Contrato/Medição/Item" → "Adicionar …", "+ Alvará/Termo de acordo/Honorários" → "Adicionar …", "+ Cadastrar como cliente" → "Cadastrar como cliente", "+ processo novo" → "Processo novo"). Ficaram só os "+" que são **conta** (ex.: "+ A pagar (já lançado)" na soma do custo da obra) e o **botão redondo flutuante "+"** do celular e o ícone dos botões dourados "Novo compromisso"/"Novo processo", que o proprietário mandou manter.
+- **Botão redondo flutuante:** mantido como está.
+- **Título "Divisão do mês" cortado no celular:** corrigido (e conferido para todos os títulos em telas de 390 e 360 px, teste `titulos-celular`).
+- Continua como observação: o aviso de conflito de edição mostra só o horário, não qual aparelho alterou.
 
 ## Fora de escopo (decidido)
 Relatório mensal em PDF, metas com data futura, backup completo com anexos e leitura do Diário, alertas de orçamento no resumo das 10h, "Folga da PJ" no Simulador.

@@ -85,7 +85,7 @@ function ob7HtmlFin(cfg, r){
       (fin.inicioObra ? '<div class="plan-linha"><span>Prazo da obra</span><strong>' + fin.prazoObraMeses + ' meses (até ' + escapeHtml(mesLabel(deslocarMes(ob7Mes(fin.inicioObra), Math.max(1, fin.prazoObraMeses) - 1))) + ')</strong></div>' : '') +
       (fin.contrapartida > 0 ? '<div class="plan-linha"><span>Recursos próprios exigidos</span><strong>' + fmtMoeda(fin.contrapartida) + '</strong></div><div class="plan-linha"><span>Já aportado por você</span><strong style="color:var(--success)">' + fmtMoeda(r2((r.aportes.pf || 0) + (r.aportes.pj || 0) + (r.aportes.externo || 0))) + '</strong></div>' : '');
   }
-  corpo += '<div class="financeiro-secao-head" style="margin-top:12px;"><h4>Medições</h4><button type="button" class="btn-text" data-ob7="med-nova">+ Medição</button></div>';
+  corpo += '<div class="financeiro-secao-head" style="margin-top:12px;"><h4>Medições</h4><button type="button" class="btn-text" data-ob7="med-nova">Adicionar medição</button></div>';
   if (!meds.length) corpo += '<div class="financeiro-vazio">Nenhuma medição cadastrada. Cadastre o cronograma de liberações que o banco combinou.</div>';
   var hoje = todayISO();
   meds.forEach(function(m){
@@ -142,7 +142,7 @@ function ob7HtmlChecklist(cfg){
         '<button type="button" class="btn-text" data-ob7="chk-edit" data-id="' + escapeHtml(x.id) + '">Editar</button></div>';
     });
   });
-  corpo += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-ob7="chk-novo">+ Item</button></div>';
+  corpo += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-ob7="chk-novo">Adicionar item</button></div>';
   return ob7Sec('chk', 'Checklist da obra', l.length ? feitos + ' de ' + l.length + ' feitos' : 'documentos e marcos por fase', corpo);
 }
 function ob7HtmlExtrato(cfg){

@@ -388,7 +388,7 @@ function prSug(){
   var q = inp.value.trim(), nq = normNome(q);
   var lista = clientes.filter(function(c){ return !c.arquivado && prEd.ids.indexOf(c.id) < 0 && (!nq || normNome(c.nome).indexOf(nq) >= 0); }).sort(function(a, b){ return a.nome.localeCompare(b.nome, 'pt-BR'); }).slice(0, 6);
   var h = lista.map(function(c){ return '<div class="cli-sug-item" data-prf="cli-add" data-v="' + escapeHtml(c.id) + '"><b>' + escapeHtml(c.nome) + '</b></div>'; }).join('');
-  if (q && !clientes.some(function(c){ return normNome(c.nome) === nq; })) h += '<div class="cli-sug-item novo" data-prf="cli-new" data-v="1">+ Cadastrar “' + escapeHtml(q) + '”</div>';
+  if (q && !clientes.some(function(c){ return normNome(c.nome) === nq; })) h += '<div class="cli-sug-item novo" data-prf="cli-new" data-v="1">Cadastrar “' + escapeHtml(q) + '”</div>';
   sug.innerHTML = h; sug.style.display = h ? '' : 'none';
 }
 /* ---------- próxima providência: texto (+ data opcional, que vira tarefa na Agenda) ---------- */
@@ -516,10 +516,10 @@ function prDesenhar(){
       h += '<div class="field"><label class="field-label" for="pr_hon">Situação</label><select id="pr_hon" class="filter-select" style="width:100%">' + ['sem', 'quitados'].map(function(k){ return '<option value="' + k + '"' + (((doc && doc.honorarios) || 'sem') === k ? ' selected' : '') + '>' + PR_HON[k] + '</option>'; }).join('') + '<option value="receber">Tenho honorários a receber (fixo, êxito…)</option></select></div>';
     }
     h += '<div class="field"><label class="field-label" for="pr_honobs">Observação sobre o contrato (opcional)</label><input type="text" id="pr_honobs" maxlength="160" value="' + escapeHtml((doc && doc.honObs) || '') + '" placeholder="Ex.: contrato assinado em 10/03/2024"></div>' +
-      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-prf="novo-hon" data-v="caso">+ Honorários (fixo, êxito…)</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="acordo">+ Termo de acordo</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="alvara">+ Alvará</button></div></div>';
+      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-prf="novo-hon" data-v="caso">Adicionar honorários (fixo, êxito…)</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="acordo">Adicionar termo de acordo</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="alvara">Adicionar alvará</button></div></div>';
     var pz = prPrazosAbertos(r);
     h += '<div class="pb-sec"><div class="pb-sec-t">Prazos e audiências (Agenda)</div>' + (pz.length ? pz.map(function(i){ var c = agChip(i); return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(i.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(agTipoLinha(i)) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-abrir" data-v="' + escapeHtml(i.key) + '">' + escapeHtml(c.t) + ' ›</button></div>'; }).join('') : '<div class="saldo-data">Nenhum prazo aberto.</div>') +
-      '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">+ Novo prazo deste processo</button></div></div>';
+      '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">Novo prazo deste processo</button></div></div>';
     h += prTimelineHtml(r) + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
   }
   var pxi = doc ? prProximaInfo(r) : null;
@@ -715,7 +715,7 @@ function prPartesPubHtml(){
     if (ligado) h += '<span class="pb-tg ok" style="align-self:flex-start">✓ cliente: ' + escapeHtml(ligado.c.nome) + '</span>';
     else {
       h += '<div class="pb-acts" style="margin:0">' + ms.filter(function(m){ return m.nivel >= 1 && prEd.ids.indexOf(m.c.id) < 0; }).slice(0, 2).map(function(m){ return '<button type="button" class="btn btn-primary pb-b" data-prf="sug-add" data-i="' + i + '" data-v="' + escapeHtml(m.c.id) + '">É o cliente ' + escapeHtml(m.c.nome) + '</button>'; }).join('') +
-        '<button type="button" class="btn btn-ghost pb-b" data-prf="sug-new" data-i="' + i + '">+ Cadastrar como cliente</button></div>';
+        '<button type="button" class="btn btn-ghost pb-b" data-prf="sug-new" data-i="' + i + '">Cadastrar como cliente</button></div>';
     }
     h += '</div>';
   });

@@ -37,6 +37,6 @@ check(await page.evaluate(() => document.querySelectorAll('.ob-tiles .acao').len
 check(await page.evaluate(() => document.querySelectorAll('#obraWrap .ob-gasto > .ct-ic').length) >= 3, 'gastos e movimentos com ícone');
 check(await page.evaluate(() => document.querySelectorAll('[data-ob7-sec] > summary .ct-ic').length) === 5, 'as 5 seções recolhidas têm ícone');
 await page.click('#obraGastoBtn'); await page.waitForTimeout(500);
-check(await page.evaluate(() => document.getElementById('overlayObraForm').classList.contains('show')), '"+ Lançar gasto" continua abrindo o formulário');
+check(await page.evaluate(() => document.getElementById('overlayObraForm').classList.contains('show')), '"Lançar gasto" continua abrindo o formulário');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

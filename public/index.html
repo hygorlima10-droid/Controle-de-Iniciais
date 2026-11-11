@@ -1496,6 +1496,20 @@
   .an-pat-guia{stroke:var(--accent);stroke-width:1;stroke-dasharray:3 3;opacity:.7;}
   .an-pat-det{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:8px 0 4px;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:var(--t2);color:var(--ink-soft);}
   .an-pat-det b{color:var(--ink);} .an-pat-det strong{color:var(--ink);}
+
+  /* título da tela sem corte no celular (ex.: "Divisão do mês" ao lado do seletor de mês) */
+  @media (max-width:480px){
+    .tb-in{gap:8px;padding-left:12px;padding-right:12px;}
+    .tb-ttl b{font-size:var(--t5);letter-spacing:-0.02em;}
+    .tb-mes{padding:3px 2px;gap:0;}
+    .tb-mes .mes-btn{min-width:26px;}
+    .tb-mes .mes-label{font-size:var(--t2);}
+  }
+  @media (max-width:380px){
+    #menuBtn{width:40px;height:40px;}
+    #discretoBtn{width:36px;height:36px;}
+    .tb-ttl b{font-size:var(--t4);}
+  }
 </style>
 <link rel="stylesheet" href="/tema.css?v=1">
 </head>
@@ -1530,6 +1544,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 <symbol id="ic-quadro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></symbol>
 <symbol id="ic-proc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
 <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+
 
 
 
@@ -2174,7 +2189,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
             <div class="parcela-sum">Divide o valor dos honorários em parcelas mensais. A entrada, se houver, é a 1ª parcela. Sem data, a 1ª vence daqui a um mês. Depois você ainda pode ajustar cada valor e data.</div>
           </div>
           <div class="parcelas-editor" id="parcelasEditor"></div>
-          <button type="button" class="btn btn-ghost add-parcela" id="addParcelaBtn" style="margin-top:8px;">+ Adicionar parcela</button>
+          <button type="button" class="btn btn-ghost add-parcela" id="addParcelaBtn" style="margin-top:8px;">Adicionar parcela</button>
           <div class="parcela-sum" id="parcelaSum" style="margin-top:8px;"></div>
         </div>
       </div>
@@ -2400,7 +2415,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
               <div class="parcela-sum">Divide o valor que lhe cabe em parcelas mensais. Sem data, a 1ª vence daqui a um mês.</div>
             </div>
             <div id="parcelasAcordoEditor"></div>
-            <button type="button" class="btn-text" id="addParcelaAcordoBtn">+ Adicionar parcela</button>
+            <button type="button" class="btn-text" id="addParcelaAcordoBtn">Adicionar parcela</button>
             <div class="parcela-sum" id="parcelaSumAcordo" style="margin-top:6px;"></div>
           </div>
         </div>
@@ -2580,7 +2595,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       <div class="field">
         <label class="field-label">Categoria</label>
         <div class="segmented" id="segDespesaCategoria"></div>
-        <button type="button" class="btn-text" id="gerenciarCategoriasBtn" style="margin-top:6px;">+ Nova categoria ou gerenciar</button>
+        <button type="button" class="btn-text" id="gerenciarCategoriasBtn" style="margin-top:6px;">Nova categoria ou gerenciar</button>
       </div>
       <div class="field">
         <label class="field-label" for="despesaObsInput">Observações (opcional)</label>
@@ -3285,7 +3300,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       <div id="editorLista"></div>
       <div class="ed-add">
         <input type="text" id="editorNovoNome" maxlength="60" placeholder="Nome">
-        <button type="button" class="btn btn-ghost" id="editorAddBtn">+ Adicionar</button>
+        <button type="button" class="btn btn-ghost" id="editorAddBtn">Adicionar</button>
         <div class="ed-cores" id="editorNovoCores" style="display:none;"></div>
       </div>
       <div class="form-error" id="editorErro"></div>
@@ -5141,7 +5156,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         '<div class="kanban-col-head"><h4>' + rsIconeColuna(STATUS_LABEL[k]) + ' ' + escapeHtml(STATUS_LABEL[k]) + ' <span class="fv-chip">' + itens.length + '</span></h4><div class="kc-soma">' + (itens.length === 1 ? '1 caso' : itens.length + ' casos') + ' · ' + fmtMoeda(soma) + '</div></div>' +
         (itens.length ? itens.map(cardKanbanPeticao).join('') : '<div class="kanban-vazio">Nenhum caso nesta etapa.</div>') +
         '</div>';
-    }).join('') + '<div class="kanban-add" data-add-col="peticao">+ Coluna</div>';
+    }).join('') + '<div class="kanban-add" data-add-col="peticao">Adicionar coluna</div>';
     ligarAddColuna(el);
     Array.prototype.forEach.call(el.querySelectorAll('[data-p-mover]'), function(btn){
       btn.addEventListener('click', function(ev){
@@ -6131,7 +6146,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         '<div class="kanban-col-head"><h4>' + rsIconeFase(k, FASE_LABEL[k]) + ' ' + escapeHtml(titulo) + ' <span class="fv-chip">' + itens.length + '</span></h4><div class="kc-soma">' + (itens.length === 1 ? '1 alvará' : itens.length + ' alvarás') + ' · ' + fmtMoeda(soma) + '</div></div>' +
         (itens.length ? itens.map(cardKanbanAlvara).join('') : '<div class="kanban-vazio">Nenhum alvará nesta fase.</div>') +
         '</div>';
-    }).join('') + '<div class="kanban-add" data-add-col="alvara">+ Fase</div>';
+    }).join('') + '<div class="kanban-add" data-add-col="alvara">Adicionar fase</div>';
     ligarAddColuna(el);
     ligarMoverAlvara(el);
     Array.prototype.forEach.call(el.querySelectorAll('[data-k-editar]'), function(btn){
@@ -6366,9 +6381,9 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       '<div class="saldo-data" style="margin-top:8px;">' + escapeHtml(legendaResultado(resultado)) + '</div>' +
       '<div class="fp-prev"><span>Já recebido no mês <b>' + fmtMoeda(projecao.recebido) + '</b></span><span>Ainda a receber <b>' + fmtMoeda(projecao.previsto) + '</b></span></div>' +
       '<div class="saldo-data">O que ainda vai entrar (Iniciais, Termos de Acordo e Alvarás com previsão neste mês, total ' + fmtMoeda(projecao.total) + ') não entra no "Vai sobrar" até ser recebido.</div></div>';
-    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>' +
+    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">Lançar receita</button></div>' +
       '<div class="financeiro-totais">Total no mês: <span class="v">' + fmtMoeda(recebidas) + '</span> <small class="saldo-data">(automático das 3 abas + lançamentos manuais)</small></div>' + htmlReceitas + '</div>';
-    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">+ Nova despesa</button></div>' +
+    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">Nova despesa</button></div>' +
       '<div class="financeiro-totais">Pago: <span class="v">' + fmtMoeda(despesasResumo.pago) + '</span> · Pendente: <span class="v">' + fmtMoeda(despesasResumo.pendente) + '</span></div>' +
       (despTransf > 0.004 ? '<div class="saldo-data" id="finTransfDesp">Desse total, ' + fmtMoeda(despTransf) + ' são transferências entre a PF e a PJ ou repasses a parceiros (não são gasto). Gasto de verdade: <strong>' + fmtMoeda(despesasResumo.pago + despesasResumo.pendente - despTransf) + '</strong>.</div>' : '') +
       (despesasResumo.qtdEstimadas ? '<div class="saldo-data">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') + htmlDespesas + '</div>';
@@ -6407,13 +6422,13 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         corpoD += '<button type="button" class="btn-pagas" data-toggle-pagas="' + coluna + '">' + (abertas ? '▾' : '▸') + ' Pagas (' + linhasPagas.length + ') · ' + fmtMoeda(despesasResumo.quitado) + '</button>' + (abertas ? linhasPagas.join('') : '');
       }
     }
-    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">+ Nova despesa</button></div>' +
+    h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="' + coluna + '">Nova despesa</button></div>' +
       (total > 0 ? '<div class="fp-nota">Pago ' + fmtMoeda(despesasResumo.pago) + ' de ' + fmtMoeda(total) + ' · ' + Math.round(pct) + '%</div><div class="fv-bar"><i style="width:' + pct.toFixed(1) + '%;background:var(--success)"></i></div>' : '') +
       (despesasResumo.qtdEstimadas ? '<div class="fp-nota">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') + corpoD + '</div>';
     if (!nReceitas){
-      h += '<div class="financeiro-bloco fp-vazia"><span class="fp-nota">Nenhuma receita neste mês</span><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>';
+      h += '<div class="financeiro-bloco fp-vazia"><span class="fp-nota">Nenhuma receita neste mês</span><button type="button" class="btn-text" data-nova-receita="' + coluna + '">Lançar receita</button></div>';
     } else {
-      h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">+ Lançar receita</button></div>' +
+      h += '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receitas</h4><button type="button" class="btn-text" data-nova-receita="' + coluna + '">Lançar receita</button></div>' +
         '<div class="financeiro-totais">' + (transfIn > 0.004 ? 'Receitas no mês' : 'Total no mês') + ': <span class="v">' + fmtMoeda(recebidas) + '</span></div>' +
         (transfIn > 0.004 ? '<div class="fp-nota" id="finTransfNota">+ ' + fmtMoeda(transfIn) + ' de transferências entre a PF e a PJ = <strong>' + fmtMoeda(resultado.receita) + '</strong> que entrou na conta.</div>' : '') + htmlReceitas + '</div>';
     }
@@ -6557,7 +6572,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         '<div class="resultado-mes-item"><div class="lbl">Sobrou até agora</div><div class="val">'+fmtMoeda(resultado.sobrouAgora)+'</div></div>' +
         '<div class="resultado-mes-item"><div class="lbl">Vai sobrar ao final</div><div class="val">'+fmtMoeda(resultado.vaiSobrarFinal)+'</div></div>' +
       '</div><div class="saldo-data" style="margin-top:8px;">'+legendaResultado(resultado)+'</div></div>' +
-      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receita do mês</h4><div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">'+(coluna==='pj' ? '<button type="button" class="btn-text" data-transferir-pf="1">Transferir p/ PF</button>' : '')+'<button type="button" class="btn-text" data-nova-receita="'+coluna+'">+ Lançar receita</button></div></div>' +
+      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Receita do mês</h4><div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">'+(coluna==='pj' ? '<button type="button" class="btn-text" data-transferir-pf="1">Transferir p/ PF</button>' : '')+'<button type="button" class="btn-text" data-nova-receita="'+coluna+'">Lançar receita</button></div></div>' +
         '<div class="financeiro-totais">' + (computeReceitaTransferenciaMes(coluna) > 0.004 ? 'Receitas no mês' : 'Total no mês') + ': <span class="v">'+fmtMoeda(resultado.receita - computeReceitaTransferenciaMes(coluna))+'</span>'+(coluna==='pj'?' <small class="saldo-data">(automático das 3 abas + lançamentos manuais)</small>':'')+'</div>' +
         (computeReceitaTransferenciaMes(coluna) > 0.004 ? '<div class="saldo-data" id="finTransfNota">+ '+fmtMoeda(computeReceitaTransferenciaMes(coluna))+' de transferências entre a PF e a PJ (marcadas "transferência" na lista) = <strong>'+fmtMoeda(resultado.receita)+'</strong> que entrou na conta. Só a primeira linha é receita; é ela que aparece como "Recebido no mês" no Início.</div>' : '') +
         htmlReceitas + '</div>' +
@@ -6569,7 +6584,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         '</div>' +
         '<div class="saldo-data" style="margin-top:8px;">Projeção total do mês: '+fmtMoeda(projecao.total)+'. Considera as entradas previstas em Iniciais, Termos de Acordo e Alvarás (com previsão informada) ainda pendentes com vencimento neste mês (não entra em "Vai sobrar ao final").</div></div>'
       ) : '') +
-      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="'+coluna+'">+ Nova despesa</button></div>' +
+      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Despesas do mês</h4><button type="button" class="btn-text" data-nova-despesa="'+coluna+'">Nova despesa</button></div>' +
         '<div class="financeiro-totais">Pago: <span class="v">'+fmtMoeda(despesasResumo.pago)+'</span> · Pendente: <span class="v">'+fmtMoeda(despesasResumo.pendente)+'</span></div>' +
         (computeDespesaTransferenciaMes(coluna) > 0.004 ? '<div class="saldo-data" id="finTransfDesp">Desse total, '+fmtMoeda(computeDespesaTransferenciaMes(coluna))+' são transferências entre a PF e a PJ ou repasses a parceiros (não são gasto). Gasto de verdade: <strong>'+fmtMoeda(despesasResumo.pago + despesasResumo.pendente - computeDespesaTransferenciaMes(coluna))+'</strong>.</div>' : '') +
         (despesasResumo.qtdEstimadas ? '<div class="saldo-data">O pendente inclui ' + fmtMoeda(despesasResumo.estimadoPend) + ' estimados (média dos últimos meses) de despesas variáveis ainda sem valor.</div>' : '') +
@@ -9206,9 +9221,9 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     if (!el) return;
     var pat = computePatrimonio();
     var cards = pat.metas.length ? pat.metas.map(cardMeta).join('') :
-      '<div class="financeiro-vazio">Nenhuma meta criada. Use "+ Nova meta" para separar dinheiro (ex.: construção da casa) do planejamento do mês.</div>';
+      '<div class="financeiro-vazio">Nenhuma meta criada. Use "Nova meta" para separar dinheiro (ex.: construção da casa) do planejamento do mês.</div>';
     el.innerHTML = patTopoHtml(pat) +
-      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Metas</h4><button type="button" class="btn-text" data-nova-meta="1">+ Nova meta</button></div>' + cards + '</div>';
+      '<div class="financeiro-bloco"><div class="financeiro-secao-head"><h4>Metas</h4><button type="button" class="btn-text" data-nova-meta="1">Nova meta</button></div>' + cards + '</div>';
     Array.prototype.forEach.call(el.querySelectorAll('[data-nova-meta]'), function(b){ b.addEventListener('click', function(){ abrirNovaMeta(); }); });
     Array.prototype.forEach.call(el.querySelectorAll('[data-menu-item]'), function(b){ b.addEventListener('click', function(){ menusAbertos = {}; }); });
     Array.prototype.forEach.call(el.querySelectorAll('[data-menu-toggle]'), function(b){
@@ -11018,7 +11033,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       return '<div class="cli-sug-item" data-pick-add="' + escapeHtml(c.id) + '"><b>' + escapeHtml(c.nome) + '</b><span>' + (c.pagador === 'murilo' ? 'Murilo' : 'Próprio') + (c.telefone ? ' · ' + escapeHtml(c.telefone) : '') + '</span></div>';
     }).join('');
     if (q && !clientes.some(function(c){ return normNome(c.nome) === nq; })){
-      h += '<div class="cli-sug-item novo" data-pick-new="1">+ Cadastrar “' + escapeHtml(q) + '”</div>';
+      h += '<div class="cli-sug-item novo" data-pick-new="1">Cadastrar “' + escapeHtml(q) + '”</div>';
     } else if (!q && !lista.length){
       h += '<div class="cli-sug-vazio">Digite o nome para cadastrar um cliente.</div>';
     }
@@ -15294,10 +15309,10 @@ function obraContratoLinha(k, aberto, cfg){
 function obraContratosHtml(r, cfg){
   var lista = cfg.contratos;
   if (!lista.length){
-    return '<div class="ini-card"><div class="financeiro-secao-head"><h4>Mão de obra</h4></div><div class="parcela-sum">Para pagar o profissional da obra aos poucos (por exemplo, toda semana), cadastre o valor combinado. Cada pagamento é abatido do total e entra como gasto pago da obra. Você pode cadastrar um contrato para cada profissional.</div><div class="ob-acoes"><button type="button" class="btn btn-ghost" id="obraMOCriar">+ Cadastrar contrato de mão de obra</button></div></div>';
+    return '<div class="ini-card"><div class="financeiro-secao-head"><h4>Mão de obra</h4></div><div class="parcela-sum">Para pagar o profissional da obra aos poucos (por exemplo, toda semana), cadastre o valor combinado. Cada pagamento é abatido do total e entra como gasto pago da obra. Você pode cadastrar um contrato para cada profissional.</div><div class="ob-acoes"><button type="button" class="btn btn-ghost" id="obraMOCriar">Cadastrar contrato de mão de obra</button></div></div>';
   }
   var ativos = lista.filter(function(k){ return !k.encerrado; }), enc = lista.filter(function(k){ return k.encerrado; });
-  var h = '<div class="ini-card ob-mo"><div class="financeiro-secao-head"><h4>Mão de obra</h4><button type="button" class="btn-text" id="obraMOCriar">+ Contrato</button></div>';
+  var h = '<div class="ini-card ob-mo"><div class="financeiro-secao-head"><h4>Mão de obra</h4><button type="button" class="btn-text" id="obraMOCriar">Adicionar contrato</button></div>';
   if (ativos.length >= 2){
     var comb = 0, pg = 0;
     ativos.forEach(function(k){ comb += k.valor; pg += obraContratoResumo(k).pago; });
@@ -15911,7 +15926,7 @@ function ldClientes(kind, partes){
     var nq = normNome(n), c = clientes.filter(function(x){ return !x.arquivado && (normNome(x.nome) === nq || (nq.length >= 5 && normNome(x.nome).indexOf(nq) >= 0)); })[0];
     if (c){ pickerAdicionar(kind, c.id); achou++; } else falta.push(n);
   });
-  if (falta.length) avisos.push('Cliente não cadastrado: ' + falta.join(', ') + '. Digite o nome no campo de clientes e toque em “+ Cadastrar”.');
+  if (falta.length) avisos.push('Cliente não cadastrado: ' + falta.join(', ') + '. Digite o nome no campo de clientes e toque em “Cadastrar”.');
   return avisos;
 }
 function ldAplicar(){
@@ -16638,7 +16653,7 @@ function ob7HtmlFin(cfg, r){
       (fin.inicioObra ? '<div class="plan-linha"><span>Prazo da obra</span><strong>' + fin.prazoObraMeses + ' meses (até ' + escapeHtml(mesLabel(deslocarMes(ob7Mes(fin.inicioObra), Math.max(1, fin.prazoObraMeses) - 1))) + ')</strong></div>' : '') +
       (fin.contrapartida > 0 ? '<div class="plan-linha"><span>Recursos próprios exigidos</span><strong>' + fmtMoeda(fin.contrapartida) + '</strong></div><div class="plan-linha"><span>Já aportado por você</span><strong style="color:var(--success)">' + fmtMoeda(r2((r.aportes.pf || 0) + (r.aportes.pj || 0) + (r.aportes.externo || 0))) + '</strong></div>' : '');
   }
-  corpo += '<div class="financeiro-secao-head" style="margin-top:12px;"><h4>Medições</h4><button type="button" class="btn-text" data-ob7="med-nova">+ Medição</button></div>';
+  corpo += '<div class="financeiro-secao-head" style="margin-top:12px;"><h4>Medições</h4><button type="button" class="btn-text" data-ob7="med-nova">Adicionar medição</button></div>';
   if (!meds.length) corpo += '<div class="financeiro-vazio">Nenhuma medição cadastrada. Cadastre o cronograma de liberações que o banco combinou.</div>';
   var hoje = todayISO();
   meds.forEach(function(m){
@@ -16695,7 +16710,7 @@ function ob7HtmlChecklist(cfg){
         '<button type="button" class="btn-text" data-ob7="chk-edit" data-id="' + escapeHtml(x.id) + '">Editar</button></div>';
     });
   });
-  corpo += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-ob7="chk-novo">+ Item</button></div>';
+  corpo += '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-ob7="chk-novo">Adicionar item</button></div>';
   return ob7Sec('chk', 'Checklist da obra', l.length ? feitos + ' de ' + l.length + ' feitos' : 'documentos e marcos por fase', corpo);
 }
 function ob7HtmlExtrato(cfg){
@@ -17758,7 +17773,7 @@ function pbRenderLista(){
 function pbCartao(p){
   var v = pbVinculo(p.processo), pz = pbPrazoGrupo(p), cls = pbClasseTipo(p.tipo), tags = '', mem = pbMembros(p), lida = pbLidaG(p), semPz = pbSemPrazoG(p);
   if (mem.length > 1) tags += '<span class="pb-tg nv">' + mem.length + ' publicações idênticas reunidas</span>';
-  tags += v ? '<button type="button" class="pb-tg ok" data-pb="ir" data-id="' + escapeHtml(p.id) + '">✓ ' + escapeHtml(v.cadastro) + (v.arquivado ? ' (arquivado)' : '') + '</button>' : '<span class="pb-tg nv">+ processo novo</span>';
+  tags += v ? '<button type="button" class="pb-tg ok" data-pb="ir" data-id="' + escapeHtml(p.id) + '">✓ ' + escapeHtml(v.cadastro) + (v.arquivado ? ' (arquivado)' : '') + '</button>' : '<span class="pb-tg nv">Processo novo</span>';
   if (!v){ var prov = cliProvaveis(pbDestinatarios(p)); if (prov.length) tags += '<span class="pb-tg ok">provável cliente: ' + escapeHtml(prov.slice(0, 2).map(function(c){ return c.nome; }).join(', ')) + '</span>'; }
   if (pz) tags += '<span class="pb-tg pz">⏱ prazo ' + escapeHtml(fmtData(pz.data)) + (pz.concluido ? ' (cumprido)' : '') + '</span>';
   else if (!semPz && pbPecaPrincipal(pbPecasDe(p))) { var pp = pbPecaPrincipal(pbPecasDe(p)); tags += '<span class="pb-tg pz">✦ ' + escapeHtml(pp.peca.slice(0, 44)) + (pp.dias ? ' · ' + pp.dias + ' dias' : '') + '</span>'; }
@@ -17838,7 +17853,7 @@ function pbDesenharDetalhe(){
   var p = pbPub(pbDetId), c = qs('pbCorpo'); if (!p || !c) return;
   var v = pbVinculo(p.processo), t = pbTextos[p.id], pz = pbPrazoGrupo(p), sug = (t && t.ok && t.sug) || p.sug, mem = pbMembros(p);
   var pc = pz ? null : pbPecasDe(p), stp = pbPeca[p.id] || {}, pcSel = pz ? null : (pc ? pbPecaSel(p) : (stp.cat || null)), usaPc = !!(pcSel && pcSel.dias);
-  var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">+ processo novo</span>') + '</div></div>';
+  var h = '<div class="pb-cab"><div class="pb-l1"><span>' + escapeHtml(fmtData(p.data) + ' · ' + (p.tribunal || '') + ' · ' + (p.orgao || '')) + '</span></div><div class="pb-cli">' + escapeHtml(pbNomeParte(p, v)) + '</div><div class="pb-proc">' + escapeHtml(p.numero || '') + (p.classe ? ' · ' + escapeHtml(pbClasse(p.classe)) : '') + '</div><div class="pb-tags"><span class="pb-tipo ' + pbClasseTipo(p.tipo) + '">' + escapeHtml(p.tipo || 'Publicação') + '</span>' + (v ? '<span class="pb-tg ok">✓ ' + escapeHtml(v.cadastro) + ': ' + escapeHtml(v.cliente) + '</span>' : '<span class="pb-tg nv">Processo novo</span>') + '</div></div>';
   if (mem.length > 1) h += '<div class="pb-sec"><div class="pb-sec-t">' + mem.length + ' publicações idênticas reunidas</div><div class="saldo-data">Mesmo processo, dia e texto; só muda o destinatário ou a OAB que a encontrou. Elas são marcadas como lidas juntas.</div><div class="txt">' + escapeHtml(pbDestinatarios(p).join(', ')) + '</div></div>';
   h += '<div class="pb-sec"><div class="pb-sec-t">Texto da publicação</div>';
   if (!t) h += '<div class="saldo-data">Buscando o texto completo no Diário Oficial…</div><div class="pb-texto">' + escapeHtml(p.trecho || '') + '</div>';
@@ -17936,7 +17951,7 @@ function pbDesenharOabs(){
       '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av' + i + '"' + (o.avisar ? ' checked' : '') + '><span class="ad-t">Avisar no celular quando chegar publicação nova</span></label>' +
       (o.erro ? '<div class="form-error">Última leitura falhou: ' + escapeHtml(o.erro) + '</div>' : '') + (!o.principal ? '<button type="button" class="btn-text" data-pbo="remover" data-i="' + i + '" style="color:var(--urgente)">Remover esta OAB</button>' : '') + '</div>';
   }).join('');
-  h += '<div class="pb-oab pb-novo"><div class="pb-sec-t">+ Adicionar advogado</div><div class="field"><label class="field-label" for="pbo_nome">Nome (para você identificar)</label><input type="text" id="pbo_nome" maxlength="60" placeholder="Ex.: Murilo, sócio"></div>' +
+  h += '<div class="pb-oab pb-novo"><div class="pb-sec-t">Adicionar advogado</div><div class="field"><label class="field-label" for="pbo_nome">Nome (para você identificar)</label><input type="text" id="pbo_nome" maxlength="60" placeholder="Ex.: Murilo, sócio"></div>' +
     '<div class="pb-dois"><div class="field"><label class="field-label" for="pbo_num">Número da OAB</label><input type="text" id="pbo_num" inputmode="numeric" maxlength="7" placeholder="49308"></div><div class="field"><label class="field-label" for="pbo_uf">UF</label><input type="text" id="pbo_uf" maxlength="2" value="GO" style="text-transform:uppercase"></div></div>' +
     '<div class="field"><label class="field-label" for="pbo_esc">Mostrar</label><select id="pbo_esc" class="filter-select"><option value="conjunto">só processos em conjunto comigo</option><option value="tudo">todas as publicações</option></select></div>' +
     '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="pbo_av" checked><span class="ad-t">Avisar no celular</span></label><button type="button" class="btn btn-ghost" data-pbo="novo" style="width:100%;justify-content:center;">Adicionar à lista</button></div>' +
@@ -18285,7 +18300,7 @@ function agVistaLista(todos){
   futuros.slice(0, 80).forEach(function(i){ if (i.data !== ult){ ult = i.data; h += agCabDia(i.data) + agConflitoHtml(futuros.filter(function(x){ return x.data === i.data; })); } h += agCartao(i); });
   if (futuros.length > 80) h += '<div class="saldo-data">Mostrando os 80 primeiros. Use o mês ou a semana para ver os demais.</div>';
   if ((agS.sit || 'abertos') !== 'abertos' && feitos.length) h += '<div class="ag-dia">Concluídos e cancelados</div>' + feitos.slice(0, 30).map(agCartao).join('');
-  if (!atr.length && !pas.length && !futuros.length && !((agS.sit || 'abertos') !== 'abertos' && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
+  if (!atr.length && !pas.length && !futuros.length && !((agS.sit || 'abertos') !== 'abertos' && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “Novo compromisso” ou confirme prazos nas Publicações.</div>';
   return h;
 }
 function agTipoLinha(i){
@@ -18944,7 +18959,7 @@ function prSug(){
   var q = inp.value.trim(), nq = normNome(q);
   var lista = clientes.filter(function(c){ return !c.arquivado && prEd.ids.indexOf(c.id) < 0 && (!nq || normNome(c.nome).indexOf(nq) >= 0); }).sort(function(a, b){ return a.nome.localeCompare(b.nome, 'pt-BR'); }).slice(0, 6);
   var h = lista.map(function(c){ return '<div class="cli-sug-item" data-prf="cli-add" data-v="' + escapeHtml(c.id) + '"><b>' + escapeHtml(c.nome) + '</b></div>'; }).join('');
-  if (q && !clientes.some(function(c){ return normNome(c.nome) === nq; })) h += '<div class="cli-sug-item novo" data-prf="cli-new" data-v="1">+ Cadastrar “' + escapeHtml(q) + '”</div>';
+  if (q && !clientes.some(function(c){ return normNome(c.nome) === nq; })) h += '<div class="cli-sug-item novo" data-prf="cli-new" data-v="1">Cadastrar “' + escapeHtml(q) + '”</div>';
   sug.innerHTML = h; sug.style.display = h ? '' : 'none';
 }
 /* ---------- próxima providência: texto (+ data opcional, que vira tarefa na Agenda) ---------- */
@@ -19072,10 +19087,10 @@ function prDesenhar(){
       h += '<div class="field"><label class="field-label" for="pr_hon">Situação</label><select id="pr_hon" class="filter-select" style="width:100%">' + ['sem', 'quitados'].map(function(k){ return '<option value="' + k + '"' + (((doc && doc.honorarios) || 'sem') === k ? ' selected' : '') + '>' + PR_HON[k] + '</option>'; }).join('') + '<option value="receber">Tenho honorários a receber (fixo, êxito…)</option></select></div>';
     }
     h += '<div class="field"><label class="field-label" for="pr_honobs">Observação sobre o contrato (opcional)</label><input type="text" id="pr_honobs" maxlength="160" value="' + escapeHtml((doc && doc.honObs) || '') + '" placeholder="Ex.: contrato assinado em 10/03/2024"></div>' +
-      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-prf="novo-hon" data-v="caso">+ Honorários (fixo, êxito…)</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="acordo">+ Termo de acordo</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="alvara">+ Alvará</button></div></div>';
+      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-prf="novo-hon" data-v="caso">Adicionar honorários (fixo, êxito…)</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="acordo">Adicionar termo de acordo</button><button type="button" class="btn btn-ghost pb-b" data-prf="novo-hon" data-v="alvara">Adicionar alvará</button></div></div>';
     var pz = prPrazosAbertos(r);
     h += '<div class="pb-sec"><div class="pb-sec-t">Prazos e audiências (Agenda)</div>' + (pz.length ? pz.map(function(i){ var c = agChip(i); return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(i.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(agTipoLinha(i)) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-abrir" data-v="' + escapeHtml(i.key) + '">' + escapeHtml(c.t) + ' ›</button></div>'; }).join('') : '<div class="saldo-data">Nenhum prazo aberto.</div>') +
-      '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">+ Novo prazo deste processo</button></div></div>';
+      '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">Novo prazo deste processo</button></div></div>';
     h += prTimelineHtml(r) + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
   }
   var pxi = doc ? prProximaInfo(r) : null;
@@ -19271,7 +19286,7 @@ function prPartesPubHtml(){
     if (ligado) h += '<span class="pb-tg ok" style="align-self:flex-start">✓ cliente: ' + escapeHtml(ligado.c.nome) + '</span>';
     else {
       h += '<div class="pb-acts" style="margin:0">' + ms.filter(function(m){ return m.nivel >= 1 && prEd.ids.indexOf(m.c.id) < 0; }).slice(0, 2).map(function(m){ return '<button type="button" class="btn btn-primary pb-b" data-prf="sug-add" data-i="' + i + '" data-v="' + escapeHtml(m.c.id) + '">É o cliente ' + escapeHtml(m.c.nome) + '</button>'; }).join('') +
-        '<button type="button" class="btn btn-ghost pb-b" data-prf="sug-new" data-i="' + i + '">+ Cadastrar como cliente</button></div>';
+        '<button type="button" class="btn btn-ghost pb-b" data-prf="sug-new" data-i="' + i + '">Cadastrar como cliente</button></div>';
     }
     h += '</div>';
   });
@@ -22419,7 +22434,7 @@ function mfObraResumo(r, cfg){
   var h = hero + '<div class="mf-duas">' + cCusto + cProprios + '</div><div class="md-kpis mf-kp6">' + kp.map(mdKpi).join('') + '</div>';
   var ets = r.etapas.filter(function(x){ return x.orcado > 0.004 || x.pago > 0.004 || x.aPagar > 0.004; }).slice(0, 8), sel = mfS.sel.obra; if (sel != null && sel >= ets.length) sel = mfS.sel.obra = null;
   var curto = function(n){ n = String(n || ''); return n.length > (ets.length > 5 ? 5 : 8) ? n.slice(0, ets.length > 5 ? 4 : 7) + '.' : n; };
-  var g = mdCard('Orçado × realizado por etapa', !ets.length ? '<div class="md-vazio">Nenhuma etapa com valor. Use “+ Etapa” na sub-aba Etapas.</div>' :
+  var g = mdCard('Orçado × realizado por etapa', !ets.length ? '<div class="md-vazio">Nenhuma etapa com valor. Use “Adicionar etapa” na sub-aba Etapas.</div>' :
     mdBarras(ets.map(function(x){ return x.e.id; }), ets.map(function(x){ return x.orcado; }), ets.map(function(x){ return r2(x.pago + x.aPagar); }), { sel: sel, ca: '#B9B7AE', cb: MD_COR.ouro, ra: 'orçado', rb: 'realizado', rot: function(i){ return curto(ets[i].e.nome); }, tit: function(i){ return String(ets[i].e.nome).slice(0, 16); }, titulo: 'Orçado e realizado por etapa' }) +
     mdLeg([['#B9B7AE', 'Orçado'], [MD_COR.ouro, 'Realizado (pago + a pagar)']]) + '<div class="md-foot">' + (sel != null ? 'Toque de novo em <b>' + escapeHtml(ets[sel].e.nome) + '</b> para ver os gastos dessa etapa.' : 'Toque numa etapa para ver os valores.') + '</div>', ['sub:etapas', 'abrir as etapas']);
   var fontes = [['Aportes da PF', r.aportes.pf, MD_COR.azul], ['Aportes da PJ', r.aportes.pj, MD_COR.ouro], ['Já estava na conta da obra', r.aportes.externo, MD_COR.cinza], ['Aportes de terceiros', r.aportes.terceiro, MD_COR.roxo], ['Liberações do financiamento', r.liberado, MD_COR.verde]].filter(function(x){ return x[1] > 0.004; });
@@ -23528,15 +23543,15 @@ function renderObra(){
   h += obraContratosHtml(r, cfg);
 
   /* etapas */
-  h += '<div class="ini-card"><div class="financeiro-secao-head"><h4>Etapas · orçado x realizado</h4><button type="button" class="btn-text" id="obraEtapaBtn">+ Etapa</button></div>';
-  if (!r.etapas.filter(function(x){ return !obraEtapaOculta(x.e, cfg); }).length) h += '<div class="financeiro-vazio">Nenhuma etapa. Use "+ Etapa" para começar.</div>';
+  h += '<div class="ini-card"><div class="financeiro-secao-head"><h4>Etapas · orçado x realizado</h4><button type="button" class="btn-text" id="obraEtapaBtn">Adicionar etapa</button></div>';
+  if (!r.etapas.filter(function(x){ return !obraEtapaOculta(x.e, cfg); }).length) h += '<div class="financeiro-vazio">Nenhuma etapa. Use "Adicionar etapa" para começar.</div>';
   var ocOrc = 0, ocPago = 0, ocAPagar = 0, nOc = 0;
   r.etapas.forEach(function(x){
     if (obraEtapaOculta(x.e, cfg)){ nOc++; ocOrc += x.orcado; ocPago += x.pago; ocAPagar += x.aPagar; return; }
     var pc = x.orcado > 0 ? (x.pago + x.aPagar) / x.orcado * 100 : 0, estouro = x.orcado > 0 && (x.pago + x.aPagar) > x.orcado + 0.005;
     h += '<div class="ob-etapa"><div class="ob-etapa-top"><b class="ob-nm">' + obIc(x.e.nome) + ' ' + escapeHtml(x.e.nome) + '</b><span class="termo ob-st-' + escapeHtml(x.e.status) + '">' + escapeHtml(obraTipoEtapa[x.e.status] || '') + '</span></div>' + obBarra(x.pago, x.aPagar, x.orcado) +
       '<div class="ob-etapa-nums"><span>Orçado <b>' + fmtMoeda(x.orcado) + '</b></span><span>Pago <b>' + fmtMoeda(x.pago) + '</b></span>' + (x.aPagar > 0.004 ? '<span>A pagar <b>' + fmtMoeda(x.aPagar) + '</b></span>' : '') + '<span class="' + (estouro ? 'ob-estouro' : '') + '">' + (estouro ? 'Estourou em' : 'Resta do orçado') + ' <b>' + fmtMoeda(Math.abs(x.saldo)) + '</b>' + (x.orcado > 0 ? ' (' + fmtPerc(pc) + ' do orçado usado)' : '') + '</span></div>' +
-      '<div class="ob-etapa-acoes"><button type="button" class="btn-text" data-ob-gasto-etapa="' + escapeHtml(x.e.id) + '">+ Gasto</button><button type="button" class="btn-text" data-ob-etapa-edit="' + escapeHtml(x.e.id) + '">Editar</button><button type="button" class="btn-text" data-ob-etapa-del="' + escapeHtml(x.e.id) + '">Excluir</button></div></div>';
+      '<div class="ob-etapa-acoes"><button type="button" class="btn-text" data-ob-gasto-etapa="' + escapeHtml(x.e.id) + '">Adicionar gasto</button><button type="button" class="btn-text" data-ob-etapa-edit="' + escapeHtml(x.e.id) + '">Editar</button><button type="button" class="btn-text" data-ob-etapa-del="' + escapeHtml(x.e.id) + '">Excluir</button></div></div>';
   });
   if (nOc) h += '<div class="saldo-data" style="margin-top:8px;">Mão de obra (contratos, no cartão acima): orçado <b>' + fmtMoeda(ocOrc) + '</b> · pago <b>' + fmtMoeda(ocPago) + '</b>' + (ocAPagar > 0.004 ? ' · a pagar <b>' + fmtMoeda(ocAPagar) + '</b>' : '') + '. Já está somado nos totais da obra.</div>';
   if (r.sem.pago > 0.004 || r.sem.aPagar > 0.004) h += '<div class="saldo-data">Gastos de etapas excluídas: pago ' + fmtMoeda(r.sem.pago) + (r.sem.aPagar > 0.004 ? ' · a pagar ' + fmtMoeda(r.sem.aPagar) : '') + '</div>';

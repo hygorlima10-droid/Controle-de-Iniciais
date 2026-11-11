@@ -289,7 +289,7 @@ function agVistaLista(todos){
   futuros.slice(0, 80).forEach(function(i){ if (i.data !== ult){ ult = i.data; h += agCabDia(i.data) + agConflitoHtml(futuros.filter(function(x){ return x.data === i.data; })); } h += agCartao(i); });
   if (futuros.length > 80) h += '<div class="saldo-data">Mostrando os 80 primeiros. Use o mês ou a semana para ver os demais.</div>';
   if ((agS.sit || 'abertos') !== 'abertos' && feitos.length) h += '<div class="ag-dia">Concluídos e cancelados</div>' + feitos.slice(0, 30).map(agCartao).join('');
-  if (!atr.length && !pas.length && !futuros.length && !((agS.sit || 'abertos') !== 'abertos' && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “+ Novo” ou confirme prazos nas Publicações.</div>';
+  if (!atr.length && !pas.length && !futuros.length && !((agS.sit || 'abertos') !== 'abertos' && feitos.length)) h += '<div class="financeiro-vazio">Nada na agenda. Toque em “Novo compromisso” ou confirme prazos nas Publicações.</div>';
   return h;
 }
 function agTipoLinha(i){
