@@ -20,7 +20,7 @@ await page.evaluate(() => document.querySelector('[data-tab="analises"]').click(
 const txt = () => page.evaluate(() => document.getElementById('anWrap').innerText);
 let t = await txt();
 check(await page.evaluate(() => document.querySelector('#anPeriodoSeg .active').textContent) === 'Último mês', 'a aba abre já em "Último mês"');
-check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Próx. 3 meses|Semanas|Simulador', 'seletor com os 5 botões (Último mês, Histórico, Próx. 3 meses, Semanas, Simulador)');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Semanas|Simulador|Futuro', 'seletor com os 5 botões (Último mês, Histórico, Semanas, Simulador, Futuro)');
 check(/R\$\s*10\.000,00/.test(t) && /R\$\s*5\.500,00/.test(t), 'mostra o recebido (10.000) e o gasto (5.500) do último mês fechado');
 check(/Sobrou[\s\S]*4\.500,00/i.test(t) && /Recebi/i.test(t) && /Gastei/i.test(t), 'indicadores Recebi, Gastei e Sobrou (R$ 4.500)');
 check(/vs\. média/.test(t) && /▲/.test(t) && /Patrimônio/i.test(t), 'cada indicador compara com a média (▲/▼ vs. média) e há o cartão de Patrimônio');
@@ -35,7 +35,7 @@ await page.evaluate(() => { document.querySelectorAll('[data-an-ult="1"]')[0].cl
 check(await page.evaluate(() => document.querySelector('[data-an-ult="1"]').disabled), 'não avança além do último mês fechado');
 await page.evaluate(() => document.querySelector('[data-an-periodo="hist"]').click()); await page.waitForTimeout(500);
 check(/Quanto entrou por mês/.test(await txt()), 'a visão de 6 meses continua como antes');
-await page.evaluate(() => document.querySelector('[data-an-periodo="proj"]').click()); await page.waitForTimeout(500);
-check(/Como cada mês termina/.test(await txt()), 'a projeção dos próximos 3 meses continua como antes');
+await page.evaluate(() => document.querySelector('[data-an-periodo="fut"]').click()); await page.waitForTimeout(500);
+check(/Como cada mês termina/.test(await txt()), 'o conteúdo da antiga "Próx. 3 meses" agora vive em Futuro');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

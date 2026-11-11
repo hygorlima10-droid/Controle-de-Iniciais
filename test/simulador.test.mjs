@@ -18,7 +18,7 @@ const br = await chromium.launch(); const ctx = await br.newContext({ viewport: 
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3500);
 const txt = () => page.evaluate(() => document.getElementById('anWrap').innerText);
 await page.evaluate(() => document.querySelector('[data-tab="analises"]').click()); await page.waitForTimeout(800);
-check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Próx. 3 meses|Semanas|Simulador', 'o seletor de Análises ganhou o botão "Simulador"');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Semanas|Simulador|Futuro', 'o seletor de Análises ganhou o botão "Simulador"');
 await page.evaluate(() => document.querySelector('[data-an-periodo="sim"]').click()); await page.waitForTimeout(600);
 let t = await txt();
 check(/Aqui nada é gravado/.test(t) && /Nenhum evento ainda/.test(t) && /Caixa livre em[\s\S]*R\$\s*5\.000,00/i.test(t), 'abre vazio, explica que nada é gravado e mostra o caixa de hoje (R$ 5.000) sem evento');

@@ -2,7 +2,7 @@
 /* ============================================================
    SIMULADOR FINANCEIRO (prefixo sim) — Fase 3, etapa 3.6 (Análises > Simulador; só o proprietário)
    - Você monta um "e se" com receita extra, despesa nova, transferência PJ → PF e aporte na reserva, e vê o efeito no caixa livre (PJ + PF).
-   - Usa a MESMA projeção de "Próx. 3 meses" (anProjecao: parcelas com data, despesas não pagas, dia a dia pela média; alvarás de fora).
+   - Usa a MESMA projeção do caixa dos próximos meses (Futuro) (anProjecao: parcelas com data, despesas não pagas, dia a dia pela média; alvarás de fora).
    - NADA é gravado nos lançamentos. O cenário fica na memória da tela; "Guardar neste aparelho" salva só neste navegador (localStorage).
    - O "Pergunte ao app" liga aqui: a resposta de um "e se" tem o botão "Abrir no Simulador" (simDeCenario converte a pergunta em eventos).
    ============================================================ */
@@ -79,7 +79,7 @@ function renderAnaliseSimulador(el){
   var w = Math.max(280, Math.floor((el.clientWidth || 360) - 30)), wMeia = (el.clientWidth || 360) >= 760 ? Math.floor(((el.clientWidth || 360) - 12) * 0.58) - 34 : w, h = '';
   var H = simS.n, S = simCalcular(simS.eventos, H), L = S.linhas, fim = L[L.length - 1], tem = simS.eventos.length > 0;
   h += '<div class="an-topo"><div class="segmented" id="anPeriodoSeg" role="group" aria-label="Período">' + anSegBotoes() + '</div></div>';
-  h += '<div class="an-sem-aviso ok"><b>Aqui nada é gravado.</b><span>Você monta um “e se” e vê o efeito no caixa livre (PJ + PF), com a mesma projeção de “Próx. 3 meses”. Sair da tela apaga o cenário, a não ser que você guarde neste aparelho.</span></div>';
+  h += '<div class="an-sem-aviso ok"><b>Aqui nada é gravado.</b><span>Você monta um “e se” e vê o efeito no caixa livre (PJ + PF), com a mesma projeção do caixa dos próximos meses (a que está em Futuro). Sair da tela apaga o cenário, a não ser que você guarde neste aparelho.</span></div>';
   if (tem && S.negCen) h += '<div class="an-sem-aviso neg"><b>Com este cenário o caixa livre fica negativo em ' + escapeHtml(mesLabel(S.negCen.m)) + ' (−' + fmtMoeda(Math.abs(S.negCen.cen)) + ').</b><span>' + (S.negBase ? 'Sem o cenário ele já ficaria negativo em ' + escapeHtml(mesLabel(S.negBase.m)) + '.' : 'Sem o cenário o caixa não fica negativo.') + '</span></div>';
   else if (tem) h += '<div class="an-sem-aviso ok"><b>Com este cenário o caixa livre não fica negativo em nenhum dos próximos ' + H + ' meses.</b><span>O ponto mais baixo é ' + fmtMoeda(S.menorCen.cen) + ', em ' + escapeHtml(mesLabel(S.menorCen.m)) + '.</span></div>';
   /* cenário */

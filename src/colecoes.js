@@ -9,7 +9,7 @@ export const NIVEL = {
 };
 /* documentos de `config` que são do proprietário: ficam na coleção configDono. O endereço antigo (/api/db/config/<id>) continua valendo
    para o aplicativo já aberto em outro aparelho: o servidor leva a leitura e a gravação para configDono. */
-export const CONFIG_DONO = new Set(['planejamento', 'obra', 'extratos', 'relatorioMurilo', 'alertasDispensados', 'backup', 'fechamentos', 'orcamento']);
+export const CONFIG_DONO = new Set(['planejamento', 'obra', 'extratos', 'relatorioMurilo', 'alertasDispensados', 'backup', 'fechamentos', 'orcamento', 'futuro']);
 export const resolverColecao = (colecao, id) => (colecao === 'config' && id && CONFIG_DONO.has(id) ? 'configDono' : colecao);
 const erro = (status, code, message) => new Response(JSON.stringify({ error: { code, message } }), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 /* devolve null se pode, ou a resposta de recusa; "auth" nulo = modo antigo (uma pessoa só, o proprietário) */
