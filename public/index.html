@@ -1441,8 +1441,6 @@
   }
 
   /* ===== Análises: Semanas (fluxo de caixa semanal) ===== */
-  #anPeriodoSeg{grid-template-columns:repeat(5,minmax(0,1fr));}
-  @media (max-width:560px){#anPeriodoSeg{grid-template-columns:repeat(3,minmax(0,1fr));}}
   .an-sem-ent{fill:var(--normal);fill-opacity:.16;stroke:var(--normal);stroke-width:1.4;stroke-dasharray:4 3;}
   .an-sem-sai{fill:var(--urgente);fill-opacity:.14;stroke:var(--urgente);stroke-width:1.4;stroke-dasharray:4 3;}
   .an-sem-linha{stroke:var(--accent);}
@@ -1468,6 +1466,28 @@
   .an-sem-tot b.an-bom{color:var(--normal);} .an-sem-tot b.an-mau{color:var(--urgente);}
   .an-sem-nota{display:flex;gap:10px;align-items:flex-start;margin:10px 0;font-size:var(--t3);line-height:1.45;}
   .an-sem-nota > span{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:var(--t2);display:flex;align-items:center;justify-content:center;}
+
+  /* ===== Análises: Histórico e Último mês repaginado (3.4) ===== */
+  #anPeriodoSeg{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .an-seg2#anRecorteSeg{margin-top:8px;max-width:420px;}
+  .an-duas{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:12px;align-items:start;margin-bottom:12px;}
+  .an-duas > .an-card{margin:0;}
+  @media (min-width:960px){.an-duas.an-duas-fech{grid-template-columns:minmax(300px,5fr) minmax(0,7fr);}}
+  .an-duas table th[scope=row]{text-align:left;}
+  .an-fech th,.an-fech td{font-size:var(--t2);padding-left:6px;padding-right:6px;}
+  .an-kpis4 .md-card{cursor:default;}
+  .an-pill{display:inline-block;border-radius:99px;padding:3px 9px;font-size:var(--t1);font-weight:700;background:var(--surface-2);color:var(--ink-soft);}
+  .an-pill.ok{background:rgba(23,137,90,.12);color:var(--normal);}
+  .an-pill.mau{background:rgba(217,59,59,.12);color:var(--urgente);}
+  .an-rosca{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .an-rosca-leg{flex:1;min-width:170px;}
+  .an-fech th,.an-fech td{white-space:nowrap;}
+  .an-fech-td{font-size:var(--t1);}
+  .an-auto{font-style:normal;font-size:var(--t1);padding:1px 6px;border-radius:99px;background:var(--surface-2);color:var(--ink-soft);}
+  .an-mudou{color:var(--urgente);font-weight:700;font-size:var(--t1);}
+  .an-tit-acao{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .an-cmp-sel{display:flex;align-items:center;gap:10px;margin:4px 0 10px;color:var(--ink-soft);font-size:var(--t2);}
+  .an-cmp-sel select{height:38px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;padding:0 10px;}
 </style>
 <link rel="stylesheet" href="/tema.css?v=1">
 </head>
@@ -3330,6 +3350,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   var metasRef = null;
   var config = {};
   var configRef = null;
+  var snapOk = {};   /* quais coleções já chegaram do servidor (o fechamento dos meses só roda com tudo carregado) */
   var editingMetaId = null;
   var metaMovId = null;
   var metaHistId = null;
@@ -3587,7 +3608,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       esconderConexao();
       qs('banner').style.display = 'none';
       casosRef = db.collection('casos');
-      casosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      casosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.casosRef = true;
         casos = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3602,7 +3623,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       acordosRef = db.collection('termosAcordo');
-      acordosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      acordosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.acordosRef = true;
         acordos = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3615,7 +3636,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       alvarasRef = db.collection('alvaras');
-      alvarasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      alvarasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.alvarasRef = true;
         alvaras = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3628,7 +3649,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       clientesRef = db.collection('clientes');
-      clientesRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      clientesRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.clientesRef = true;
         clientes = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3641,7 +3662,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       despesasRef = db.collection('despesas');
-      despesasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      despesasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.despesasRef = true;
         despesas = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3654,7 +3675,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       receitasRef = db.collection('receitasManuais');
-      receitasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      receitasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.receitasRef = true;
         receitasManuais = snap.docs.map(function(d){
           var raw = d.data() || {};
           return Object.assign({}, raw, { id: d.id });
@@ -3667,7 +3688,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       metasRef = db.collection('metas');
-      metasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      metasRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.metasRef = true;
         metas = snap.docs.map(function(d){ return Object.assign({}, d.data() || {}, { id: d.id }); });
         renderFinanceiro();
       }, function(err){
@@ -3677,17 +3698,18 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       configRef = db.collection('config');
-      configRef.limit(50).onSnapshot(function(snap){
+      configRef.limit(50).onSnapshot(function(snap){ snapOk.configRef = true;
         snap.docs.forEach(function(d){ config[d.id] = d.data() || {}; });
         configCarregado = true;
         aoMudarConfig();
+        if (typeof anFechAgendar === 'function') anFechAgendar();
         renderExtratos(); renderInicioExtratos();
         extTentarSyncAuto();
       }, function(err){
         console.error('db onSnapshot error (config)', err);
       });
       saldosRef = db.collection('saldos');
-      saldosRef.limit(10).onSnapshot(function(snap){
+      saldosRef.limit(10).onSnapshot(function(snap){ snapOk.saldosRef = true;
         snap.docs.forEach(function(d){
           var incoming = d.data() || {};
           var existente = saldos[d.id];
@@ -3703,7 +3725,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         }
       });
       extratosRef = db.collection('extratos');
-      extratosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      extratosRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.extratosRef = true;
         extratos = snap.docs.map(function(d){ return Object.assign({}, d.data() || {}, { id: d.id }); });
         extSnapOk = true;
         renderExtratos(); renderInicioExtratos(); renderPainelAtencao();
@@ -3713,7 +3735,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         console.error('db onSnapshot error (extratos)', err);
       });
       obraMovRef = db.collection('obraMov');
-      obraMovRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){
+      obraMovRef.limit(LIMITE_COLECAO).onSnapshot(function(snap){ snapOk.obraMovRef = true;
         obraMov = snap.docs.map(function(d){ return Object.assign({}, d.data() || {}, { id: d.id }); });
         renderTudo();
       }, function(err){
@@ -10024,7 +10046,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   function restaurarConfig(cfgImportada){
     if (cfgImportada === undefined || cfgImportada === null) return Promise.resolve();
     var ps = [];
-    ['planejamento', 'personalizacao', 'relatorioMurilo', 'modelosHonorario', 'extratos', 'obra'].forEach(function(k){
+    ['planejamento', 'personalizacao', 'relatorioMurilo', 'modelosHonorario', 'extratos', 'obra', 'fechamentos'].forEach(function(k){
       var novo = cfgImportada[k];
       if (novo) ps.push(comRepeticao(function(){ return configRef.doc(k).set(novo); }, 4));
       else if (config[k]) ps.push(comRepeticao(function(){ return configRef.doc(k).delete(); }, 4));
@@ -13995,9 +14017,7 @@ function anPrimeiroDia(){
 }
 function anPrimeiroMes(){ return anPrimeiroDia().slice(0, 7); }
 function anMesesVisiveis(){
-  var pri = anPrimeiroMes();
-  var l = anMesesAte(anPeriodo).filter(function(m){ return m >= pri; });
-  return l.length ? l : [todayISO().slice(0, 7)];
+  return anMesesRecorte();
 }
 
 /* ---------- dados ---------- */
@@ -14294,7 +14314,7 @@ function anMarcarObra(chave){
   }).catch(function(err){ console.error('erro ao marcar', err); toast('Não consegui salvar. Tente de novo.'); });
 }
 function anSegBotoes(){
-  return [['ult', 'Último mês'], [6, '6 meses'], [12, '12 meses'], ['proj', 'Próx. 3 meses'], ['sem', 'Semanas']].map(function(o){
+  return [['ult', 'Último mês'], ['hist', 'Histórico'], ['proj', 'Próx. 3 meses'], ['sem', 'Semanas']].map(function(o){
     return '<button type="button" data-an-periodo="' + o[0] + '" class="seg-btn' + (anPeriodo === o[0] ? ' active' : '') + '">' + o[1] + '</button>';
   }).join('');
 }
@@ -14356,30 +14376,37 @@ function renderAnaliseUltimo(el){
   var base = anMediaMeses(anteriores);
   var nav = '<div class="an-ult-nav"><button type="button" class="icon-btn" data-an-ult="-1" aria-label="Mês anterior"' + (m <= pri ? ' disabled' : '') + '>‹</button><b>' + escapeHtml(mesLabel(m)) + '</b><button type="button" class="icon-btn" data-an-ult="1" aria-label="Mês seguinte"' + (m >= ultFechado ? ' disabled' : '') + '>›</button></div>';
   h += topo + nav + '<div class="saldo-data" style="text-align:center;margin-top:-4px;">mês fechado</div>';
-  /* resumo */
-  h += anCard('Resumo do mês', '',
-    '<div class="an-ult-kpis"><div class="an-tile in"><div class="lbl">▲ Recebi</div><div class="big">' + fmtMoeda(R.total) + '</div></div><div class="an-tile out"><div class="lbl">▼ Gastei</div><div class="big">' + fmtMoeda(D.total) + '</div></div></div>' +
-    '<div class="an-sobra ' + (sobra >= 0 ? 'pos' : 'neg') + '"><span>' + (sobra >= 0 ? 'Sobrou' : 'Faltou') + '</span><b>' + fmtMoeda(Math.abs(sobra)) + '</b></div>' +
-    '<div class="saldo-data an-nota">Em frase: você recebeu ' + fmtMoeda(R.total) + ', gastou ' + fmtMoeda(D.total) + (sobra >= 0 ? ' e sobraram ' + fmtMoeda(sobra) + (R.total > 0 ? ' (' + Math.round(sobra / R.total * 100) + '% do que entrou)' : '') : ' e faltaram ' + fmtMoeda(-sobra)) + '.</div>');
-  /* comparação com a média */
-  if (base){
-    h += anCard('Comparado com a sua média', 'Média por mês dos ' + base.n + (base.n === 1 ? ' mês fechado anterior' : ' meses fechados anteriores') + ' (até 6).',
-      '<div class="plan-linha"><span>Recebido</span><strong class="' + (R.total >= base.rec ? 'an-bom' : 'an-mau') + '">' + anDif(R.total, base.rec) + ' ' + anSeta(R.total, base.rec, false) + '</strong></div>' +
-      '<div class="plan-linha"><span>Gasto</span><strong class="' + (D.total <= base.gas ? 'an-bom' : 'an-mau') + '">' + anDif(D.total, base.gas) + ' ' + anSeta(D.total, base.gas, true) + '</strong></div>' +
-      '<div class="plan-linha"><span>Sobra</span><strong class="' + (sobra >= base.sobra ? 'an-bom' : 'an-mau') + '">' + anDif(sobra, base.sobra) + '</strong></div>');
-  } else h += anCard('Comparado com a sua média', '', '<div class="financeiro-vazio">Ainda não há meses fechados anteriores para comparar.</div>');
+  /* indicadores do mês, cada um comparado com a média dos meses anteriores (Fase 3.4) */
+  var Pm = anPatrimonioEm(m), Pa = anPatrimonioEm(deslocarMes(m, -1));
+  var pill = function(v, bs, inv){
+    if (!base) return '<div class="md-foot">sem meses anteriores para comparar</div>';
+    var d = r2(v - bs), bom = inv ? d <= 0 : d >= 0;
+    if (Math.abs(d) < 0.005) return '<div class="md-foot"><span class="an-pill">igual à média</span></div>';
+    return '<div class="md-foot"><span class="an-pill ' + (bom ? 'ok' : 'mau') + '">' + (d > 0 ? '▲ ' : '▼ ') + fmtMoeda(Math.abs(d)) + ' vs. média</span></div>';
+  };
+  var kp = function(rot, ic, cor, v, cls, foot){ return '<div class="md-card md-kpi an-kpi-i"><div class="md-h"><span class="md-k">' + mdIc(ic, cor) + '<span>' + rot + '</span></span></div><b class="md-v' + (cls ? ' ' + cls : '') + '">' + v + '</b>' + foot + '</div>'; };
+  var dPat = (Pm && Pa) ? r2(Pm.total - Pa.total) : null;
+  h += '<div class="md-kpis an-kpis4">' +
+    kp('Recebi', 'trending-up', MD_COR.verde, fmtMoeda(R.total), '', pill(R.total, base ? base.rec : 0, false)) +
+    kp('Gastei', 'trending-down', MD_COR.verm, fmtMoeda(D.total), 'neg', pill(D.total, base ? base.gas : 0, true)) +
+    kp(sobra >= 0 ? 'Sobrou' : 'Faltou', 'piggy-bank', MD_COR.ouro, fmtMoeda(Math.abs(sobra)), sobra >= 0 ? 'ok' : 'neg', pill(sobra, base ? base.sobra : 0, false)) +
+    kp('Patrimônio', 'landmark', MD_COR.azul, dPat === null ? (Pm ? fmtMoeda(Pm.total) : '—') : (dPat >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(dPat)), dPat === null ? '' : (dPat >= 0 ? 'ok' : 'neg'),
+      '<div class="md-foot">' + (Pm && Pa ? fmtMoeda(Pa.total) + ' → ' + fmtMoeda(Pm.total) : (Pm ? 'no fim do mês' : 'informe o saldo das contas')) + '</div>') + '</div>';
   /* origem */
-  h += anCard('De onde veio', '', [['Clientes próprios', R.proprio, 'var(--an-1)'], ['Murilo', R.murilo, 'var(--an-2)'], ['Outras receitas', R.outras, 'var(--an-3)']].map(function(x){ return '<div class="plan-linha"><span><i class="an-pt" style="background:' + x[2] + '"></i>' + x[0] + '</span><strong class="' + (x[1] > 0.004 ? 'an-bom' : '') + '" ' + (x[1] > 0.004 ? '' : 'style="color:var(--ink-soft)"') + '>' + fmtMoeda(x[1]) + '</strong></div>'; }).join(''));
+  var fatiasO = [['Clientes próprios', R.proprio, MD_COR.ouro], ['Murilo', R.murilo, MD_COR.azul], ['Outras receitas', R.outras, MD_COR.roxo]];
+  var cOrigem = anCard('De onde veio', '',
+    '<div class="an-rosca">' + mdRosca(fatiasO, 'R$ ' + anFmtEixo(R.total), 'recebido') + '<div class="an-rosca-leg">' + fatiasO.map(function(x){ return '<div class="plan-linha"><span><i class="an-pt" style="background:' + x[2] + '"></i>' + x[0] + '</span><strong' + (x[1] > 0.004 ? '' : ' style="color:var(--ink-soft)"') + '>' + fmtMoeda(x[1]) + '</strong></div>'; }).join('') + '</div></div>');
   /* categorias */
   var lista = Object.keys(cats).map(function(k){ return { k: k, v: cats[k] }; }).filter(function(x){ return x.v > 0.004; }).sort(function(a, b){ return b.v - a.v; });
   var ctU = ctCardHtml([m], base && base.cats, function(v, b){ return b > 0.004 ? ' ' + anSeta(v, b, true) : ''; }), total = ctU.total;
-  h += anCard('Para onde o dinheiro foi', fmtMoeda(total) + ' no total. ' + (base ? 'As setas comparam com a média por mês dos meses anteriores. ' : '') + 'Toque numa categoria para ver os lançamentos.', ctU.html);
+  var cParaOnde = anCard('Para onde o dinheiro foi', fmtMoeda(total) + ' no total. ' + (base ? 'As setas comparam com a média por mês dos meses anteriores. ' : '') + 'Toque numa categoria para ver os lançamentos.', ctU.html);
   /* o que mais mudou */
+  var cMudou = '';
   if (base){
     var difs = lista.map(function(x){ return { k: x.k, d: r2(x.v - (base.cats[x.k] || 0)) }; });
     Object.keys(base.cats).forEach(function(k){ if (!(cats[k] > 0.004)) difs.push({ k: k, d: r2(-base.cats[k]) }); });
     var menos = difs.filter(function(x){ return x.d < -50; }).sort(function(a, b){ return a.d - b.d; }).slice(0, 2), mais = difs.filter(function(x){ return x.d > 50; }).sort(function(a, b){ return b.d - a.d; }).slice(0, 2);
-    if (menos.length || mais.length) h += anCard('O que mais mudou', '',
+    if (menos.length || mais.length) cMudou = anCard('O que mais mudou', '',
       (menos.length ? '<div class="plan-alerta ok">▼ Gastou menos em: ' + menos.map(function(x){ return escapeHtml(x.k) + ' (− ' + fmtMoeda(-x.d) + ')'; }).join(' e ') + '</div>' : '') +
       (mais.length ? '<div class="plan-alerta ruim">▲ Gastou mais em: ' + mais.map(function(x){ return escapeHtml(x.k) + ' (+ ' + fmtMoeda(x.d) + ')'; }).join(' e ') + '</div>' : ''));
   }
@@ -14389,10 +14416,11 @@ function renderAnaliseUltimo(el){
   var pc = function(s, r){ return r > 0.004 ? Math.round(s / r * 100) + '%' : '—'; }, mk = function(v){ return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); };
   var cols = [{ rec: R.total, gas: D.total, sob: sobra }, b6 && { rec: b6.rec, gas: b6.gas, sob: b6.sobra }, b12 && { rec: b12.rec, gas: b12.gas, sob: b12.sobra }, { rec: pEnt, gas: pSai, sob: pSob }];
   var ln = function(rot, f, forte){ return '<tr' + (forte ? ' class="sobra"' : '') + '><th scope="row">' + rot + '</th>' + cols.map(function(c, i){ var cor = forte && c ? (c.sob >= 0 ? 'an-bom' : 'an-mau') : ''; return '<td class="n' + (i === 0 ? ' col-mes' : '') + '">' + (forte ? '<b class="' + cor + '">' : '') + (c ? f(c) : '—') + (forte ? '</b>' : '') + '</td>'; }).join('') + '</tr>'; };
-  h += anCard('Os 4 cenários lado a lado', 'Valores por mês, arredondados. Os próximos 3 meses são a previsão do app (parcelas a receber, despesas e média do dia a dia).',
+  var cCen = anCard('Os 4 cenários lado a lado', 'Valores por mês, arredondados. Os próximos 3 meses são a previsão do app (parcelas a receber, despesas e média do dia a dia).',
     '<div class="an-tab-rolar an-ult-quadro"><table><thead><tr><th></th><th class="n col-mes">' + escapeHtml(mesCurto(m)) + '</th><th class="n">Média 6 m</th><th class="n">Média 12 m</th><th class="n">Próx. 3 m</th></tr></thead><tbody>' +
     ln('Recebido', function(c){ return mk(c.rec); }) + ln('Gasto', function(c){ return mk(c.gas); }) + ln('Sobra', function(c){ return mk(c.sob); }, true) + ln('% que sobra', function(c){ return pc(c.sob, c.rec); }) + '</tbody></table></div>' +
     (b6 && b6.n < 6 ? '<div class="saldo-data an-nota">A média de 6 meses usa só os ' + b6.n + ' meses fechados que o app já tem.</div>' : ''));
+  h += '<div class="an-duas">' + cOrigem + cParaOnde + '</div><div class="an-duas">' + cMudou + cCen + '</div>';
   /* leitura rápida */
   var ler = '', hist = anMesesFechados(anMesesAte(12)).map(function(x){ return { m: x, r: anRecebidoMes(x).total }; });
   if (hist.length >= 4 && hist.some(function(x){ return x.m === m; })){
@@ -14463,6 +14491,118 @@ function renderAnaliseProjecao(el){
   /* marcar / desmarcar como dinheiro da obra */
   el.innerHTML = h + '<div id="anTip" class="an-tip" role="status" style="display:none;"></div>';
   anTipEl = qs('anTip');
+}
+/* ---------- fechamento dos meses (Fase 3, etapa 3.4) ----------
+   Ao abrir o app no dia 1º (ou depois), cada mês que terminou e ainda não foi fechado vira um registro guardado (config "fechamentos"):
+   recebido, gasto, patrimônio e reserva do último dia, resultado PJ e PF. Quem lê é o Histórico (comparar meses, tabela de meses fechados).
+   Se o mês mudar depois (lançamento alterado), a tabela avisa e oferece "refazer". Nada disso mexe em lançamentos. */
+var anRecorte = 6, anCmpA = null, anCmpB = null, anFechOcupado = false, anFechTentativas = 0;
+function anFechPronto(){
+  if (!(window.__papel === 'proprietario' || !window.__SERVIDOR)) return false;
+  if (!configCarregado) return false;
+  if (storageMode === 'db') return ['casosRef', 'acordosRef', 'alvarasRef', 'clientesRef', 'despesasRef', 'receitasRef', 'metasRef', 'configRef', 'saldosRef', 'extratosRef', 'obraMovRef'].every(function(k){ return snapOk[k]; });
+  return true;
+}
+function anFechGet(){ var f = config.fechamentos; return (f && f.meses && typeof f.meses === 'object') ? f.meses : {}; }
+function anFechGravar(meses){
+  var dados = { meses: meses }; config.fechamentos = dados;
+  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('fechamentos').set(dados));
+  saveLocalConfig(); return Promise.resolve();
+}
+function anFechSnap(m){
+  var R = anRecebidoMes(m), D = anDespesasMes(m), P = anPatrimonioEm(m);
+  var res = comMes(m, function(){ var o = {}; ['pj', 'pf'].forEach(function(c){ o[c] = r2(computeReceitaMes(c) - computeDespesasResumoMes(c).pago); }); return o; });
+  return { m: m, recebido: R.total, gasto: D.total, pago: D.lancadas, patrimonio: P ? P.total : null, reserva: P ? P.reserva : null, resPJ: res.pj, resPF: res.pf };
+}
+function anFechVal(m){ var s = anFechGet()[m]; return s || anFechSnap(m); }
+function anFechMudou(sn){
+  var v = anFechSnap(sn.m);
+  if (Math.abs(v.recebido - sn.recebido) > 0.009 || Math.abs(v.gasto - sn.gasto) > 0.009) return true;
+  if ((v.patrimonio === null) !== (sn.patrimonio === null)) return true;
+  return v.patrimonio !== null && Math.abs(v.patrimonio - sn.patrimonio) > 0.009;
+}
+/* meses já terminados que têm movimento (o primeiro mês só conta se os registros começam no início dele) */
+function anMesesFechaveis(){
+  var m0 = todayISO().slice(0, 7), pri = anPrimeiroMes(), out = [];
+  for (var m = pri; m < m0; m = deslocarMes(m, 1)) out.push(m);
+  return anMesesFechados(out);
+}
+function anFechAuto(){
+  if (anFechOcupado || !anFechPronto()) return Promise.resolve(false);
+  var meses = anFechGet(), novos = {}, algum = false, ult = deslocarMes(todayISO().slice(0, 7), -1);
+  anMesesFechaveis().forEach(function(m){
+    if (meses[m]) return;
+    var s = anFechSnap(m); s.fechadoEm = new Date().toISOString(); s.auto = true; if (m < ult) s.retro = true;
+    novos[m] = s; algum = true;
+  });
+  if (!algum) return Promise.resolve(false);
+  anFechOcupado = true;
+  var todos = Object.assign({}, meses, novos);
+  return anFechGravar(todos).then(function(){ anFechOcupado = false; if (activeTab === 'analises') renderAnalises(); return true; }, function(e){ anFechOcupado = false; console.error('fechamento', e); return false; });
+}
+/* ao abrir o app: espera os dados chegarem e fecha o que estiver pendente */
+function anFechAgendar(){
+  if (anFechTentativas > 30) return;
+  anFechTentativas++;
+  setTimeout(function(){ if (!anFechPronto()){ anFechAgendar(); return; } setTimeout(anFechAuto, 1200); }, 1500);
+}
+function anFechRefazer(m){
+  var meses = Object.assign({}, anFechGet()), s = anFechSnap(m); s.fechadoEm = new Date().toISOString(); s.refeito = true;
+  meses[m] = s;
+  return anFechGravar(meses).then(function(){ renderAnalises(); toast('Fechamento de ' + mesLabel(m) + ' refeito com os valores de agora.'); });
+}
+function anMesesRecorte(){
+  var m0 = todayISO().slice(0, 7), pri = anPrimeiroMes(), l;
+  if (anRecorte === 'ano'){ l = []; for (var i = 1; i <= parseInt(m0.slice(5), 10); i++) l.push(m0.slice(0, 4) + '-' + String(i).padStart(2, '0')); }
+  else if (anRecorte === 'tudo'){ l = []; for (var m = pri; m <= m0; m = deslocarMes(m, 1)) l.push(m); }
+  else l = anMesesAte(anRecorte);
+  l = l.filter(function(m){ return m >= pri; });
+  return l.length ? l : [m0];
+}
+function anCsvNum(v){ return v === null || v === undefined ? '' : String(v).replace('.', ','); }
+function anFechExportar(){
+  var meses = anMesesFechaveis().filter(function(m){ return anMesesRecorte().indexOf(m) >= 0; }), linhas = [['Mês', 'Patrimônio', 'Recebido', 'Gasto', 'Despesas pagas', 'Resultado PJ', 'Resultado PF', 'Reserva', 'Fechado em']];
+  meses.forEach(function(m){ var v = anFechVal(m); linhas.push([m, anCsvNum(v.patrimonio), anCsvNum(v.recebido), anCsvNum(v.gasto), anCsvNum(v.pago), anCsvNum(v.resPJ), anCsvNum(v.resPF), anCsvNum(v.reserva), v.fechadoEm ? v.fechadoEm.slice(0, 10) : '']); });
+  var csv = '﻿' + linhas.map(function(l){ return l.join(';'); }).join('\r\n');
+  try{ var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'meses-fechados.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500); }catch(e){ toast('Não consegui gerar o arquivo.'); }
+}
+/* cartão: fechamentos do recorte */
+function anCardFechados(){
+  var lista = anMesesFechaveis(), vis = lista.filter(function(m){ return anMesesRecorte().indexOf(m) >= 0; }).reverse(), meses = anFechGet();
+  if (!vis.length) return anCard('Meses fechados', '', '<div class="financeiro-vazio">Ainda não há mês fechado neste recorte. O primeiro fechamento acontece quando um mês terminar e você abrir o app.</div>');
+  var linhas = vis.map(function(m){
+    var v = anFechVal(m), ant = lista.indexOf(m) > 0 ? anFechVal(lista[lista.indexOf(m) - 1]) : null, sn = meses[m];
+    var vari = (v.patrimonio !== null && ant && ant.patrimonio !== null) ? r2(v.patrimonio - ant.patrimonio) : null;
+    var fech = sn ? '<span>' + escapeHtml(fmtData(sn.fechadoEm.slice(0, 10)).slice(0, 5)) + '</span> <em class="an-auto">' + (sn.refeito ? 'refeito' : (sn.retro ? 'calculado' : 'auto')) + '</em>' + (anFechMudou(sn) ? ' <span class="an-mudou">mudou depois</span> <button type="button" class="md-link" data-an-refazer="' + m + '">refazer</button>' : '') : '<em class="an-auto">ao vivo</em>';
+    return '<tr><th scope="row">' + escapeHtml(mesCurto(m)) + '</th><td class="n">' + (v.patrimonio === null ? '—' : fmtMoeda(v.patrimonio)) + '</td><td class="n ' + (vari === null ? '' : (vari >= 0 ? 'an-bom' : 'an-mau')) + '">' + (vari === null ? '—' : (vari >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(vari))) + '</td><td class="n">' + fmtMoeda(v.recebido) + '</td><td class="n">' + fmtMoeda(v.pago) + '</td><td class="n an-fech-td">' + fech + '</td></tr>';
+  }).join('');
+  return '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Meses fechados</h4><button type="button" class="an-sem-mais" data-an-exportar="1">exportar ›</button></div>' +
+    '<div class="saldo-data">O app fecha o mês sozinho. Valores do último dia, guardados para comparar depois.</div>' +
+    '<div class="an-tab-rolar an-fech"><table><thead><tr><th>Mês</th><th class="n">Patrim.</th><th class="n">Variação</th><th class="n">Recebido</th><th class="n">Pago</th><th class="n">Fechado</th></tr></thead><tbody>' + linhas + '</tbody></table></div></section>';
+}
+/* cartão: comparar dois meses */
+function anCardComparar(){
+  var lista = anMesesFechaveis();
+  if (lista.length < 2) return anCard('Comparar dois meses', '', '<div class="financeiro-vazio">Precisa de pelo menos dois meses fechados para comparar.</div>');
+  if (!anCmpA || lista.indexOf(anCmpA) < 0) anCmpA = lista[lista.length - 2];
+  if (!anCmpB || lista.indexOf(anCmpB) < 0) anCmpB = lista[lista.length - 1];
+  var a = anFechVal(anCmpA), b = anFechVal(anCmpB);
+  var opt = function(sel){ return lista.slice().reverse().map(function(m){ return '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + escapeHtml(mesCurto(m)) + '</option>'; }).join(''); };
+  var lin = function(rot, k, gastoRuim){
+    var va = a[k], vb = b[k];
+    if (va === null || vb === null || va === undefined || vb === undefined) return '<tr><th scope="row">' + rot + '</th><td class="n">' + (va === null || va === undefined ? '—' : fmtMoeda(va)) + '</td><td class="n">' + (vb === null || vb === undefined ? '—' : fmtMoeda(vb)) + '</td><td class="n">—</td></tr>';
+    var d = r2(vb - va), bom = gastoRuim ? d <= 0 : d >= 0;
+    return '<tr><th scope="row">' + rot + '</th><td class="n">' + fmtMoeda(va) + '</td><td class="n">' + fmtMoeda(vb) + '</td><td class="n ' + (Math.abs(d) < 0.005 ? '' : (bom ? 'an-bom' : 'an-mau')) + '">' + (d >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(d)) + '</td></tr>';
+  };
+  return anCard('Comparar dois meses', '',
+    '<div class="an-cmp-sel"><select data-an-cmp="a" aria-label="Primeiro mês">' + opt(anCmpA) + '</select><span>contra</span><select data-an-cmp="b" aria-label="Segundo mês">' + opt(anCmpB) + '</select></div>' +
+    '<div class="an-tab-rolar"><table><thead><tr><th></th><th class="n">' + escapeHtml(mesCurto(anCmpA)) + '</th><th class="n">' + escapeHtml(mesCurto(anCmpB)) + '</th><th class="n">Dif.</th></tr></thead><tbody>' +
+    lin('Patrimônio final', 'patrimonio') + lin('Recebido', 'recebido') + lin('Despesas pagas', 'pago', true) + lin('Resultado PJ', 'resPJ') + lin('Resultado PF', 'resPF') + lin('Reserva', 'reserva') + '</tbody></table></div>');
+}
+function anAvisoFechamento(){
+  var meses = anFechGet(), ks = Object.keys(meses).filter(function(k){ return meses[k].auto && !meses[k].retro; }).sort(), u = ks.length ? meses[ks[ks.length - 1]] : null;
+  return '<div class="an-sem-aviso ok"><b>' + (u ? escapeHtml(mesLabel(u.m)) + ' foi fechado sozinho em ' + escapeHtml(fmtData(u.fechadoEm.slice(0, 10)).slice(0, 5)) + '.' : 'Os meses são fechados sozinhos.') + '</b>' +
+    '<span>O app fecha o mês na primeira vez que você abre no dia 1º (ou depois), com os valores do último dia do mês. Você não precisa fazer nada; se um mês fechado mudar depois (lançamento alterado), aparece “mudou depois” com o botão refazer.</span></div>';
 }
 /* ---------- visão "Semanas": fluxo de caixa semanal (Fase 3, etapa 3.3) ----------
    Mesmas regras da projeção dos próximos meses, só que semana a semana (segunda a domingo):
@@ -14612,9 +14752,11 @@ function renderAnalises(){
   var melhor = dados.slice().sort(function(a, b){ return b.r.total - a.r.total; })[0];
   var h = '';
 
+  anFechAuto();
   h += '<div class="an-topo"><div class="segmented" id="anPeriodoSeg" role="group" aria-label="Período">' +
     anSegBotoes() + '</div>' +
-    '<div class="saldo-data">' + escapeHtml(mesCurto(meses[0])) + ' a ' + escapeHtml(mesCurto(meses[meses.length - 1])) + ' · o mês atual aparece mais claro porque ainda está em andamento</div></div>';
+    '<div class="segmented an-seg2" id="anRecorteSeg" role="group" aria-label="Recorte do histórico">' + [[6, '6 meses'], [12, '12 meses'], ['ano', 'Ano'], ['tudo', 'Tudo']].map(function(o){ return '<button type="button" data-an-recorte="' + o[0] + '" class="seg-btn' + (anRecorte === o[0] ? ' active' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="saldo-data">' + escapeHtml(mesCurto(meses[0])) + ' a ' + escapeHtml(mesCurto(meses[meses.length - 1])) + ' · o mês atual aparece mais claro porque ainda está em andamento</div></div>' + anAvisoFechamento();
 
   h += '<div class="an-kpis">' +
     '<div class="ini-card"><div class="lbl">Recebido por mês (média)</div><div class="val">' + fmtMoeda(mediaRec) + '</div><div class="saldo-data">' + (fechados.length ? 'média de ' + fechados.length + (fechados.length === 1 ? ' mês fechado' : ' meses fechados') + (dados.some(function(x){ return x.inicio; }) ? ' (sem o 1º mês de uso, que começou em ' + fmtData(pri).slice(0, 5) + ')' : '') : 'só o mês atual e o 1º mês de uso (incompleto) até agora') + '</div></div>' +
@@ -14622,6 +14764,7 @@ function renderAnalises(){
     '<div class="ini-card"><div class="lbl">Sobra média</div><div class="val ' + (mediaRec - mediaDesp >= 0 ? 'ok' : 'neg') + '">' + fmtMoeda(mediaRec - mediaDesp) + '</div><div class="saldo-data">recebido − gasto</div></div>' +
     '<div class="ini-card"><div class="lbl">Melhor mês</div><div class="val">' + (melhor && melhor.r.total > 0 ? escapeHtml(mesCurto(melhor.m)) : '—') + '</div><div class="saldo-data">' + (melhor && melhor.r.total > 0 ? fmtMoeda(melhor.r.total) : 'ainda sem recebimentos') + '</div></div></div>';
 
+  h += '<div class="an-duas">' + anCardComparar() + anCardFechados() + '</div>';
   var soPf = r2(dados.reduce(function(a, x){ return a + comMes(x.m, function(){ return computeReceitaManualMes('pf') - computeReceitaTransferenciaMes('pf'); }); }, 0));
   /* 1) recebido por mês, por origem */
   var serRec = [{ key: 'proprio', nome: 'Clientes próprios', cor: S1 }, { key: 'murilo', nome: 'Murilo', cor: S2 }, { key: 'outras', nome: 'Outras receitas', cor: S3 }];
@@ -14671,9 +14814,6 @@ function renderAnalises(){
   } else corpoPat = '<div class="financeiro-vazio">Informe o saldo das contas para acompanhar a evolução.</div>';
   h += anCard('Evolução do patrimônio', 'Dinheiro nas contas (último saldo informado até o fim do mês + lançamentos depois dele) mais o valor das metas.', corpoPat);
 
-  /* 5) projeção */
-  h += anCardCaixa(anProjecao(AN_HORIZONTE), w, AN_HORIZONTE);
-
   /* 6) comparativo anual */
   var ano = parseInt(m0.slice(0, 4), 10), mesesAno = [];
   for (var i = 1; i <= 12; i++) mesesAno.push(String(i).padStart(2, '0'));
@@ -14716,6 +14856,11 @@ function anMostrarTip(ev, alvo){
     if (at){ anMarcarObra(at.getAttribute('data-an-atip')); return; }
     var v = ev.target.closest ? ev.target.closest('[data-an-visao]') : null;
     if (v){ anVisaoDesp = v.getAttribute('data-an-visao'); renderAnalises(); return; }
+    var rc = ev.target.closest ? ev.target.closest('[data-an-recorte]') : null;
+    if (rc){ var rv = rc.getAttribute('data-an-recorte'); anRecorte = (rv === 'ano' || rv === 'tudo') ? rv : parseInt(rv, 10); renderAnalises(); return; }
+    var rf = ev.target.closest ? ev.target.closest('[data-an-refazer]') : null;
+    if (rf){ anFechRefazer(rf.getAttribute('data-an-refazer')); return; }
+    if (ev.target.closest && ev.target.closest('[data-an-exportar]')){ anFechExportar(); return; }
     var ss = ev.target.closest ? ev.target.closest('[data-an-sem]') : null;
     if (ss){ anSemSel = parseInt(ss.getAttribute('data-an-sem'), 10); renderAnalises(); return; }
     var sv = ev.target.closest ? ev.target.closest('[data-an-sem-ver]') : null;
@@ -14724,12 +14869,13 @@ function anMostrarTip(ev, alvo){
     if (sn){ anSemN = parseInt(sn.getAttribute('data-an-sem-n'), 10); renderAnalises(); return; }
     var sg = ev.target.closest ? ev.target.closest('[data-an-sem-nav]') : null;
     if (sg && !sg.disabled){ anSemSel = Math.max(0, (anSemSel || 0) + parseInt(sg.getAttribute('data-an-sem-nav'), 10)); renderAnalises(); return; }
-    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = (pv === 'proj' || pv === 'ult' || pv === 'sem') ? pv : parseInt(pv, 10); renderAnalises(); return; }
+    if (b){ var pv = b.getAttribute('data-an-periodo'); anPeriodo = pv; renderAnalises(); return; }
     var un = ev.target.closest ? ev.target.closest('[data-an-ult]') : null;
     if (un && !un.disabled){ anMesUlt = deslocarMes(anMesUlt || deslocarMes(todayISO().slice(0, 7), -1), parseInt(un.getAttribute('data-an-ult'), 10)); renderAnalises(); return; }
     var a = ev.target.closest ? ev.target.closest('[data-tip]') : null;
     if (a) anMostrarTip(ev, a); else if (anTipEl) anTipEl.style.display = 'none';
   });
+  wrap.addEventListener('change', function(ev){ var c = ev.target.closest ? ev.target.closest('[data-an-cmp]') : null; if (!c) return; if (c.getAttribute('data-an-cmp') === 'a') anCmpA = c.value; else anCmpB = c.value; renderAnalises(); });
   wrap.addEventListener('pointerleave', function(){ if (anTipEl) anTipEl.style.display = 'none'; });
   var anResize = null;
   window.addEventListener('resize', function(){ clearTimeout(anResize); anResize = setTimeout(function(){ if (activeTab === 'analises') renderAnalises(); }, 150); });

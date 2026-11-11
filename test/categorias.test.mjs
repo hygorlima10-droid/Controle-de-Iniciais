@@ -22,7 +22,7 @@ const br = await chromium.launch(); const page = await (await br.newContext({ vi
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
 const txt = s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const aba = async (t) => { await page.evaluate(t => document.querySelector('[data-tab="' + t + '"]').click(), t); await page.waitForTimeout(800); };
-await aba('analises'); await page.evaluate(() => document.querySelector('[data-an-periodo="6"]').click()); await page.waitForTimeout(700);
+await aba('analises'); await page.evaluate(() => document.querySelector('[data-an-periodo="hist"]').click()); await page.waitForTimeout(700);
 let t = await txt('#anWrap');
 check(await page.evaluate(() => document.querySelectorAll('#anWrap .ct-row .ct-ic svg').length) >= 4, 'cada categoria tem ícone colorido');
 check(!/Outras \(\d+\)/.test(t), 'não existe mais o item "Outras (n)"');
