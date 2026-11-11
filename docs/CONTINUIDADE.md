@@ -174,3 +174,6 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
 
 ## Agenda: cartão "Dia de trabalhar na peça" padronizado (11/11/2026)
 O cartão do dia em que se deve trabalhar num prazo (`agCartaoTrabalho`, `cliente/agenda.js`) agora usa o mesmo desenho dos demais (`agCartaoBase(i, true)`): clicável (abre a ficha do prazo), com a bolinha de concluir e a marca "interno"; o botão "Abrir prazo" saiu. Concluir pela bolinha conclui o próprio prazo. Teste: `agenda-trabalho`.
+
+## Fase 5, etapa 5.1 (11/11/2026): regras de papéis no servidor
+Feita: `src/politica.js` ligado em `/api/db` e `/api/lote`; teste `permissoes`. Detalhes e decisões completas em `docs/DECISOES.md` ("Fase 5"). **Próxima: 5.2 (usuários e convites por link, em Configurações › Usuários)** — precisa de esboço em imagem e OK antes de implementar. Atenção: sem a tela da 5.2, nenhum usuário que não seja o proprietário existe em produção; as rotas de Diário/DataJud/notificações ficam só do proprietário até a 5.3.

@@ -7,7 +7,7 @@ const MAX_OPS = 25;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
 
-export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao }) {
+export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao, autorizarGravacao, autorizarExclusao }) {
   if (request.method !== 'POST') return erro(405, 'method', 'Use POST.');
   const txt = await request.text();
   if (txt.length > MAX_DOC * 4) return erro(413, 'quota_exceeded', 'Lote grande demais.');
@@ -28,6 +28,8 @@ export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, 
   const cmds = [];
   for (const o of ops) {
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(o.colecao, o.id).first(), antesObj = antes ? JSON.parse(antes.dados) : null;
+    const dono = !auth || !auth.usuario || auth.usuario.papel === 'proprietario';
+    if (!dono) { const neg = o.acao === 'gravar' ? await autorizarGravacao(env, o.colecao, o.id, antesObj, o.dados, auth) : await autorizarExclusao(env, o.colecao, o.id, antesObj, auth); if (neg) return neg; }
     if (o.acao === 'gravar') {
       cmds.push(stmtGravar(env, o.colecao, o.id, o.dados));
       if (registraColecao(o.colecao)) {

@@ -7,6 +7,7 @@ import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } fr
 import { datajudRotas } from './datajud.js';
 import { loteRotas } from './lote.js';
 import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
+import { checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono } from './politica.js';
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
@@ -424,10 +425,18 @@ async function api(request, env, partes, auth) {
   const id = partes[2];
   if (id !== undefined && !NOME.test(id)) return erro(400, 'invalid', 'Identificador inválido.');
   const colecao = resolverColecao(partes[1], id);   // config/<documento do proprietário> vai para configDono (compatível com o app já aberto)
-  const recusa = checarColecao(colecao, auth); if (recusa) return recusa;
+  const recusa = checarColecao(colecao, auth) || checarAcessoColecao(colecao, auth); if (recusa) return recusa;
+  if (colecao === 'config' && !ehDono(auth) && id && metodo !== 'GET') { const rc = await autorizarGravacao(env, colecao, id, null, {}, auth); if (rc) return rc; }
+  else if (colecao === 'config' && !ehDono(auth) && !id && metodo !== 'GET') return erro(403, 'forbidden', 'Só o proprietário pode gravar isto.');
 
   if (!id && metodo === 'GET') {
     const sp = new URL(request.url).searchParams;
+    if (!ehDono(auth)) {   // quem não é proprietário recebe só o que a política libera (a lista inteira é filtrada aqui, na leitura)
+      const vis = await linhasVisiveis(env, colecao, auth), tt = vis.reduce((m, r) => Math.max(m, r.atualizado || 0), 0);
+      if (sp.get('resumo') === '1') return json({ n: vis.length, t: tt });
+      const lim2 = Math.min(Math.max(parseInt(sp.get('limit') || '1000', 10) || 1000, 1), MAX_LISTA), dep2 = sp.get('after') || '', resto = vis.filter((r) => r.id > dep2), pag = resto.slice(0, lim2);
+      return json({ docs: pag.map((r) => ({ id: r.id, data: JSON.parse(r.dados), v: r.atualizado })), mais: resto.length > lim2, n: vis.length, t: tt });
+    }
     if (sp.get('resumo') === '1') {   // "ficha" barata da coleção (quantos registros e a última alteração): o app compara para saber se precisa reler tudo
       const r = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(atualizado), 0) AS t FROM docs WHERE colecao = ?').bind(colecao).first();
       return json({ n: r ? r.n : 0, t: r ? r.t : 0 });
@@ -446,12 +455,17 @@ async function api(request, env, partes, auth) {
   if (!id && metodo === 'POST') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
     const novo = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+    const negPost = await autorizarGravacao(env, colecao, novo, null, dados, auth); if (negPost) return negPost;
     if (registraColecao(colecao)) await env.DB.batch([stmtGravar(env, colecao, novo, dados), stmtRegistro(env, { op: 'criou', colecao, id: novo, titulo: tituloDe(colecao, dados) })]);
     else await gravar(env, colecao, novo, dados);
     return json({ id: novo });
   }
   if (id && metodo === 'PUT') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
+    if (!ehDono(auth)) {   // quem não é proprietário: confere visão, vínculo e permissões contra o que já está gravado
+      const at = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+      const neg = await autorizarGravacao(env, colecao, id, at ? JSON.parse(at.dados) : null, dados, auth); if (neg) return neg;
+    }
     if (new URL(request.url).searchParams.get('soNovo') === '1') {
       /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
       const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
@@ -476,6 +490,7 @@ async function api(request, env, partes, auth) {
   }
   if (id && metodo === 'DELETE') {
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+    if (!ehDono(auth)) { const neg = await autorizarExclusao(env, colecao, id, antes ? JSON.parse(antes.dados) : null, auth); if (neg) return neg; }
     const cmds = [env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id)];
     if (antes && vaiParaLixeira(colecao)) cmds.push(stmtLixeira(env, colecao, id, antes.dados));   // a exclusão vira cópia na lixeira (30 dias) na mesma operação
     if (antes && registraColecao(colecao)) cmds.push(stmtRegistro(env, { op: 'excluiu', colecao, id, titulo: tituloDe(colecao, JSON.parse(antes.dados)) }));
@@ -509,13 +524,13 @@ const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png
    Raiz que não está aqui é recusada; /api/enviar é a única pública (tem token próprio). */
 const ROTAS = {
   ler: ['proprietario', (r, e, p) => ler(r, e, p)], recebidos: ['proprietario', (r, e, p) => recebidos(r, e, p)], anexos: ['proprietario', (r, e, p) => anexos(r, e, p)],
-  notif: ['sessao', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p) => djenRotas(r, e, p)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],
+  notif: ['proprietario', (r, e, p) => notif(r, e, p)], djen: ['proprietario', (r, e, p) => djenRotas(r, e, p)], datajud: ['proprietario', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
   db: ['sessao', (r, e, p, au) => api(r, e, p, au)],
-  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao })],
+  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)],
-  eu: ['sessao', (r, e, p, a) => json({ papel: a && a.usuario ? a.usuario.papel : 'proprietario' })],   // quem está usando (a tela esconde o que é só do proprietário)
+  eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ papel, nome, oabs, permissoes }) => ({ papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);
 
