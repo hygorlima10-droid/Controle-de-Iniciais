@@ -9,6 +9,8 @@
      definido e continua nos meses seguintes até ser mudado (null = sem limite a partir dali).
    ============================================================ */
 var orcS = { cat: null };
+/* número digitado em português (aceita 2.500,00, 2500,5 e 2500.5) */
+function orcNum(t){ var x = String(t == null ? '' : t).replace(/[^\d,.]/g, ''); if (!x) return 0; if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); var n = parseFloat(x); return isFinite(n) ? n : 0; }
 function orcDados(){ var o = config.orcamento; return (o && o.limites && typeof o.limites === 'object') ? o.limites : {}; }
 function orcLimite(cat, m){
   var h = orcDados()[cat]; if (!h) return null;
@@ -70,7 +72,7 @@ function orcLinhaHtml(l, por, m){
   return '<details class="orc-row" data-ct-chave="' + escapeHtml(l.k) + '"' + (ctAbertos[l.k] ? ' open' : '') + '><summary>' +
     '<div class="orc-l1">' + ctIcone(l.k) + '<span class="orc-nm">' + escapeHtml(l.k) + '</span><span class="orc-v"><b>' + fmtMoeda(l.gasto) + '</b>' + (l.lim ? ' <small>de ' + fmtMoeda(l.lim).replace(',00', '') + '</small> <em class="orc-pct" style="color:' + cor + '">' + pct + '%</em>' : ' <small>sem limite</small> <em class="orc-def">definir ›</em>') + '</span></div>' +
     (l.lim ? '<div class="orc-bar"><i style="width:' + Math.min(100, l.pct).toFixed(1) + '%;background:' + cor + '"></i></div>' : '') + orcMsg(l) + '</summary>' +
-    '<div class="ct-det"><div class="orc-ed"><label>Limite mensal (R$)</label><input type="number" min="0" step="0.01" inputmode="decimal" value="' + (l.lim || '') + '" placeholder="ex.: 1500"><button type="button" class="btn btn-primary" data-orc-salvar="' + escapeHtml(l.k) + '">Salvar</button>' + (l.lim ? '<button type="button" class="btn btn-ghost" data-orc-sem="' + escapeHtml(l.k) + '">Tirar o limite</button>' : '') + '</div>' +
+    '<div class="ct-det"><div class="orc-ed"><label>Limite mensal (R$)</label><input type="text" inputmode="decimal" value="' + (l.lim ? String(l.lim).replace('.', ',') : '') + '" placeholder="ex.: 1500"><button type="button" class="btn btn-primary" data-orc-salvar="' + escapeHtml(l.k) + '">Salvar</button>' + (l.lim ? '<button type="button" class="btn btn-ghost" data-orc-sem="' + escapeHtml(l.k) + '">Tirar o limite</button>' : '') + '</div>' +
     '<div class="saldo-data">Vale a partir de ' + escapeHtml(mesLabel(m)) + ' e continua nos meses seguintes até você mudar.</div>' + itens + '</div></details>';
 }
 function orcRender(){
@@ -117,7 +119,7 @@ function orcAplicar(){
 function orcClique(ev){
   var t = ev.target, c = function(s){ return t.closest ? t.closest(s) : null; }, b;
   if ((b = c('[data-orc-salvar]'))){
-    var inp = b.parentNode.querySelector('input'), v = Number(String(inp.value).replace(',', '.'));
+    var inp = b.parentNode.querySelector('input'), v = orcNum(inp.value);
     if (!(v > 0)){ toast('Digite um limite maior que zero (ou use “Tirar o limite”).'); return; }
     var cat = b.getAttribute('data-orc-salvar');
     Promise.resolve(orcSalvar(cat, mesSelecionado, v)).then(function(){ renderFinanceiro(); toast('Limite de ' + cat + ' salvo.'); }).catch(function(e){ console.error('orçamento', e); toast('Não consegui salvar. Tente de novo.'); });

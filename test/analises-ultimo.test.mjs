@@ -20,7 +20,7 @@ await page.evaluate(() => document.querySelector('[data-tab="analises"]').click(
 const txt = () => page.evaluate(() => document.getElementById('anWrap').innerText);
 let t = await txt();
 check(await page.evaluate(() => document.querySelector('#anPeriodoSeg .active').textContent) === 'Último mês', 'a aba abre já em "Último mês"');
-check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Próx. 3 meses|Semanas', 'seletor com os 4 botões (Último mês, Histórico, Próx. 3 meses, Semanas)');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Próx. 3 meses|Semanas|Simulador', 'seletor com os 5 botões (Último mês, Histórico, Próx. 3 meses, Semanas, Simulador)');
 check(/R\$\s*10\.000,00/.test(t) && /R\$\s*5\.500,00/.test(t), 'mostra o recebido (10.000) e o gasto (5.500) do último mês fechado');
 check(/Sobrou[\s\S]*4\.500,00/i.test(t) && /Recebi/i.test(t) && /Gastei/i.test(t), 'indicadores Recebi, Gastei e Sobrou (R$ 4.500)');
 check(/vs\. média/.test(t) && /▲/.test(t) && /Patrimônio/i.test(t), 'cada indicador compara com a média (▲/▼ vs. média) e há o cartão de Patrimônio');

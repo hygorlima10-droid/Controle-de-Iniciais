@@ -49,6 +49,9 @@ t = await txt();
 check(/Alimentação/.test(t) && /de R\$\s*500/.test(t) && /Já passou de 80%: restam R\$\s*80,00/.test(t), 'definir limite de R$ 500 em Alimentação: 420 de 500 (84%), restam R$ 80');
 const lista = await (await api('GET', 'config')).json(); const orc = ((lista.docs || []).find(d => d.id === 'orcamento') || {}).data;
 check(orc && orc.limites['Dia a dia · Alimentação'] && orc.limites['Dia a dia · Alimentação'][m0] === 500, 'o limite ficou guardado em config/orcamento a partir deste mês');
+// 6b) editar um limite que já existe: o campo vem preenchido (2.500) e dá para salvar outro valor
+await page.evaluate(() => { const d = Array.from(document.querySelectorAll('#finOrcamento .orc-row')).find(x => /Sistemas/.test(x.innerText)); d.open = true; const i = d.querySelector('.orc-ed input'); i.value = '3.000,00'; d.querySelector('[data-orc-salvar]').click(); }); await page.waitForTimeout(1200);
+check(/de R\$\s*3\.000/.test(await txt()) && /Sistemas[\s\S]{0,80}96%/.test(await txt()), 'editar um limite existente (2.500 → 3.000,00): Sistemas passa a 96% e deixa de estar estourada');
 // 7) tirar o limite
 await page.evaluate(() => { const d = Array.from(document.querySelectorAll('#finOrcamento .orc-row')).find(x => /Dia a dia · Alimentação/.test(x.innerText)); d.open = true; d.querySelector('[data-orc-sem]').click(); }); await page.waitForTimeout(1000);
 check(!/de R\$\s*500/.test(await txt()), 'tirar o limite devolve a categoria para "sem limite"');

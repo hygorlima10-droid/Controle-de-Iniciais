@@ -71,6 +71,7 @@ const mi = sim.linhas.findIndex(l => l.movimentoDoCenario !== 0);
 check(sim.cenario.valorTotal === 5000 && sim.linhas[mi].movimentoDoCenario === -5000 && sim.linhas[mi].saldoSemAlvarasComCenario === Math.round((sim.linhas[mi].saldoSemAlvaras - 5000) * 100) / 100, 'simulação: gasto de 5.000 abate o saldo previsto do mês');
 check(sim.linhas.slice(mi + 1).every(l => l.movimentoDoCenario === 0 && Math.abs(l.saldoSemAlvaras - l.saldoSemAlvarasComCenario - 5000) < 0.011), 'simulação: o efeito acumulado continua nos meses seguintes');
 check(await page.evaluate(() => !!document.querySelector('#paMsgs .pa-det')), 'tabela "projeção mês a mês" disponível');
+check(await page.evaluate(() => !!document.querySelector('#paMsgs [data-sim-pergunte]')), 'a resposta de um "e se" tem o botão "Abrir no Simulador"');
 respostaCenario = { tipo: 'cenario', cenario: { descricao: 'carro', tipoEvento: 'gasto', valor: 80000, mes: mes(4), parcelas: 36, entrada: 30000 } };
 await page.fill('#paInput', 'E se eu trocar de carro em março com 30 de entrada e 36 parcelas?'); await page.click('#paEnviar'); await page.waitForTimeout(1800);
 const p4 = prompts.filter(p => !/Classifique a pergunta/.test(p.texto)).pop(); const sim2 = JSON.parse(p4.texto.split('SIMULACAO (JSON):\n')[1].split('\nPERGUNTA')[0]);

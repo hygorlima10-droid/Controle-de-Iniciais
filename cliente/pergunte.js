@@ -122,8 +122,8 @@ function paMsgErro(e){
 }
 function paRender(){
   var box = qs('paMsgs'); if (!box) return;
-  box.innerHTML = paHistorico.map(function(t){
-    var a = t.a ? '<div class="pa-b pa-a">' + paTextoHtml(t.a) + (t.sim ? paTabelaSim(t.sim) : '') + '</div>' : (t.erro ? '<div class="pa-b pa-e">' + escapeHtml(t.erro) + '</div>' : '<div class="pa-b pa-a pa-pensando">Pensando…</div>');
+  box.innerHTML = paHistorico.map(function(t, ti){
+    var a = t.a ? '<div class="pa-b pa-a">' + paTextoHtml(t.a) + (t.sim ? paTabelaSim(t.sim) + (t.cen ? '<div class="ob-acoes"><button type="button" class="btn btn-ghost" data-sim-pergunte="' + ti + '">Abrir no Simulador</button></div>' : '') : '') + '</div>' : (t.erro ? '<div class="pa-b pa-e">' + escapeHtml(t.erro) + '</div>' : '<div class="pa-b pa-a pa-pensando">Pensando…</div>');
     return '<div class="pa-b pa-q">' + escapeHtml(t.q) + '</div>' + a;
   }).join('');
   box.scrollTop = box.scrollHeight;
@@ -151,7 +151,7 @@ function paPerguntar(pergunta){
       if (cls.tipo === 'fora'){ turno.a = 'Eu só consigo responder sobre as finanças e os processos que estão no app. Pergunte, por exemplo, "quanto o Murilo me deve?" ou "posso comprar um carro de R$ 60 mil em março?".'; return null; }
       var fatos = paFatos(), sim = null;
       if (cls.tipo === 'cenario' && cls.cenario && Number(cls.cenario.valor) > 0) sim = paSimular(cls.cenario);
-      turno.sim = sim;
+      turno.sim = sim; turno.cen = sim ? cls.cenario : null;
       return Promise.resolve(sample(paPromptResponder(pergunta, fatos, sim, paHistorico.slice(0, -1)), opts('default'))).then(function(r2x){ turno.a = String((r2x && r2x.text) || '').trim() || 'Não consegui montar a resposta.'; });
     }).catch(function(e){ var m = paMsgErro(e); if (m) turno.erro = m; else paHistorico.pop(); }).then(function(){ paOcupado = false; paCtrl = null; paRender(); });
   });

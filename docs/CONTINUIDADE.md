@@ -103,7 +103,7 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
   - **Largura:** a variável CSS `--larg: 1440px` (em `public/index.html`) vale para `.wrap` e `.tb-in` (barra do topo); os limites antigos (1080, 960, 820 e 780 px de `.ob-wrap`, `.an-wrap`, `.ext-wrap`, `.financeiro-colunas`, `.fin-secao`) foram retirados. Em notebook de 1440 px o conteúdo usa toda a largura ao lado do menu; em monitor maior, 1440 px centralizado. Celular e tablet não mudam.
   - **Kanban:** no computador (≥ 1000 px) `.kanban-wrap .kanban-col` divide a largura (`flex:1 1 0; min-width:190px`), então Iniciais → Quadro, Alvarás → Fases e Agenda → Quadro mostram todas as colunas sem rolar de lado.
   - **Agenda → Quadro:** a coluna “Concluído” (só no modo por urgência) começa como **trilha estreita** (`.recolhida`), abre ao arrastar um cartão para ela ou ao tocar na trilha (`agS.feitoAberto`). **Arrastar cartões foi acrescentado** (antes só Iniciais e Alvarás arrastavam): por situação, soltar em A fazer / Em andamento / Concluído muda a situação (`agdSituacao`); por urgência só dá para soltar em Concluído (prazo abre a pergunta da data do protocolo, como o botão); a data **não** muda arrastando (use “Adiar”); audiência não vai para “Em andamento”; alvará não arrasta (`agSoltar`).
-- **3.3 feita** (ver seção abaixo). **3.4 feita** (ver seção abaixo). **3.5 feita** (ver seção abaixo). **Próximo: 3.6** Simulador.
+- **3.3 feita** (ver seção abaixo). **3.4 feita** (ver seção abaixo). **3.5 feita** (ver seção abaixo). **3.6 feita** (ver seção abaixo). **Próximo: 3.7** Futuro (projeção patrimonial; recebe o conteúdo de "Próx. 3 meses").
 
 ## Logos em três versões e tela de abertura (11/11/2026)
 - `public/logo/logo-dark.png`, `logo-transparent.png`, `logo-white.png` (a transparente e a branca vieram de arquivo enviado pelo proprietário; a branca foi refeita sobre branco puro a partir da transparente, para tirar uma mancha cinza do original). Usos: menu e botão de menu (transparente, sem quadrado), abertura e entrada (escuro), relatórios (branco).
@@ -132,3 +132,12 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
 - Alertas também em "Precisa de atenção" da Visão geral (só no mês atual). O orçamento **nunca altera lançamentos**.
 - Fora do escopo: o esboço citava o "resumo das 10h"; esse resumo é gerado no servidor e não calcula finanças, então não leva alertas de orçamento (se quiser, é uma etapa à parte).
 - Teste: `orcamento` (grupo principal); `modulo-financeiro` agora espera a sub-aba Orçamento.
+
+## Fase 3, etapa 3.6: Simulador — feita em 11/11/2026
+- Nova sub-aba **Simulador** em Finanças > Análises (5º botão do seletor; a ordem final Último mês | Histórico | Semanas | Simulador | Futuro vem com a 3.7, que remove "Próx. 3 meses"). Código em `cliente/simulador.js` (prefixo `sim`, bloco MD): `simCalcular`, `renderAnaliseSimulador`, `simDeCenario`, `simAbrir`.
+- Eventos: **receita extra, despesa nova, transferência PJ → PF e aporte na reserva**, cada um "uma vez", "todo mês a partir de" ou (receita/despesa) "parcelado". Efeito calculado em cima de `anProjecao` (a mesma de "Próx. 3 meses"): caixa livre PJ + PF mês a mês, sem e com o cenário (6 ou 12 meses), menor caixa do período e reserva (aporte sobe a reserva e sai do caixa; transferência não muda o caixa livre). Aviso vermelho se o caixa fica negativo.
+- **Nada é gravado nos lançamentos.** O cenário fica na memória da tela; "Guardar neste aparelho" usa só `localStorage` (`horus.simulador.v1`); "limpar" apaga.
+- Ligação com o **Pergunte ao app**: a resposta de um "e se" ganhou o botão "Abrir no Simulador" (`simDeCenario` converte a pergunta em eventos, com entrada e parcelas); no Simulador, o botão "Perguntar ao app sobre este cenário" manda o cenário em texto.
+- Diferença em relação ao esboço: em vez de "Folga da PJ em dez" (a projeção do app é do caixa livre PJ + PF, sem separar a PJ nos meses futuros), o indicador do meio é "Menor caixa no período".
+- Correção junto: os campos de limite do Orçamento e do Simulador são texto com número em português (o app formata campos numéricos como 2.500,00, e isso quebrava salvar um limite já preenchido).
+- Testes: `simulador` (novo, grupo principal); `pergunte` confere o botão; `analises-ultimo` espera 5 botões; `orcamento` ganhou o caso de editar limite existente.
