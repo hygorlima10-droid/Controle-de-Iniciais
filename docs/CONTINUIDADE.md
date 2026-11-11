@@ -171,3 +171,6 @@ Respondido em 08/11: o Worker `controle-de-iniciais` era só ambiente de teste a
 - **Tela** (`cliente/conflito.js`, prefixo `cfl`): "Este registro foi alterado em outro aparelho" com o que mudou (campo, sua versão × a do servidor) e os botões **Usar a do outro aparelho** / **Manter a minha** (vários conflitos entram em fila). Os avisos "lista chegou ao limite de 1.000" saíram na prática: `LIMITE_COLECAO` virou 100.000 (trava de segurança) e `LIMITE_TOTAL_DOCS` 200.000.
 - Não foi feito: dizer **qual aparelho** alterou (o servidor não guarda o aparelho do registro); só o horário.
 - Teste: `conflito-paginas` (novo, grupo principal): 1.250 registros em páginas, ficha, 409, forçar, sem falso conflito, o app lendo mais de 1.000 e os dois botões do aviso.
+
+## Agenda: cartão "Dia de trabalhar na peça" padronizado (11/11/2026)
+O cartão do dia em que se deve trabalhar num prazo (`agCartaoTrabalho`, `cliente/agenda.js`) agora usa o mesmo desenho dos demais (`agCartaoBase(i, true)`): clicável (abre a ficha do prazo), com a bolinha de concluir e a marca "interno"; o botão "Abrir prazo" saiu. Concluir pela bolinha conclui o próprio prazo. Teste: `agenda-trabalho`.

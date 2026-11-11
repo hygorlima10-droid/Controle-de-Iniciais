@@ -297,8 +297,10 @@ function agTipoLinha(i){
   if (i.tipo === 'tarefa') return 'Fazer até ' + fmtData(i.data).slice(0, 5);
   return 'Prazo fatal ' + fmtData(i.data).slice(0, 5) + (!i.concluido && i.trabalhar && i.trabalhar < i.data ? ' · trabalhar até ' + fmtData(i.trabalhar).slice(0, 5) : '');
 }
-function agCartao(i){
-  var c = agChip(i), cls = i.concluido ? 'ok' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')), v = i.processo ? pbVinculo(i.processo) : null, k = escapeHtml(i.key), d = i.doc || {}, tags = '';
+/* trabalho = o "dia de trabalhar na peça" de um prazo: o mesmo cartão dos demais (clicável, com a bolinha de concluir), só com o título e a marca "interno" */
+function agCartao(i){ return agCartaoBase(i, false); }
+function agCartaoBase(i, trabalho){
+  var c = trabalho ? { c: 'breve', t: 'interno' } : agChip(i), cls = i.concluido ? 'ok' : (trabalho ? 'pe' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr'))), v = i.processo ? pbVinculo(i.processo) : null, k = escapeHtml(i.key), d = i.doc || {}, tags = '';
   if (i.situacao === 'elaboracao') tags += '<span class="pb-tg pz">Em andamento</span>';
   if (/alta/i.test(d.prioridade || '')) tags += '<span class="pb-tg pz">Prioridade alta</span>';
   if (i.tipo === 'audiencia' && i.modalidade) tags += '<span class="pb-tg">' + escapeHtml(AG_MODAL[i.modalidade] || i.modalidade) + '</span>';
@@ -309,15 +311,13 @@ function agCartao(i){
   if (i.concluido && !i.cancelado && i.tipo === 'prazo' && i.protocoladoEm) tags += '<span class="pb-tg ok">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</span>';
   (Array.isArray(d.responsaveis) ? d.responsaveis : []).slice(0, 3).forEach(function(n){ tags += '<span class="agc-av" title="' + escapeHtml(n) + '">' + escapeHtml(agdSigla(n)) + '</span>'; });
   var ok = i.fonte === 'alvara' ? '' : '<button type="button" class="agc-ok' + (i.concluido ? ' on' : '') + '" data-ag="' + (i.concluido ? 'reabrir' : 'concluir') + '" data-k="' + k + '" aria-label="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Marcar como realizada' : 'Concluir'))) + '" title="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : 'Concluir')) + '">✓</button>';
-  return '<div class="agc ' + cls + '" data-ag="det" data-k="' + k + '"><div style="min-width:0"><div class="agc-top"><span>' + escapeHtml(i.tipo === 'prazo' ? 'Prazo fatal ' + fmtData(i.data).slice(0, 5) : agTipoLinha(i)) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="agc-t">' + escapeHtml(i.titulo) + '</div>' +
-    (i.cliente ? '<div class="agc-s">' + escapeHtml(i.cliente) + '</div>' : '') +
+  return '<div class="agc ' + cls + '" data-ag="det" data-k="' + k + '"><div style="min-width:0"><div class="agc-top"><span>' + escapeHtml(trabalho ? 'Dia de trabalhar na peça' : (i.tipo === 'prazo' ? 'Prazo fatal ' + fmtData(i.data).slice(0, 5) : agTipoLinha(i))) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="agc-t">' + escapeHtml(i.titulo) + '</div>' +
+    (trabalho ? '<div class="agc-s">Prazo fatal ' + escapeHtml(fmtData(i.data).slice(0, 5)) + '</div>' : '') + (i.cliente ? '<div class="agc-s">' + escapeHtml(i.cliente) + '</div>' : '') +
     (i.tipo === 'audiencia' && i.local ? '<div class="agc-s">📍 ' + escapeHtml(i.local) + '</div>' : '') +
     (i.processo ? '<div class="agc-n"><span>' + escapeHtml(i.processo) + '</span><button type="button" class="agc-cp" data-ag="copiar" data-n="' + escapeHtml(i.processo) + '" aria-label="Copiar o número do processo" title="Copiar o número">' + AGD_COPIA + '</button></div>' : '') +
     '<div class="agc-tg">' + tags + '</div></div>' + ok + '</div>';
 }
-function agCartaoTrabalho(i){
-  return '<div class="ag-it pe"><div class="pb-l1"><span>Dia de trabalhar na peça</span><span class="est est-breve">interno</span></div><div class="pb-cli">' + escapeHtml(i.titulo) + '</div><div class="pb-proc">Prazo fatal ' + fmtData(i.data).slice(0, 5) + (i.cliente ? ' · ' + escapeHtml(i.cliente) : '') + '</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-ag="abrir" data-k="' + escapeHtml(i.key) + '">Abrir prazo</button></div></div>';
-}
+function agCartaoTrabalho(i){ return agCartaoBase(i, true); }
 
 /* ---------- Quadro (Kanban geral: prazos, audiências, tarefas, prazos das Iniciais e previsões dos Alvarás) ---------- */
 var AG_ICO = { prazo: ['scale', '#D93B3B'], audiencia: ['user', '#2A78D6'], tarefa: ['check', '#C98500'], inicial: ['doc', '#B7791E'], alvara: ['bank', '#2A78D6'] };
