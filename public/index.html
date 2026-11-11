@@ -1615,6 +1615,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -22690,8 +22691,8 @@ function renderAnaliseSimulador(el){
   }).join('');
   var cen = '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Cenário</h4>' + (tem ? '<button type="button" class="an-sem-mais" data-sim="limpar">limpar ›</button>' : '') + '</div>' +
     (tem ? linhasEv : '<div class="financeiro-vazio">Nenhum evento ainda. Adicione o que quer testar.</div>') +
-    (simS.ed ? simForm(simS.ed) : '<div class="sim-add">' + Object.keys(SIM_TIPOS).map(function(k){ return '<button type="button" class="btn btn-ghost" data-sim="novo:' + k + '">+ ' + ({ receita: 'Receita', despesa: 'Despesa', transf: 'Transferência', aporte: 'Aporte' })[k] + '</button>'; }).join('') + '</div>') +
-    (tem && !simS.ed ? '<div class="sim-bt"><button type="button" class="btn btn-ghost" data-sim="guardar">Guardar neste aparelho</button>' + (typeof paTemSample === 'function' && paTemSample() ? '<button type="button" class="btn btn-ghost" data-pa-abrir="' + escapeHtml(simPergunta()) + '">Perguntar ao app sobre este cenário</button>' : '') + '</div>' : '') +
+    (simS.ed ? simForm(simS.ed) : '<div class="plano-tit sim-tit">Adicionar ao cenário</div><div class="sim-opcoes">' + [['receita', 'Receita extra', 'entra dinheiro'], ['despesa', 'Despesa nova', 'sai dinheiro'], ['transf', 'Transferência', 'da PJ para a PF'], ['aporte', 'Aporte', 'para a reserva']].map(function(o){ var t = SIM_TIPOS[o[0]]; return '<button type="button" class="sim-opc" data-sim="novo:' + o[0] + '">' + mdIc(t[1], t[2]) + '<span class="sim-opc-tx"><b>' + o[1] + '</b><span>' + o[2] + '</span></span></button>'; }).join('') + '</div>') +
+    (tem && !simS.ed ? '<div class="sim-acoes"><button type="button" class="btn btn-ghost" data-sim="guardar">Guardar neste aparelho</button>' + (typeof paTemSample === 'function' && paTemSample() ? '<button type="button" class="btn btn-ghost" data-pa-abrir="' + escapeHtml(simPergunta()) + '">Perguntar ao app</button>' : '') + '</div>' : '') +
     '<div class="saldo-data an-nota">Quem usa o <b>Pergunte ao app</b> (“e se eu…”) pode abrir a resposta aqui, já preenchida: é o mesmo cálculo, só que com tela para ajustar.</div></section>';
   /* gráfico e indicadores */
   var pontos = L.map(function(l){ return { rot: anRotMes(l.m), v: { base: l.base, cen: l.cen }, tip: '<b>' + escapeHtml(mesCurto(l.m)) + '</b><br>Sem o cenário: <b>' + fmtMoeda(l.base) + '</b><br>Com o cenário: <b>' + fmtMoeda(l.cen) + '</b>' }; });
@@ -22746,7 +22747,9 @@ document.addEventListener('click', function(ev){
   var st = document.createElement('style'); st.id = 'simCss';
   st.textContent = '.sim-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:12px;align-items:start}.sim-dir{display:flex;flex-direction:column;gap:12px}.sim-grid .an-card{margin:0}@media(max-width:999px){.sim-grid{grid-template-columns:minmax(0,1fr)}}' +
     '.sim-ev{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)}.sim-ev:first-of-type{border-top:0}.sim-tx{flex:1;min-width:0}.sim-tx b{display:block;font-size:var(--t4)}' +
-    '.sim-add,.sim-bt{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}.sim-add .btn{border-style:dashed}' +
+    '.sim-bt{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}' +
+    '.sim-tit{margin:16px 0 8px}.sim-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sim-opc{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:14px;padding:10px 12px;font:inherit;cursor:pointer;min-width:0;transition:background .12s,border-color .12s}.sim-opc:hover{background:var(--surface-2);border-color:var(--accent)}.sim-opc-tx{display:flex;flex-direction:column;min-width:0}.sim-opc-tx b{font-size:var(--t3);font-weight:700;line-height:1.25}.sim-opc-tx span{font-size:var(--t1);color:var(--ink-soft);line-height:1.3}' +
+    '.sim-acoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0 4px;padding-top:12px;border-top:1px solid var(--border)}.sim-acoes .btn{width:100%;justify-content:center}' +
     '.sim-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;padding:12px;border-radius:14px;background:var(--surface-2)}.sim-ft{grid-column:1/-1}.sim-form label{display:flex;flex-direction:column;gap:4px;font-size:var(--t2);color:var(--ink-soft);font-weight:600}.sim-form input,.sim-form select{height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font:inherit;padding:0 10px}.sim-desc,.sim-bt{grid-column:1/-1}' +
     '.md-kpis.sim-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.sim-kpis .md-card{cursor:default}@media(max-width:560px){.md-kpis.sim-kpis{grid-template-columns:minmax(0,1fr)}.sim-form{grid-template-columns:1fr}}';
   document.head.appendChild(st);

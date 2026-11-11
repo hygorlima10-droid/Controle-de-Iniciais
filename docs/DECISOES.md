@@ -51,3 +51,6 @@ Registro curto para não repetir conversa. Atualize quando algo for decidido. Fo
 - **Logos:** o proprietário **assume o uso**. Itaú, C6, Caixa e Sicoob (arquivos baixados/enviados) ficam em `public/icones/bancos/`.
 - **Ordem:** 3.1 seletor de peça; 3.2 largura única + Kanban largo; 3.3 Semanas; 3.4 Análises reorganizadas (Histórico, fechamento automático, Último mês; sai “6/12 meses”); 3.5 Orçamento; 3.6 Simulador; 3.7 Futuro (aqui sai “Próx. 3 meses”, depois de o conteúdo estar no Futuro); 3.8 Construção; 3.9 Contas/logos/3 níveis; 3.10 conflito de edição + fim do limite.
 
+
+## Regra de aparência: sem botões "+ Algo" tracejados (decidido em 11/11/2026)
+O proprietário não gosta de botões com "+" no texto e borda tracejada (ficaram no Simulador e destoavam do resto do app). **Não usar mais esse padrão.** Para adicionar itens, usar botões no padrão do app: bloco com ícone colorido (`mdIc`) e nome em duas linhas, em grade (como "Adicionar ao cenário" no Simulador), ou `btn btn-primary` / `btn btn-ghost` com texto direto ("Adicionar receita"), sem o "+".
