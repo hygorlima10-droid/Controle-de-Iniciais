@@ -11,30 +11,61 @@
           if (r.status === 401 && j) { location.href = '/login'; }
           if (!r.ok || !j) {
             var e2 = (j && j.error) || { code: r.status === 401 || r.status === 403 ? 'not_granted' : 'unavailable', message: 'Erro ' + r.status };
+            if (j && j.atual) e2.atual = j.atual;   // conflito de edição: a versão que está no servidor
             throw e2;
           }
           return j;
         });
       }, function () { throw { code: 'unavailable', message: 'Sem conexão com o servidor.' }; });
   }
+  /* Coleções SEM teto de registros: o servidor entrega páginas de 1.000 ("depois do id X") e o app lê página a página até acabar.
+     A 1ª página já libera a tela e as outras chegam em seguida (aviso "carregando mais…"); nas releituras de 15 em 15 segundos só se relê tudo se a "ficha"
+     da coleção (quantidade + última alteração) mudou. Cada registro guarda a versão (carimbo) que o app leu, para o servidor detectar edição em outro aparelho. */
+  var MAX_PAGINAS = 120;
+  function avisarCarga(c, lidos, completo) { try { window.dispatchEvent(new CustomEvent('horus-carga', { detail: { nome: c.nome, lidos: lidos, completo: completo } })); } catch (e) { } }
   function colecao(nome) {
     if (colecoes[nome]) return colecoes[nome];
-    var c = colecoes[nome] = { nome: nome, mapa: {}, inscritos: [], carregada: false, pendentes: 0, assinatura: '', timer: null };
+    var c = colecoes[nome] = { nome: nome, mapa: {}, versoes: {}, fila: {}, inscritos: [], carregada: false, parcial: false, pendentes: 0, assinatura: '', token: '', timer: null };
     c.docs = function (lim) {
       var ids = Object.keys(c.mapa).sort();
       if (lim) ids = ids.slice(0, lim);
       return ids.map(function (id) { var v = c.mapa[id]; return { id: id, data: function () { return JSON.parse(JSON.stringify(v)); } }; });
     };
     c.avisar = function () { c.inscritos.forEach(function (s) { s.cb({ docs: c.docs(s.lim) }); }); };
+    var base = '/api/db/' + encodeURIComponent(nome);
+    c.lerTudo = function () {
+      var primeiraCarga = !c.carregada, novo = {}, nvers = {}, lidos = 0, paginas = 0, token = '';
+      function pagina(depois) {
+        return req('GET', base + '?limit=1000' + (depois ? '&after=' + encodeURIComponent(depois) : '')).then(function (j) {
+          if (!primeiraCarga && c.pendentes > 0) return;   // há gravação em andamento: deixa para a próxima rodada
+          if (paginas === 0) token = j.n + '|' + j.t;
+          paginas++;
+          j.docs.forEach(function (d) { lidos++; if (primeiraCarga) { c.mapa[d.id] = d.data; c.versoes[d.id] = d.v; } else { novo[d.id] = d.data; nvers[d.id] = d.v; } });
+          var ha = !!(j.mais && j.docs.length && paginas < MAX_PAGINAS);
+          if (primeiraCarga) {
+            c.carregada = true; c.parcial = ha; c.avisar();
+            if (ha || paginas > 1) avisarCarga(c, lidos, !ha);
+          }
+          if (ha) return pagina(j.docs[j.docs.length - 1].id);
+          if (!primeiraCarga) {
+            if (c.pendentes > 0) return;
+            c.mapa = novo; c.versoes = nvers; c.avisar();
+            if (paginas > 1) avisarCarga(c, lidos, true);
+          }
+          c.token = token; c.parcial = false;
+        });
+      }
+      return pagina('');
+    };
     c.carregar = function () {
-      return req('GET', '/api/db/' + encodeURIComponent(nome) + '?limit=1000').then(function (j) {
-        if (c.pendentes > 0) return;
-        var ass = JSON.stringify(j.docs);
-        if (c.carregada && ass === c.assinatura) return;
-        c.assinatura = ass; c.carregada = true; c.mapa = {};
-        j.docs.forEach(function (d) { c.mapa[d.id] = d.data; });
-        c.avisar();
-      });
+      if (c.carregada && !c.parcial) {
+        return req('GET', base + '?resumo=1').then(function (r) {
+          if (c.pendentes > 0 || (r.n + '|' + r.t) === c.token) return;
+          return c.lerTudo();
+        });
+      }
+      if (c.parcial) return Promise.resolve();   // ainda lendo as páginas
+      return c.lerTudo();
     };
     c.iniciarVigia = function () {
       if (c.timer) return;
@@ -42,6 +73,20 @@
     };
     return c;
   }
+  /* lê uma coleção inteira (todas as páginas) sem passar pelo cache: usado pelas telas que carregam a sua própria lista (agenda, processos…) */
+  function listarTudo(nome) {
+    var docs = [], paginas = 0;
+    function pagina(depois) {
+      return req('GET', '/api/db/' + encodeURIComponent(nome) + '?limit=1000' + (depois ? '&after=' + encodeURIComponent(depois) : '')).then(function (j) {
+        paginas++; docs = docs.concat(j.docs);
+        if (j.mais && j.docs.length && paginas < MAX_PAGINAS) return pagina(j.docs[j.docs.length - 1].id);
+        return { docs: docs };
+      });
+    }
+    return pagina('');
+  }
+  window.__horusListarTudo = listarTudo;
+  window.__horusDb = { total: function (n) { return Object.keys(colecao(n).mapa).length; }, completo: function () { return Object.keys(colecoes).every(function (n) { return !colecoes[n].parcial; }); }, versao: function (n, id) { return colecao(n).versoes[id]; } };
 
   /* Diário do "Desfazer": guarda como cada documento estava antes de cada gravação/exclusão (últimas 20 ações). */
   var ROTULO_COL = { casos: 'petição', termosAcordo: 'acordo', alvaras: 'alvará', clientes: 'cliente', despesas: 'despesa', receitasManuais: 'receita', metas: 'meta', saldos: 'saldo', obraMov: 'lançamento da obra', extratos: 'extrato' };
@@ -75,13 +120,42 @@
     }
   };
 
+  /* conflito de edição: coleções em que dois aparelhos podem mexer no mesmo registro (o servidor também só confere estas) */
+  var CONFLITO = { casos: 1, termosAcordo: 1, alvaras: 1, clientes: 1, despesas: 1, receitasManuais: 1, metas: 1, obraMov: 1 };
+  function enviar(c, id, dados, forcar) {
+    var base = c.versoes[id], q = '';
+    if (forcar) q = '?forcar=1'; else if (CONFLITO[c.nome] && base && !desfazendo) q = '?base=' + base;
+    return req('PUT', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id) + q, dados).then(function (j) {
+      if (j && j.v) c.versoes[id] = j.v;
+      return j;
+    }, function (e) {
+      if (e && e.code === 'conflict' && e.atual) return resolverConflito(c, id, dados, e.atual);
+      throw e;
+    });
+  }
+  function resolverConflito(c, id, minha, atual) {
+    var fn = window.__horusConflito;
+    if (typeof fn !== 'function') return enviar(c, id, minha, true);
+    return fn({ colecao: c.nome, id: id, minha: minha, servidor: atual.data, quando: atual.v }).then(function (esc) {
+      if (esc === 'outra') { c.mapa[id] = JSON.parse(JSON.stringify(atual.data)); c.versoes[id] = atual.v; c.avisar(); return { ok: true, adotada: true }; }
+      return enviar(c, id, minha, true);
+    });
+  }
+  /* as gravações do mesmo registro vão uma depois da outra, para cada uma usar a versão devolvida pela anterior (senão a 2ª pareceria conflito com a 1ª) */
+  function naFila(c, id, tarefa) {
+    var anterior = c.fila[id] || Promise.resolve(), p = anterior.then(tarefa, tarefa);
+    c.fila[id] = p.then(function () { }, function () { });
+    return p;
+  }
   function escrever(c, id, dados, apagar) {
     var antes = c.mapa[id], existia = Object.prototype.hasOwnProperty.call(c.mapa, id);
     if (apagar) delete c.mapa[id]; else c.mapa[id] = JSON.parse(JSON.stringify(dados));
     c.pendentes++; c.avisar();
     registrar(c, id, antes, existia, dados, apagar);
-    var p = apagar ? req('DELETE', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id))
-                   : req('PUT', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id), dados);
+    var p = naFila(c, id, function () {
+      return apagar ? req('DELETE', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id)).then(function (j) { delete c.versoes[id]; return j; })
+                    : enviar(c, id, dados, false);
+    });
     return p.then(function () { c.pendentes--; c.assinatura = ''; }, function (e) {
       c.pendentes--;
       if (existia) c.mapa[id] = antes; else delete c.mapa[id];
@@ -103,7 +177,7 @@
     Object.keys(cols).forEach(function (n) { cols[n].avisar(); });
     var corpo = { ops: ops.map(function (o) { return o.apagar ? { acao: 'excluir', colecao: o.colecao, id: o.id } : { acao: 'gravar', colecao: o.colecao, id: o.id, dados: o.dados }; }) };
     return req('POST', '/api/lote', corpo).then(function () {
-      feitos.forEach(function (f) { f.c.pendentes--; f.c.assinatura = ''; });
+      feitos.forEach(function (f) { f.c.pendentes--; f.c.assinatura = ''; delete f.c.versoes[f.id]; });   // o servidor gravou por conta própria: a versão certa só chega na próxima leitura (até lá não se confere conflito deste registro)
     }, function (e) {
       feitos.slice().reverse().forEach(function (f) { f.c.pendentes--; if (f.existia) f.c.mapa[f.id] = f.antes; else delete f.c.mapa[f.id]; });
       Object.keys(cols).forEach(function (n) { cols[n].avisar(); });

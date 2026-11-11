@@ -14,7 +14,9 @@ import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeir
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
-const MAX_LISTA = 1000;
+const MAX_LISTA = 1000;           // registros por PÁGINA de uma lista (a lista inteira vem em várias páginas, sem teto)
+/* coleções em que dois aparelhos podem editar o mesmo registro: aqui o servidor avisa antes de gravar por cima (as de configuração e de leitura automática ficam de fora) */
+const CONFLITO = new Set(['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'obraMov']);
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
@@ -425,13 +427,21 @@ async function api(request, env, partes, auth) {
   const recusa = checarColecao(colecao, auth); if (recusa) return recusa;
 
   if (!id && metodo === 'GET') {
-    const lim = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get('limit') || '1000', 10) || 1000, 1), MAX_LISTA);
-    let { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? ORDER BY id LIMIT ?').bind(colecao, lim).all();
-    if (colecao === 'config' && ehProprietario(auth)) {   // o proprietário (e o app já aberto antes da separação) continua vendo os seus documentos na lista de config
-      const dono = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? ORDER BY id').bind('configDono').all();
-      results = [...results, ...dono.results].sort((a, b) => (a.id < b.id ? -1 : 1)).slice(0, lim);
+    const sp = new URL(request.url).searchParams;
+    if (sp.get('resumo') === '1') {   // "ficha" barata da coleção (quantos registros e a última alteração): o app compara para saber se precisa reler tudo
+      const r = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(atualizado), 0) AS t FROM docs WHERE colecao = ?').bind(colecao).first();
+      return json({ n: r ? r.n : 0, t: r ? r.t : 0 });
     }
-    return json({ docs: results.map((r) => ({ id: r.id, data: JSON.parse(r.dados) })) });
+    const lim = Math.min(Math.max(parseInt(sp.get('limit') || '1000', 10) || 1000, 1), MAX_LISTA), depois = sp.get('after') || '';
+    /* páginas por "depois do id X": a lista não tem teto (o app lê página a página até acabar). Pede-se uma linha a mais só para saber se há mais. */
+    let { results } = await env.DB.prepare('SELECT id, dados, atualizado FROM docs WHERE colecao = ? AND id > ? ORDER BY id LIMIT ?').bind(colecao, depois, lim + 1).all();
+    let mais = results.length > lim; if (mais) results = results.slice(0, lim);
+    if (colecao === 'config' && ehProprietario(auth)) {   // o proprietário (e o app já aberto antes da separação) continua vendo os seus documentos na lista de config
+      const dono = await env.DB.prepare('SELECT id, dados, atualizado FROM docs WHERE colecao = ? ORDER BY id').bind('configDono').all();
+      results = [...results, ...dono.results].sort((a, b) => (a.id < b.id ? -1 : 1)).slice(0, lim); mais = false;
+    }
+    const meta = await env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(atualizado), 0) AS t FROM docs WHERE colecao = ?').bind(colecao).first();
+    return json({ docs: results.map((r) => ({ id: r.id, data: JSON.parse(r.dados), v: r.atualizado })), mais, n: meta ? meta.n : 0, t: meta ? meta.t : 0 });
   }
   if (!id && metodo === 'POST') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
@@ -449,12 +459,20 @@ async function api(request, env, partes, auth) {
       if (criado && registraColecao(colecao)) await stmtRegistro(env, { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) }).run();
       return json({ ok: true, criado });
     }
-    if (!registraColecao(colecao)) { await gravar(env, colecao, id, dados); return json({ ok: true }); }
+    /* conflito de edição: o app manda `base` = a versão (carimbo de tempo) que ele tinha lido. Se o registro mudou no servidor depois disso e o conteúdo é diferente,
+       não grava e devolve 409 com a versão do servidor; o app pergunta ao usuário (usar a do outro aparelho ou manter a minha → repete com forcar=1). */
+    const base = parseInt(new URL(request.url).searchParams.get('base') || '', 10), forcar = new URL(request.url).searchParams.get('forcar') === '1';
+    if (CONFLITO.has(colecao) && base > 0 && !forcar) {
+      const atual = await env.DB.prepare('SELECT dados, atualizado FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+      if (atual && atual.atualizado > base && atual.dados !== JSON.stringify(dados)) return json({ error: { code: 'conflict', message: 'Este registro foi alterado em outro aparelho.' }, atual: { id, data: JSON.parse(atual.dados), v: atual.atualizado } }, 409);
+    }
+    const ts = Date.now();
+    if (!registraColecao(colecao)) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts }); }
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
     const antesObj = antes ? JSON.parse(antes.dados) : null, mud = antesObj ? mudancas(antesObj, dados) : [];
-    if (antesObj && !mud.length) { await gravar(env, colecao, id, dados); return json({ ok: true }); }   // nada mudou de verdade (só campos de controle): grava, mas não há o que registrar
-    await env.DB.batch([stmtGravar(env, colecao, id, dados), stmtRegistro(env, antesObj ? { op: 'alterou', colecao, id, titulo: tituloDe(colecao, dados), mud } : { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) })]);
-    return json({ ok: true });
+    if (antesObj && !mud.length) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts }); }   // nada mudou de verdade (só campos de controle): grava, mas não há o que registrar
+    await env.DB.batch([stmtGravar(env, colecao, id, dados, ts), stmtRegistro(env, antesObj ? { op: 'alterou', colecao, id, titulo: tituloDe(colecao, dados), mud } : { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) })]);
+    return json({ ok: true, v: ts });
   }
   if (id && metodo === 'DELETE') {
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
@@ -473,8 +491,8 @@ async function lerDoc(request) {
   if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return erro(400, 'invalid', 'O registro precisa ser um objeto.');
   return dados;
 }
-const stmtGravar = (env, colecao, id, dados) =>
-  env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), Date.now());
+const stmtGravar = (env, colecao, id, dados, ts) =>
+  env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), ts || Date.now());
 const gravar = (env, colecao, id, dados) => stmtGravar(env, colecao, id, dados).run();
 
 export default {

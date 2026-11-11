@@ -121,7 +121,7 @@ if '/*IC-INICIO*/' in s:
 else:
     assert s.count('/*AGD-FIM*/\n') == 1
     s = s.replace('/*AGD-FIM*/\n', '/*AGD-FIM*/\n' + bloco_ic)
-md_js = open(R + 'cliente/modulo.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-juridico.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-financeiro.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/orcamento.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/simulador.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/futuro.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/extratos-contas.js', encoding='utf-8').read()
+md_js = open(R + 'cliente/modulo.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-juridico.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/modulo-financeiro.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/orcamento.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/simulador.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/futuro.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/extratos-contas.js', encoding='utf-8').read() + '\n' + open(R + 'cliente/conflito.js', encoding='utf-8').read()
 bloco_md = '/*MD-INICIO*/\n' + md_js + '\n/*MD-FIM*/\n'
 if '/*MD-INICIO*/' in s:
     s = re.sub(r'/\*MD-INICIO\*/.*?/\*MD-FIM\*/\n', lambda m: bloco_md, s, flags=re.S)

@@ -19,7 +19,7 @@ function pbRefColecao(col){
 }
 function prCarregar(){
   if (!window.__SERVIDOR){ prOk = true; return Promise.resolve(); }
-  return pbApi('/api/db/processos').then(function(r){
+  return (window.__horusListarTudo ? window.__horusListarTudo('processos') : pbApi('/api/db/processos')).then(function(r){
     prDocs = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); prOk = true; prDepois();
   }).catch(function(){ prOk = true; prDepois(); });
 }

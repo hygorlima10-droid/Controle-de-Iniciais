@@ -54,3 +54,6 @@ Registro curto para não repetir conversa. Atualize quando algo for decidido. Fo
 
 ## Regra de aparência: sem botões "+ Algo" tracejados (decidido em 11/11/2026)
 O proprietário não gosta de botões com "+" no texto e borda tracejada (ficaram no Simulador e destoavam do resto do app). **Não usar mais esse padrão.** Para adicionar itens, usar botões no padrão do app: bloco com ícone colorido (`mdIc`) e nome em duas linhas, em grade (como "Adicionar ao cenário" no Simulador), ou `btn btn-primary` / `btn btn-ghost` com texto direto ("Adicionar receita"), sem o "+".
+
+## Fase 3 concluída (11/11/2026)
+Etapas 3.1 a 3.10 entregues na ordem aprovada. O que ficou de fora de propósito: relatório mensal em PDF, metas com data futura, backup completo com anexos e leitura do Diário, melhorias pequenas, alertas de orçamento no resumo das 10h, "Folga da PJ" no Simulador e a identificação do aparelho no aviso de conflito.

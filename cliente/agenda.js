@@ -37,7 +37,7 @@ function agCarregar(){
       return pbApi('/api/db/agenda', 'POST', { tipo: 'prazo', titulo: x.descricao || 'Prazo', processo: x.processo || '', cliente: x.cliente || '', data: x.data, trabalhar: '', situacao: x.concluido ? 'feito' : 'afazer', concluido: !!x.concluido, pubId: x.pubId || '', dias: x.dias, contagem: x.contagem, disp: x.disp, inicio: x.inicio, manual: !!x.manual, tribunal: x.tribunal || '', avisos: AG_PADRAO.slice(), criadoEm: x.criadoEm || new Date().toISOString() })
         .then(function(){ return pbApi('/api/db/prazosPub/' + encodeURIComponent(d.id), 'DELETE'); });
     }));
-  }).then(function(){ return pbApi('/api/db/agenda'); }).then(function(r){
+  }).then(function(){ return (window.__horusListarTudo ? window.__horusListarTudo('agenda') : pbApi('/api/db/agenda')); }).then(function(r){
     agDocs = (r.docs || []).map(function(d){ var x = d.data || {}; x.id = d.id; return x; }); agOk = true; agDepois();
   }).catch(function(){ agOk = true; agDepois(); });
 }
