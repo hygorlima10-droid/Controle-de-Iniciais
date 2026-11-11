@@ -1488,6 +1488,13 @@
   .an-tit-acao{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .an-cmp-sel{display:flex;align-items:center;gap:10px;margin:4px 0 10px;color:var(--ink-soft);font-size:var(--t2);}
   .an-cmp-sel select{height:38px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;padding:0 10px;}
+  .an-lin-pat{stroke:var(--accent);}
+  .an-pat-pt{fill:var(--accent);stroke:var(--surface);stroke-width:1.5;}
+  .an-pat-pt.parcial{fill:var(--surface);stroke:var(--accent);stroke-width:2.2;}
+  .an-pat-pt.sel{stroke-width:2.6;}
+  .an-pat-guia{stroke:var(--accent);stroke-width:1;stroke-dasharray:3 3;opacity:.7;}
+  .an-pat-det{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:8px 0 4px;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:var(--t2);color:var(--ink-soft);}
+  .an-pat-det b{color:var(--ink);} .an-pat-det strong{color:var(--ink);}
 </style>
 <link rel="stylesheet" href="/tema.css?v=1">
 </head>
@@ -14576,7 +14583,7 @@ function anCardFechados(){
     var fech = sn ? '<span>' + escapeHtml(fmtData(sn.fechadoEm.slice(0, 10)).slice(0, 5)) + '</span> <em class="an-auto">' + (sn.refeito ? 'refeito' : (sn.retro ? 'calculado' : 'auto')) + '</em>' + (anFechMudou(sn) ? ' <span class="an-mudou">mudou depois</span> <button type="button" class="md-link" data-an-refazer="' + m + '">refazer</button>' : '') : '<em class="an-auto">ao vivo</em>';
     return '<tr><th scope="row">' + escapeHtml(mesCurto(m)) + '</th><td class="n">' + (v.patrimonio === null ? '—' : fmtMoeda(v.patrimonio)) + '</td><td class="n ' + (vari === null ? '' : (vari >= 0 ? 'an-bom' : 'an-mau')) + '">' + (vari === null ? '—' : (vari >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(vari))) + '</td><td class="n">' + fmtMoeda(v.recebido) + '</td><td class="n">' + fmtMoeda(v.pago) + '</td><td class="n an-fech-td">' + fech + '</td></tr>';
   }).join('');
-  return '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Meses fechados</h4><button type="button" class="an-sem-mais" data-an-exportar="1">exportar ›</button></div>' +
+  return '<section class="ini-card an-card" id="anFechados"><div class="an-tit an-tit-acao"><h4>Meses fechados</h4><button type="button" class="an-sem-mais" data-an-exportar="1">exportar ›</button></div>' +
     '<div class="saldo-data">O app fecha o mês sozinho. Valores do último dia, guardados para comparar depois.</div>' +
     '<div class="an-tab-rolar an-fech"><table><thead><tr><th>Mês</th><th class="n">Patrim.</th><th class="n">Variação</th><th class="n">Recebido</th><th class="n">Pago</th><th class="n">Fechado</th></tr></thead><tbody>' + linhas + '</tbody></table></div></section>';
 }
@@ -14603,6 +14610,33 @@ function anAvisoFechamento(){
   var meses = anFechGet(), ks = Object.keys(meses).filter(function(k){ return meses[k].auto && !meses[k].retro; }).sort(), u = ks.length ? meses[ks[ks.length - 1]] : null;
   return '<div class="an-sem-aviso ok"><b>' + (u ? escapeHtml(mesLabel(u.m)) + ' foi fechado sozinho em ' + escapeHtml(fmtData(u.fechadoEm.slice(0, 10)).slice(0, 5)) + '.' : 'Os meses são fechados sozinhos.') + '</b>' +
     '<span>O app fecha o mês na primeira vez que você abre no dia 1º (ou depois), com os valores do último dia do mês. Você não precisa fazer nada; se um mês fechado mudar depois (lançamento alterado), aparece “mudou depois” com o botão refazer.</span></div>';
+}
+/* cartão de indicador no padrão das telas de resumo (ícone colorido, valor grande, rodapé); não clicável */
+function anKpiMd(rot, ic, cor, v, cls, foot){ return '<div class="md-card md-kpi an-kpi-i"><div class="md-h"><span class="md-k">' + mdIc(ic, cor) + '<span>' + rot + '</span></span></div><b class="md-v' + (cls ? ' ' + cls : '') + '">' + v + '</b>' + foot + '</div>'; }
+/* linha com área (patrimônio no fim de cada mês): o mês em andamento fica tracejado e com ponto vazado; tocar num ponto seleciona o mês */
+var anPatSel = null;
+function anLinhaArea(o){
+  var w = Math.max(280, o.w || 340), H = 200, L = 46, R = 14, T = 16, B = 26, pw = w - L - R, ph = H - T - B, n = o.pontos.length, i;
+  var vs = o.pontos.map(function(p){ return p.v; }), mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), span = (mx - mn) || Math.abs(mx) || 1;
+  var esc = anEscala(mn - span * 0.25, mx + span * 0.15), y = function(v){ return T + ph - (v - esc.lo) / (esc.hi - esc.lo) * ph; }, xs = function(k){ return n === 1 ? L + pw / 2 : L + pw * k / (n - 1); };
+  var s = '<svg class="an-svg" viewBox="0 0 ' + w + ' ' + H + '" width="100%" role="img" aria-label="' + escapeHtml(o.rotulo) + '"><defs><linearGradient id="anGradPat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.30"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient></defs>';
+  esc.ticks.forEach(function(t){ s += '<line class="an-grid" x1="' + L + '" x2="' + (w - R) + '" y1="' + y(t) + '" y2="' + y(t) + '"/><text class="an-eixo" x="' + (L - 6) + '" y="' + (y(t) + 3.5) + '" text-anchor="end">' + anFmtEixo(t) + '</text>'; });
+  var area = 'M' + xs(0) + ',' + (T + ph); o.pontos.forEach(function(p, k){ area += 'L' + xs(k) + ',' + y(p.v); }); area += 'L' + xs(n - 1) + ',' + (T + ph) + 'Z';
+  s += '<path d="' + area + '" fill="url(#anGradPat)"/>';
+  var ultParcial = n > 1 && o.pontos[n - 1].parcial, nSolido = ultParcial ? n - 1 : n, d = '';
+  for (i = 0; i < nSolido; i++) d += (i ? 'L' : 'M') + xs(i) + ',' + y(o.pontos[i].v);
+  if (nSolido > 1) s += '<path d="' + d + '" fill="none" class="an-lin-pat" stroke-width="2.4" stroke-linejoin="round"/>';
+  if (ultParcial) s += '<path d="M' + xs(n - 2) + ',' + y(o.pontos[n - 2].v) + 'L' + xs(n - 1) + ',' + y(o.pontos[n - 1].v) + '" fill="none" class="an-lin-pat" stroke-width="2.4" stroke-dasharray="5 4"/>';
+  var passo = Math.max(1, Math.ceil(n / 12));
+  o.pontos.forEach(function(p, k){
+    var sel = p.m === o.sel;
+    if (sel) s += '<line class="an-pat-guia" x1="' + xs(k) + '" x2="' + xs(k) + '" y1="' + T + '" y2="' + (T + ph) + '"/>';
+    s += '<circle cx="' + xs(k) + '" cy="' + y(p.v) + '" r="' + (sel ? 6 : 4) + '" class="an-pat-pt' + (p.parcial ? ' parcial' : '') + (sel ? ' sel' : '') + '"/>';
+    if (k % passo === 0 || sel) s += '<text class="an-eixo' + (sel ? ' an-sem-rot-sel' : '') + '" x="' + xs(k) + '" y="' + (H - 7) + '" text-anchor="middle">' + anRotMes(p.m) + '</text>';
+    var larg = n === 1 ? pw : pw / (n - 1);
+    s += '<rect class="an-hit" x="' + (xs(k) - larg / 2) + '" y="' + T + '" width="' + larg + '" height="' + (ph + B) + '" data-an-pat="' + p.m + '" data-tip="' + anTip(p.tip) + '"/>';
+  });
+  return s + '</svg>';
 }
 /* ---------- visão "Semanas": fluxo de caixa semanal (Fase 3, etapa 3.3) ----------
    Mesmas regras da projeção dos próximos meses, só que semana a semana (segunda a domingo):
@@ -14743,6 +14777,7 @@ function renderAnalises(){
   if (anPeriodo === 'sem'){ renderAnaliseSemanas(el); return; }
   var w = Math.floor((el.clientWidth || 360) - 30), hoje = todayISO(), m0 = hoje.slice(0, 7), meses = anMesesVisiveis();
   var S1 = 'var(--an-1)', S2 = 'var(--an-2)', S3 = 'var(--an-3)';
+  var wMeia = (el.clientWidth || 360) >= 680 ? Math.floor(((el.clientWidth || 360) - 12) / 2) - 34 : w;   /* gráficos em cartão de meia largura */
   var pri = anPrimeiroDia(), priParcial = pri.slice(8) > '05';
   var dados = meses.map(function(m){ var r = anRecebidoMes(m), d = anDespesasMes(m); return { m: m, r: r, d: d, parcial: m === m0, inicio: m === pri.slice(0, 7) && priParcial && m !== m0 }; });
   var fechados = dados.filter(function(x){ return !x.parcial && !x.inicio; });
@@ -14758,11 +14793,12 @@ function renderAnalises(){
     '<div class="segmented an-seg2" id="anRecorteSeg" role="group" aria-label="Recorte do histórico">' + [[6, '6 meses'], [12, '12 meses'], ['ano', 'Ano'], ['tudo', 'Tudo']].map(function(o){ return '<button type="button" data-an-recorte="' + o[0] + '" class="seg-btn' + (anRecorte === o[0] ? ' active' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>' +
     '<div class="saldo-data">' + escapeHtml(mesCurto(meses[0])) + ' a ' + escapeHtml(mesCurto(meses[meses.length - 1])) + ' · o mês atual aparece mais claro porque ainda está em andamento</div></div>' + anAvisoFechamento();
 
-  h += '<div class="an-kpis">' +
-    '<div class="ini-card"><div class="lbl">Recebido por mês (média)</div><div class="val">' + fmtMoeda(mediaRec) + '</div><div class="saldo-data">' + (fechados.length ? 'média de ' + fechados.length + (fechados.length === 1 ? ' mês fechado' : ' meses fechados') + (dados.some(function(x){ return x.inicio; }) ? ' (sem o 1º mês de uso, que começou em ' + fmtData(pri).slice(0, 5) + ')' : '') : 'só o mês atual e o 1º mês de uso (incompleto) até agora') + '</div></div>' +
-    '<div class="ini-card"><div class="lbl">Gasto por mês (média)</div><div class="val">' + fmtMoeda(mediaDesp) + '</div><div class="saldo-data">despesas + dia a dia</div></div>' +
-    '<div class="ini-card"><div class="lbl">Sobra média</div><div class="val ' + (mediaRec - mediaDesp >= 0 ? 'ok' : 'neg') + '">' + fmtMoeda(mediaRec - mediaDesp) + '</div><div class="saldo-data">recebido − gasto</div></div>' +
-    '<div class="ini-card"><div class="lbl">Melhor mês</div><div class="val">' + (melhor && melhor.r.total > 0 ? escapeHtml(mesCurto(melhor.m)) : '—') + '</div><div class="saldo-data">' + (melhor && melhor.r.total > 0 ? fmtMoeda(melhor.r.total) : 'ainda sem recebimentos') + '</div></div></div>';
+  h += '<div class="md-kpis an-kpis4">' +
+    anKpiMd('Recebido por mês (média)', 'trending-up', MD_COR.verde, fmtMoeda(mediaRec), '', '<div class="md-foot">' + (fechados.length ? 'média de ' + fechados.length + (fechados.length === 1 ? ' mês fechado' : ' meses fechados') + (dados.some(function(x){ return x.inicio; }) ? ' (sem o 1º mês de uso, que começou em ' + fmtData(pri).slice(0, 5) + ')' : '') : 'só o mês atual e o 1º mês de uso (incompleto) até agora') + '</div>') +
+    anKpiMd('Gasto por mês (média)', 'trending-down', MD_COR.verm, fmtMoeda(mediaDesp), '', '<div class="md-foot">despesas + dia a dia</div>') +
+    anKpiMd('Sobra média', 'piggy-bank', MD_COR.ouro, fmtMoeda(mediaRec - mediaDesp), mediaRec - mediaDesp >= 0 ? 'ok' : 'neg', '<div class="md-foot">recebido − gasto</div>') +
+    anKpiMd('Melhor mês', 'trophy', MD_COR.azul, melhor && melhor.r.total > 0 ? escapeHtml(mesCurto(melhor.m)) : '—', '', '<div class="md-foot">' + (melhor && melhor.r.total > 0 ? fmtMoeda(melhor.r.total) + ' recebidos' : 'ainda sem recebimentos') + '</div>') + '</div>' +
+    '<!--DUAS-->';
 
   h += '<div class="an-duas">' + anCardComparar() + anCardFechados() + '</div>';
   var soPf = r2(dados.reduce(function(a, x){ return a + comMes(x.m, function(){ return computeReceitaManualMes('pf') - computeReceitaTransferenciaMes('pf'); }); }, 0));
@@ -14780,8 +14816,8 @@ function renderAnalises(){
     var sobra = r2(x.r.total - x.d.total);
     return { m: x.m, rotuloLongo: mesLabel(x.m), parcial: x.parcial, inicio: x.inicio, v: { rec: x.r.total, desp: x.d.total }, extraTip: (sobra >= 0 ? 'Sobrou ' : 'Faltou ') + '<b>' + fmtMoeda(Math.abs(sobra)) + '</b>' };
   });
-  h += anCard('Recebido x gasto', 'Gasto = despesas lançadas (PJ e PF, sem as transferências entre as duas) + o dia a dia que vem dos extratos.',
-    anLegenda(serRG) + anBarras({ w: w, itens: itRG, series: serRG, empilhado: false, rotulo: 'Recebido e gasto por mês', duasLinhas: meses.length > 6 }) +
+  var cRG = anCard('Recebido x gasto', 'Gasto = despesas lançadas (PJ e PF, sem as transferências entre as duas) + o dia a dia que vem dos extratos.',
+    anLegenda(serRG) + anBarras({ w: wMeia, itens: itRG, series: serRG, empilhado: false, rotulo: 'Recebido e gasto por mês', duasLinhas: meses.length > 6 }) +
     anTabela(['Mês', 'Recebido', 'Despesas', 'Dia a dia', 'Sobrou'], dados.map(function(x){ return [escapeHtml(mesCurto(x.m)) + (x.parcial ? ' *' : '') + (x.inicio ? ' †' : ''), fmtMoeda(x.r.total), fmtMoeda(x.d.lancadas), fmtMoeda(x.d.diaADia), fmtMoeda(x.r.total - x.d.total)]; })) +
     '<div class="saldo-data an-nota">* mês em andamento: despesas ainda não pagas entram pela estimativa.' + (dados.some(function(x){ return x.inicio; }) ? ' † os registros do app começam no meio desse mês.' : '') + '</div>');
 
@@ -14802,17 +14838,24 @@ function renderAnalises(){
     segDesp + (ctRes ? ctRes.html : topo.length ? '<div class="an-hbs">' + topo.map(function(x){ return anBarraHtml(x.k, x.v, topo[0].v, totalCat, S1); }).join('') + '</div>' + anTabela(['Categoria', 'Valor', '%'], listaCat.map(function(x){ return [escapeHtml(x.k), fmtMoeda(x.v), (totalCat > 0 ? Math.round(x.v / totalCat * 100) : 0) + '%']; }))
       : '<div class="financeiro-vazio">Ainda não há despesas no período.</div>'));
 
-  /* 4) patrimônio */
+  /* 4) patrimônio: linha clicável (tocar num ponto mostra o mês embaixo) */
   var pat = meses.map(function(m){ return { m: m, p: anPatrimonioEm(m) }; }).filter(function(x){ return x.p; });
-  var serPat = [{ key: 'contas', nome: 'Nas contas', cor: S1 }, { key: 'reserva', nome: 'Reserva', cor: S2 }, { key: 'outras', nome: 'Outras metas e obra', cor: S3 }];
-  var corpoPat;
+  var cPat;
   if (pat.length){
-    var primeiro = pat[0], ultimo = pat[pat.length - 1], delta = r2(ultimo.p.total - primeiro.p.total);
-    corpoPat = anLegenda(serPat) + anBarras({ w: w, itens: pat.map(function(x){ return { m: x.m, rotuloLongo: 'Fim de ' + mesLabel(x.m), parcial: x.m === m0, v: { contas: x.p.contas, reserva: x.p.reserva, outras: x.p.outras } }; }), series: serPat, empilhado: true, rotulo: 'Patrimônio no fim de cada mês', duasLinhas: pat.length > 6 }) +
-      (pat.length > 1 ? '<div class="saldo-data an-nota">De ' + escapeHtml(mesCurto(primeiro.m)) + ' para ' + escapeHtml(mesCurto(ultimo.m)) + ': ' + (delta >= 0 ? '+' : '−') + fmtMoeda(Math.abs(delta)) + '.</div>' : '') +
-      anTabela(['Fim de', 'Contas', 'Reserva', 'Outras metas e obra', 'Total'], pat.map(function(x){ return [escapeHtml(mesCurto(x.m)) + (x.m === m0 ? ' (hoje)' : ''), fmtMoeda(x.p.contas), fmtMoeda(x.p.reserva), fmtMoeda(x.p.outras), fmtMoeda(x.p.total)]; }));
-  } else corpoPat = '<div class="financeiro-vazio">Informe o saldo das contas para acompanhar a evolução.</div>';
-  h += anCard('Evolução do patrimônio', 'Dinheiro nas contas (último saldo informado até o fim do mês + lançamentos depois dele) mais o valor das metas.', corpoPat);
+    if (!anPatSel || !pat.some(function(x){ return x.m === anPatSel; })) anPatSel = pat[pat.length - 1].m;
+    var iSel = 0; pat.forEach(function(x, k){ if (x.m === anPatSel) iSel = k; });
+    var pSel = pat[iSel], pAnt = iSel > 0 ? pat[iSel - 1] : null, dSel = pAnt ? r2(pSel.p.total - pAnt.p.total) : null;
+    var pontos = pat.map(function(x){ return { m: x.m, v: x.p.total, parcial: x.m === m0, tip: '<b>' + escapeHtml(mesCurto(x.m)) + (x.m === m0 ? ' (em andamento)' : '') + '</b><br>Patrimônio: <b>' + fmtMoeda(x.p.total) + '</b><br>Contas ' + fmtMoeda(x.p.contas) + ' · reserva ' + fmtMoeda(x.p.reserva) + ' · outras metas e obra ' + fmtMoeda(x.p.outras) }; });
+    var delta = r2(pat[pat.length - 1].p.total - pat[0].p.total);
+    cPat = '<section class="ini-card an-card"><div class="an-tit an-tit-acao"><h4>Patrimônio ao fim de cada mês</h4><button type="button" class="an-sem-mais" data-an-ir="anFechados">por mês ›</button></div>' +
+      '<div class="saldo-data">Dinheiro nas contas (último saldo informado até o fim do mês + lançamentos depois dele) mais o valor das metas. Toque num ponto para ver o mês.</div>' +
+      anLinhaArea({ w: wMeia, pontos: pontos, sel: anPatSel, rotulo: 'Patrimônio no fim de cada mês' }) +
+      '<div class="an-pat-det"><b>' + escapeHtml(mesLabel(pSel.m)) + (pSel.m === m0 ? ' (em andamento)' : '') + '</b><span>Total <strong>' + fmtMoeda(pSel.p.total) + '</strong></span>' +
+      (dSel !== null ? '<span class="' + (dSel >= 0 ? 'an-bom' : 'an-mau') + '">' + (dSel >= 0 ? '+ ' : '− ') + fmtMoeda(Math.abs(dSel)) + ' no mês</span>' : '') +
+      '<span>Contas ' + fmtMoeda(pSel.p.contas) + '</span><span>Reserva ' + fmtMoeda(pSel.p.reserva) + '</span><span>Outras metas e obra ' + fmtMoeda(pSel.p.outras) + '</span></div>' +
+      (pat.length > 1 ? '<div class="saldo-data an-nota">De ' + escapeHtml(mesCurto(pat[0].m)) + ' para ' + escapeHtml(mesCurto(pat[pat.length - 1].m)) + ': ' + (delta >= 0 ? '+' : '−') + fmtMoeda(Math.abs(delta)) + '.</div>' : '') +
+      anTabela(['Fim de', 'Contas', 'Reserva', 'Outras metas e obra', 'Total'], pat.map(function(x){ return [escapeHtml(mesCurto(x.m)) + (x.m === m0 ? ' (hoje)' : ''), fmtMoeda(x.p.contas), fmtMoeda(x.p.reserva), fmtMoeda(x.p.outras), fmtMoeda(x.p.total)]; })) + '</section>';
+  } else cPat = anCard('Patrimônio ao fim de cada mês', '', '<div class="financeiro-vazio">Informe o saldo das contas para acompanhar a evolução.</div>');
 
   /* 6) comparativo anual */
   var ano = parseInt(m0.slice(0, 4), 10), mesesAno = [];
@@ -14829,6 +14872,7 @@ function renderAnalises(){
       anTabela(['Mês', String(ano), String(ano - 1)], mesesAno.map(function(mm, i2){ return [AN_MESES3[i2], atual[i2] === null ? '—' : fmtMoeda(atual[i2]), fmtMoeda(passado[i2])]; }));
   } else corpoAno = '<div class="financeiro-vazio">O comparativo aparece quando houver recebimentos de ' + (ano - 1) + '. Os registros começam em ' + escapeHtml(mesCurto(anPrimeiroMes())) + '.</div>';
   h += anCard('Este ano contra o ano passado', 'Total recebido mês a mês.', corpoAno);
+  h = h.replace('<!--DUAS-->', function(){ return '<div class="an-duas">' + cPat + cRG + '</div>'; });
 
   el.innerHTML = h + '<div id="anTip" class="an-tip" role="status" style="display:none;"></div>';
   anTipEl = qs('anTip');
@@ -14856,6 +14900,10 @@ function anMostrarTip(ev, alvo){
     if (at){ anMarcarObra(at.getAttribute('data-an-atip')); return; }
     var v = ev.target.closest ? ev.target.closest('[data-an-visao]') : null;
     if (v){ anVisaoDesp = v.getAttribute('data-an-visao'); renderAnalises(); return; }
+    var pt = ev.target.closest ? ev.target.closest('[data-an-pat]') : null;
+    if (pt){ anPatSel = pt.getAttribute('data-an-pat'); renderAnalises(); return; }
+    var ir = ev.target.closest ? ev.target.closest('[data-an-ir]') : null;
+    if (ir){ var alvoIr = qs(ir.getAttribute('data-an-ir')); if (alvoIr && alvoIr.scrollIntoView) alvoIr.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     var rc = ev.target.closest ? ev.target.closest('[data-an-recorte]') : null;
     if (rc){ var rv = rc.getAttribute('data-an-recorte'); anRecorte = (rv === 'ano' || rv === 'tudo') ? rv : parseInt(rv, 10); renderAnalises(); return; }
     var rf = ev.target.closest ? ev.target.closest('[data-an-refazer]') : null;

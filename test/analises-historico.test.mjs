@@ -40,7 +40,15 @@ await page.click('[data-an-recorte="ano"]'); await page.waitForTimeout(500); che
 await page.click('[data-an-recorte="tudo"]'); await page.waitForTimeout(500); check(await linhas() === 13, 'Tudo: os 13 meses');
 await page.click('[data-an-recorte="6"]'); await page.waitForTimeout(500);
 t = await txt();
-check(!/Quanto o caixa deve ficar|Projeção do caixa/i.test(t) && /Quanto entrou por mês/.test(t) && /Recebido x gasto/.test(t) && /Evolução do patrimônio/.test(t), 'os gráficos de hoje continuam (entrou por mês, recebido x gasto, patrimônio)');
+check(!/Quanto o caixa deve ficar|Projeção do caixa/i.test(t) && /Quanto entrou por mês/.test(t) && /Recebido x gasto/.test(t) && /Patrimônio ao fim de cada mês/.test(t), 'os gráficos de hoje continuam (entrou por mês, recebido x gasto, patrimônio)');
+check(await page.evaluate(() => document.querySelectorAll('#anWrap .an-kpis4 .ct-ic').length) === 4, 'os 4 cartões do topo (recebido, gasto, sobra e melhor mês) têm ícone');
+check(await page.evaluate(() => !!document.querySelector('#anWrap .an-lin-pat') && !!document.querySelector('#anWrap svg path[fill="url(#anGradPat)"]') && document.querySelectorAll('#anWrap .an-pat-pt').length === 6 && document.querySelectorAll('#anWrap .an-pat-pt.parcial').length === 1), 'patrimônio é uma linha com área e 6 pontos, o mês atual vazado (em andamento)');
+const detAntes = await page.evaluate(() => document.querySelector('#anWrap .an-pat-det').innerText);
+await page.locator('#anWrap rect[data-an-pat]').nth(2).click({ force: true }); await page.waitForTimeout(400);
+const detDepois = await page.evaluate(() => document.querySelector('#anWrap .an-pat-det').innerText);
+check(detAntes !== detDepois && /Total/.test(detDepois) && /Contas/.test(detDepois) && /Reserva/.test(detDepois), 'tocar num ponto da linha mostra o patrimônio daquele mês (contas, reserva, outras metas)');
+check(await page.evaluate(() => { const g = document.querySelector('#anWrap .an-duas'); return !!g && /Patrimônio ao fim/.test(g.innerText) && /Recebido x gasto/.test(g.innerText); }), 'patrimônio e recebido × gasto ficam lado a lado, logo depois dos indicadores');
+check(await page.evaluate(() => !!document.querySelector('[data-an-ir="anFechados"]')), 'o link "por mês ›" leva à tabela de meses fechados');
 // 2) tabela: auto x calculado
 check(await page.evaluate(() => { const l = Array.from(document.querySelectorAll('#anWrap .an-fech tbody tr')); return /auto/.test(l[0].innerText) && /calculado/.test(l[l.length - 1].innerText); }), 'o mês mais novo mostra "auto" e os antigos "calculado"');
 check(!/mudou depois/.test(await tabela()), 'nada mudou depois do fechamento ainda');
