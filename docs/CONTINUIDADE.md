@@ -16,7 +16,7 @@ Para confirmar em produção: contagem de registros por coleção; `ALLOW_NO_AUT
 ## Situação atual (09/11/2026): Fase 1 concluída
 - **Fase 1 concluída** (itens 1 a 8, abaixo). O proprietário vai testar em produção e dar uma pausa antes da Fase 2.
 - **Ao publicar** (uma vez): cada aparelho entra de novo (primeiro aparelho: senha antiga → “Crie o seu acesso” com e-mail e senha de 12+ caracteres); a migração da configuração (`configDono`) roda sozinha na primeira abertura; guardar a senha antiga (é a chave de emergência em `/recuperar`). Chave de retorno do login: variável `LOGIN_ANTIGO=1`.
-- **Pendências do proprietário:** (1) cadastrar as 4 OABs em Publicações (hoje 2) para os advogados participantes saírem completos; (2) apagar o Worker abandonado `controle-de-iniciais` no painel do Cloudflare; (3) decidir sobre o banco vazio `controle-juridico-teste`; (4) enviar os arquivos oficiais dos logos dos bancos quando chegar a Fase 3; (5) conferir se a variável `ALLOW_NO_AUTH` não existe no Worker de produção (já informado que não existe).
+- **Pendências do proprietário:** (1) cadastrar as 4 OABs em Publicações (hoje 2) para os advogados participantes saírem completos; (2) apagar o Worker abandonado `controle-de-iniciais` no painel do Cloudflare; (4) enviar os arquivos oficiais dos logos dos bancos quando chegar a Fase 3; (5) conferir se a variável `ALLOW_NO_AUTH` não existe no Worker de produção (já informado que não existe).
 - **Próximo:** Fase 2 (dashboards e sub-abas; base do Banco Central de Ícones, ver `docs/ICONES.md`), sempre com esboço em imagem e OK antes de implementar. Fases 5 a 7 (multiusuário) só depois da Fase 4 (homologação).
 - **Testes:** `npm test` roda tudo (ver README).
 

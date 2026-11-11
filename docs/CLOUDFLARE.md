@@ -26,3 +26,6 @@ Sinais de segurança no banco: 3 falhas de token em `/api/enviar` em 03/11 (um �
 - **Carregar coleções em lotes** (limite de 1.000 registros): **sem urgência**; maior coleção real tem 259. Fica para quando alguma passar de ~700.
 - **Cópia fora do banco:** rebaixada. Com Time Travel (7/30 dias) + backups baixados pelo app + cópias de segurança automáticas, o risco é baixo. R2 só se o proprietário ativar.
 - **Backup semanal:** o primeiro cron (segunda 04:00, horário de Brasília) ainda não rodou; conferir na segunda-feira que `_backups` ganhou o backup do dia.
+
+## Limpeza feita em 11/11/2026 (início da Fase 4)
+O proprietário apagou o Worker `controle-de-iniciais` no painel e autorizou apagar o banco vazio `controle-juridico-teste`; o banco foi apagado pelo conector (sem tabelas, só o Worker abandonado o usava) e o arquivo `wrangler.teste.jsonc` saiu do repositório. Hoje existe só o Worker `controle-juridico` e o banco `controle-juridico`.
