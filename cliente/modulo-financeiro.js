@@ -26,7 +26,12 @@ function mfCss(){
     '.mf-hero{background:linear-gradient(160deg,rgba(201,133,0,.13),rgba(201,133,0,.03) 60%),var(--surface)}.mf-hero .md-k{color:var(--accent)}.mf-big{display:block;font-size:1.8rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '.mf-bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px}.mf-bar i{display:block;height:100%;border-radius:99px;background:#17895A}' +
     '.mf-stk{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--surface-2);margin:2px 0 8px}.mf-stk i{display:block;height:100%}' +
-    '.mf-aviso{font-size:var(--t1);color:var(--ink-soft);margin:0 2px 10px}';
+    '.mf-aviso{font-size:var(--t1);color:var(--ink-soft);margin:0 2px 10px}' +
+    '.mf-mini{margin-bottom:10px;padding:11px 14px}.mf-mini-t{display:flex;justify-content:space-between;align-items:center;gap:8px}.mf-mini-v{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:2px}.mf-med{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.mf-med.neg{color:var(--urgente,#D93B3B)}' +
+    '.mf-chip{display:inline-block;border-radius:99px;padding:3px 10px;font-size:var(--t1);font-weight:700;background:var(--surface-2);color:var(--ink-soft)}.mf-chip.ok{background:rgba(23,137,90,.12);color:#17895A}.mf-chip.aviso{background:rgba(217,59,59,.12);color:#D93B3B}.mf-chipl{margin:2px 0 8px}' +
+    '.mf-duas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px;align-items:start}@media(max-width:999px){.mf-duas{grid-template-columns:minmax(0,1fr)}}' +
+    '.mf-cal{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:var(--t2);border-top:1px solid var(--border)}.mf-cal b{font-variant-numeric:tabular-nums;white-space:nowrap}.mf-cal.tot{border-top:2px solid var(--accent);font-weight:800;margin-top:2px}.mf-cal.tot b{font-size:var(--t4)}' +
+    '.md-kpis.mf-kp6{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:700px){.md-kpis.mf-kp6{grid-template-columns:repeat(2,minmax(0,1fr))}}';
   document.head.appendChild(st);
 }
 function mfBarra(atual){ return mdBarraHtml(MF_ABAS, atual, function(k){ return 'data-mf-aba="' + k + '"'; }); }
@@ -165,11 +170,36 @@ function mfObra(){
 (function(){ var orig = renderObra; renderObra = function(){ var x = orig.apply(this, arguments); try{ mfObra(); }catch(e){ console.error('sub-abas da obra', e); } return x; }; })();
 function mfObraResumo(r, cfg){
   var fin = cfg.financiamento || {}, perc = r.orcamento > 0 ? r.pago / r.orcamento * 100 : 0;
-  var hero = '<div class="md-card mf-hero"><div class="md-h"><span class="md-k">' + mdIc('wallet', MD_COR.ouro) + '<span>Dinheiro na conta da obra</span></span><button type="button" class="md-link" data-md-ir="sub:caixa">ver entradas ›</button></div>' +
-    '<b class="mf-big' + (r.saldo < -0.004 ? ' neg' : '') + '"' + (r.saldo < -0.004 ? ' style="color:var(--urgente,#D93B3B)"' : '') + '>' + fmtMoeda(r.saldo) + '</b>' + obBarra(r.pago, r.aPagar, r.orcamento) +
-    '<div class="md-foot">Gasto ' + fmtMoeda(r.pago) + ' · ' + fmtPerc(perc) + ' do orçamento' + (r.aPagar > 0.004 ? ' · a pagar ' + fmtMoeda(r.aPagar) : '') + '</div>' +
-    '<div class="md-foot">Aportes ' + fmtMoeda(r.aportado) + (r.liberado > 0.004 ? ' + liberações ' + fmtMoeda(r.liberado) : '') + (r.retirado > 0.004 ? ' − devolvido ' + fmtMoeda(r.retirado) : '') + ' − gastos pagos.' + (r.sobra > 0.004 && r.etapas.length ? ' Sobra acima do que falta gastar nas etapas: ' + fmtMoeda(r.sobra) + '.' : '') + '</div></div>';
-  var cmpObra = extObraComparacaoHtml(); if (cmpObra) hero = hero.replace(/<\/div>$/, '<div class="md-foot">' + cmpObra + '</div></div>');
+  /* "Dinheiro na conta da obra" em duas linhas (Fase 3.8): título e atalho; valor, situação do extrato e, se houver, a sobra */
+  var cx = null; try{ cx = extObraComparacao(extPendentes()); }catch(e){}
+  var chip = '', notaCx = '';
+  if (cx){
+    if (cx.app === null) notaCx = 'Extrato da conta da obra: <b>' + extMoeda(cx.extrato) + '</b> (de ' + extFmtQuando(cx.emitido) + ').';
+    else {
+      var dif = Math.abs(cx.dif), bate = dif <= 0.10;   /* diferença de centavos conta como "bate" */
+      chip = '<span class="mf-chip ' + (bate ? 'ok' : 'aviso') + '">' + (bate ? 'extrato bate' : 'extrato difere ' + fmtMoeda(dif)) + '</span>';
+      notaCx = 'Extrato da conta da obra: <b>' + extMoeda(cx.extrato) + '</b> (de ' + extFmtQuando(cx.emitido) + ')' + (bate ? (dif >= 0.005 ? ' · diferença de centavos' : '') : ' · ' + (cx.dif > 0 ? 'o extrato tem mais' : 'o app tem mais') + ' que a aba Construção');
+    }
+  }
+  var hero = '<div class="md-card mf-mini"><div class="mf-mini-t"><span class="md-k">' + mdIc('wallet', MD_COR.ouro) + '<span>Dinheiro na conta da obra</span></span><button type="button" class="md-link" data-md-ir="sub:caixa">entradas ›</button></div>' +
+    '<div class="mf-mini-v"><b class="mf-med' + (r.saldo < -0.004 ? ' neg' : '') + '">' + fmtMoeda(r.saldo) + '</b>' + chip + (notaCx ? '<span class="md-foot">' + notaCx + '</span>' : '') + '</div>' +
+    (r.sobra > 0.004 && r.etapas.length ? '<div class="md-foot">Sobra acima do que falta gastar nas etapas: ' + fmtMoeda(r.sobra) + '.</div>' : '') + '</div>';
+  /* custo estimado final: o que já foi pago + o que já foi lançado a pagar + o que ainda falta gastar nas etapas + o orçamento ainda sem etapa.
+     Etapa que já estourou o orçado entra pelo que foi gasto (pago + a pagar), sem contar duas vezes. */
+  var faltaEtapas = r2(r.etapas.reduce(function(t, x){ return t + Math.max(0, x.orcado - x.pago - x.aPagar); }, 0));
+  var custo = r2(r.pago + r.aPagar + faltaEtapas + (r.semDetalhar || 0));
+  var dCusto = r.orcamento > 0 ? (custo / r.orcamento - 1) * 100 : null;
+  var chipCusto = dCusto === null ? '' : (Math.abs(dCusto) < 0.05 ? '<span class="mf-chip ok">igual ao orçamento</span>' : (dCusto > 0 ? '<span class="mf-chip aviso">+ ' + fmtPerc(dCusto) + ' sobre o orçamento de ' + fmtMoeda(r.orcamento) + '</span>' : '<span class="mf-chip ok">' + fmtPerc(-dCusto) + ' abaixo do orçamento de ' + fmtMoeda(r.orcamento) + '</span>'));
+  var cal = function(rot, v, tot){ return '<div class="mf-cal' + (tot ? ' tot' : '') + '"><span>' + rot + '</span><b>' + fmtMoeda(v).replace(',00', '') + '</b></div>'; };
+  var cCusto = '<div class="md-card mf-hero mf-custo"><div class="md-h"><span class="md-k">' + mdIc('hammer', MD_COR.ouro) + '<span>Custo estimado final da obra</span></span></div><b class="mf-big">' + fmtMoeda(custo) + '</b>' + (chipCusto ? '<div class="mf-chipl">' + chipCusto + '</div>' : '') +
+    cal('Já pago', r.pago) + cal('+ A pagar (já lançado)', r.aPagar) + cal('+ Falta gastar nas etapas (orçado − pago − a pagar)', faltaEtapas) + cal('+ Falta detalhar (orçamento sem etapa)', r.semDetalhar || 0) + cal('= Custo estimado final', custo, true) +
+    '<div class="md-foot">Falta gastar ainda: ' + fmtMoeda(Math.max(0, r2(custo - r.pago))) + '. Etapa que já estourou o orçado entra pelo que foi gasto, sem ser contada duas vezes. É estimativa: não altera o orçamento.</div></div>';
+  var finV = fin.valor > 0 ? fin.valor : 0, proprios = Math.max(0, r2(custo - finV));
+  var aportado = r2((r.aportes.pf || 0) + (r.aportes.pj || 0) + (r.aportes.externo || 0) + (r.aportes.terceiro || 0) - (r.retirado || 0)), falta = Math.max(0, r2(proprios - aportado));
+  var cProprios = '<div class="md-card mf-proprios"><div class="md-h"><span class="md-k">' + mdIc('coins', MD_COR.verde) + '<span>Recursos próprios necessários</span></span></div><b class="mf-big">' + fmtMoeda(proprios) + '</b>' +
+    '<div class="md-foot">' + (finV > 0 ? 'custo estimado ' + fmtMoeda(custo) + ' − financiamento ' + fmtMoeda(finV) + ' <em style="font-style:normal">(' + (fin.status === 'aprovado' ? 'aprovado' : 'estimado') + ')</em>' : 'sem financiamento informado: o custo estimado inteiro é recurso próprio') + '</div>' +
+    cal('Já aportado (PF, PJ e outras origens)', aportado) + cal(falta > 0.004 ? 'Falta colocar' : 'Já cobre o que é necessário', falta, true) +
+    '<div class="md-foot">Fica junto do cartão “Caixa próprio necessário” e da tabela de juros, na sub-aba Dinheiro e financiamento. Não cria saldo nem altera o orçamento.</div></div>';
   var nAPagar = obraMov.filter(function(m){ return m.tipo === 'gasto' && m.status === 'apagar'; }).length;
   var kp = [
     { ir: 'sub:etapas', ic: 'hard-hat', cor: MD_COR.ouro, rot: 'Orçamento', v: fmtMoeda(r.orcamento), foot: r.orcamento > 0 ? fmtPerc(r.detalhado / r.orcamento * 100) + ' detalhado em etapas' : 'sem orçamento definido' },
@@ -178,7 +208,7 @@ function mfObraResumo(r, cfg){
     { ir: 'sub:etapas', ic: 'hammer', cor: MD_COR.roxo, rot: 'Ainda a gastar nas etapas', v: fmtMoeda(r.faltaGastar), foot: 'orçado das etapas menos o que já foi pago' },
     { ir: 'sub:caixa', ic: 'landmark', cor: MD_COR.verde, rot: 'Financiamento', v: fin.valor > 0 ? fmtMoeda(fin.valor) : '—', foot: (fin.valor > 0 ? (fin.status === 'aprovado' ? 'aprovado' : 'estimado') + (fin.banco ? ' · ' + escapeHtml(fin.banco) : '') + ' · ' : '') + 'liberado ' + fmtMoeda(r.liberado) },
     { ir: 'sub:etapas', ic: 'layers', cor: MD_COR.cinza, rot: 'Falta detalhar', v: fmtMoeda(r.semDetalhar || 0), foot: 'do orçamento ainda sem etapa' }];
-  var h = '<div class="mf-topo">' + hero + kp.map(mdKpi).join('') + '</div>';
+  var h = hero + '<div class="mf-duas">' + cCusto + cProprios + '</div><div class="md-kpis mf-kp6">' + kp.map(mdKpi).join('') + '</div>';
   var ets = r.etapas.filter(function(x){ return x.orcado > 0.004 || x.pago > 0.004 || x.aPagar > 0.004; }).slice(0, 8), sel = mfS.sel.obra; if (sel != null && sel >= ets.length) sel = mfS.sel.obra = null;
   var curto = function(n){ n = String(n || ''); return n.length > (ets.length > 5 ? 5 : 8) ? n.slice(0, ets.length > 5 ? 4 : 7) + '.' : n; };
   var g = mdCard('Orçado × realizado por etapa', !ets.length ? '<div class="md-vazio">Nenhuma etapa com valor. Use “+ Etapa” na sub-aba Etapas.</div>' :
