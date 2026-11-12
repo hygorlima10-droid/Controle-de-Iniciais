@@ -177,3 +177,6 @@ O cartão do dia em que se deve trabalhar num prazo (`agCartaoTrabalho`, `client
 
 ## Fase 5, etapa 5.1 (11/11/2026): regras de papéis no servidor
 Feita: `src/politica.js` ligado em `/api/db` e `/api/lote`; teste `permissoes`. Detalhes e decisões completas em `docs/DECISOES.md` ("Fase 5"). **Próxima: 5.2 (usuários e convites por link, em Configurações › Usuários)** — precisa de esboço em imagem e OK antes de implementar. Atenção: sem a tela da 5.2, nenhum usuário que não seja o proprietário existe em produção; as rotas de Diário/DataJud/notificações ficam só do proprietário até a 5.3.
+
+## Fase 5, etapa 5.2 (12/11/2026): usuários e convites por link
+Feita (servidor + tela + testes). Detalhes em `docs/DECISOES.md`. **Antes de publicar:** é a primeira vez que existem outros usuários em produção; testar com uma pessoa de confiança (etapa 5.9). Enquanto as etapas 5.3 a 5.7 não saem, advogado e estagiário convidados já entram, mas o app deles ainda é o mesmo (as telas só aparecem filtradas pelo servidor; Diário/DataJud/notificações dão 403 para advogado). **Recomendação: não convide ninguém em produção até a 5.7.** Próxima: 5.3 (visibilidade por participação e Publicações por OAB).

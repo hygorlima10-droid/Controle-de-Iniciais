@@ -100,13 +100,20 @@ if '/*SG-INICIO*/' in s:
 else:
     assert s.count('/*CF-FIM*/\n') == 1
     s = s.replace('/*CF-FIM*/\n', '/*CF-FIM*/\n' + bloco_sg)
+us = open(R + 'cliente/usuarios.js', encoding='utf-8').read()
+bloco_us = '/*US-INICIO*/\n' + us + '\n/*US-FIM*/\n'
+if '/*US-INICIO*/' in s:
+    s = re.sub(r'/\*US-INICIO\*/.*?/\*US-FIM\*/\n', lambda m: bloco_us, s, flags=re.S)
+else:
+    assert s.count('/*SG-FIM*/\n') == 1
+    s = s.replace('/*SG-FIM*/\n', '/*SG-FIM*/\n' + bloco_us)
 agi = open(R + 'cliente/agenda-importar.js', encoding='utf-8').read()
 bloco_agi = '/*AGI-INICIO*/\n' + agi + '\n/*AGI-FIM*/\n'
 if '/*AGI-INICIO*/' in s:
     s = re.sub(r'/\*AGI-INICIO\*/.*?/\*AGI-FIM\*/\n', lambda m: bloco_agi, s, flags=re.S)
 else:
-    assert s.count('/*SG-FIM*/\n') == 1
-    s = s.replace('/*SG-FIM*/\n', '/*SG-FIM*/\n' + bloco_agi)
+    assert s.count('/*US-FIM*/\n') == 1
+    s = s.replace('/*US-FIM*/\n', '/*US-FIM*/\n' + bloco_agi)
 agd = open(R + 'cliente/agenda-detalhe.js', encoding='utf-8').read()
 bloco_agd = '/*AGD-INICIO*/\n' + agd + '\n/*AGD-FIM*/\n'
 if '/*AGD-INICIO*/' in s:
