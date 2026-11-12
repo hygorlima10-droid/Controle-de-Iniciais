@@ -42,17 +42,25 @@ export const semAdvogado = (d) => oabsDoRegistro(d).length === 0;
 
 /* o que o advogado pode ver das coleções que dependem do vínculo com processos:
    números de processo e nomes/ids de clientes dos registros em que ele participa */
-export async function escopoDoAdvogado(env, auth) {
+export async function escopoDoAdvogado(env, auth, ignorar) {   // ignorar = [colecao, id]: calcula como se esse registro não existisse (para saber se ele é o único elo com o processo)
   const u = usu(auth), meus = new Set(u.oabs), esc = { processos: new Set(), clienteIds: new Set(), clienteNomes: new Set() };
   if (!meus.size) return esc;
+  /* o processo é a unidade: se o advogado está em qualquer registro de um processo (Inicial, Acordo, Alvará ou o próprio cadastro do processo),
+     ele passa a ver todos os registros daquele número, e os clientes deles */
+  const todos = [];
   for (const col of PARTICIPACAO) {
-    const { results } = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ?').bind(col).all();
+    const { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ?').bind(col).all();
     for (const r of results) {
-      const d = JSON.parse(r.dados); if (!oabsDoRegistro(d).some((k) => meus.has(k))) continue;
+      if (ignorar && ignorar[0] === col && ignorar[1] === r.id) continue;
+      const d = JSON.parse(r.dados); todos.push(d);
+      if (!oabsDoRegistro(d).some((k) => meus.has(k))) continue;
       const num = digitos(d.numero || d.numeroProcesso); if (num.length >= 15) esc.processos.add(num);
-      if (Array.isArray(d.clienteIds)) for (const i of d.clienteIds) esc.clienteIds.add(String(i));
-      if (d.cliente) esc.clienteNomes.add(normNome(d.cliente));
     }
+  }
+  for (const d of todos) {
+    if (!oabsDoRegistro(d).some((k) => meus.has(k)) && !esc.processos.has(digitos(d.numero || d.numeroProcesso))) continue;
+    if (Array.isArray(d.clienteIds)) for (const i of d.clienteIds) esc.clienteIds.add(String(i));
+    if (d.cliente) esc.clienteNomes.add(normNome(d.cliente));
   }
   return esc;
 }
@@ -65,7 +73,7 @@ export function podeVer(colecao, d, auth, esc) {
   if (LIVRES.has(colecao)) return true;
   if (u.papel === 'estagiario') return colecao !== 'agenda' || u.permissoes.verAgendas || agendaVisivel(d, u, null) || !!(d && d.processo);   // o estagiário vê o escritório inteiro (jurídico); a agenda de todos, se a permissão estiver ligada
   if (u.papel !== 'advogado') return false;
-  if (PARTICIPACAO.has(colecao)) return participa(auth, d);
+  if (PARTICIPACAO.has(colecao)) return participa(auth, d) || (!!esc && esc.processos.has(digitos(d && (d.numero || d.numeroProcesso))));   // ou o processo dele (mesmo número) tem outro registro com ele
   if (COM_PROCESSO.has(colecao)) return !!esc && esc.processos.has(digitos(d && (d.processo || d.numero)));
   if (colecao === 'clientes') return !!d && (d.criadoPor === u.id || (!!esc && (esc.clienteIds.has(String(d.id || '')) || esc.clienteNomes.has(normNome(d.nome)))));
   if (colecao === 'agenda') return agendaVisivel(d, u, esc);
@@ -131,8 +139,9 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
   if (u.papel !== 'advogado') return NEGADO();
   if (PARTICIPACAO.has(colecao)) {
     if (!u.oabs.length) return NEGADO('Cadastre a sua OAB antes de lançar registros.');
-    if (!antes) { if (!oabsDoRegistro(depois).length) return erro(400, 'invalid', 'Escolha os advogados responsáveis.'); }   // quem cadastra escolhe os responsáveis (o app sugere); o advogado não é incluído sozinho
-    else if (!participa(auth, depois)) return NEGADO('Você não pode se retirar deste registro.');
+    const doProcesso = (reg) => !!esc && esc.processos.has(digitos(reg.numero || reg.numeroProcesso));   // o registro herda os advogados do processo (mesmo número)
+    if (!antes) { if (!oabsDoRegistro(depois).length && !doProcesso(depois)) return erro(400, 'invalid', 'Escolha os advogados responsáveis.'); }   // quem cadastra escolhe os responsáveis (o app sugere); o advogado não é incluído sozinho
+    else if (!participa(auth, depois)) { const sem = await escopoDoAdvogado(env, auth, [colecao, id]); if (!sem.processos.has(digitos(depois.numero || depois.numeroProcesso))) return NEGADO('Você não pode se retirar deste registro.'); }   // sair só vale se outro registro do mesmo processo mantém o vínculo
   }
   return null;
 }

@@ -223,7 +223,7 @@ function prFiltrar(filtro){
   var E = window.__horusEscopo, so = !!(E && E.ativo && E.modo === 'meus');   /* "Meus": só os processos cadastrados com um dos meus advogados */
   return mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){
     var arq = prArquivado(r);
-    if (so && !(r.doc && (r.doc.advogados || []).some(function(a){ return a && E.oabs.indexOf(a.oab) >= 0; }))) return false;
+    if (so && !(E.meuNum(r.num) || (r.doc && E.meuDoc(r.doc)))) return false;   /* "Meus": o processo é meu se eu estou nele ou em qualquer Inicial, Acordo ou Alvará do mesmo número */
     if (filtro === 'andamento' && arq) return false;
     if (filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
     if (filtro === 'revisar' && (arq || !(r.doc && r.doc.revisar))) return false;

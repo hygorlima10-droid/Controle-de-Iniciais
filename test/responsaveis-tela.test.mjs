@@ -7,8 +7,10 @@ let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA 
 const api = async (m, p, b) => { const x = await fetch(B + p, { method: m, headers: { cookie: 'sessao=' + TOK, 'content-type': 'application/json' }, body: b !== undefined ? JSON.stringify(b) : undefined }); let j = null; try { j = await x.json(); } catch (e) { } return { s: x.status, j }; };
 /* dados do teste: o proprietário indica a OAB 60456/GO; duas Iniciais (uma dele, uma de outro) e uma sem advogado */
 await api('PUT', '/api/usuarios/u1', { oabs: ['60456/GO'] });
-await api('PUT', '/api/db/casos/zz1', { tipo: 'inicial', status: 'protocolada', cliente: 'Zeta Meu', numeroProcesso: '', advogados: [{ oab: '60456/GO', nome: 'Dono' }], criadoEm: '2026-11-01T10:00:00Z' });
+await api('PUT', '/api/db/casos/zz1', { tipo: 'inicial', status: 'protocolada', cliente: 'Zeta Meu', numeroProcesso: '0000123-45.2024.8.09.0123', advogados: [{ oab: '60456/GO', nome: 'Dono' }], criadoEm: '2026-11-01T10:00:00Z' });
 await api('PUT', '/api/db/casos/zz2', { tipo: 'inicial', status: 'protocolada', cliente: 'Zeta Outro', numeroProcesso: '', advogados: [{ oab: '22222/GO', nome: 'Bruno' }], criadoEm: '2026-11-01T10:00:00Z' });
+await api('PUT', '/api/db/termosAcordo/zA', { partes: 'Acordo Zeta Herdado', numeroProcesso: '0000123-45.2024.8.09.0123', status: 'pendente', criadoEm: '2026-11-01T10:00:00Z' });   /* sem advogado, mas do mesmo processo da Inicial do proprietário */
+await api('PUT', '/api/db/termosAcordo/zB', { partes: 'Acordo Zeta Alheio', numeroProcesso: '0000777-77.2024.8.09.0777', status: 'pendente', criadoEm: '2026-11-01T10:00:00Z' });
 await api('PUT', '/api/db/casos/zz3', { tipo: 'inicial', status: 'protocolada', cliente: 'Zeta Sem', numeroProcesso: '', criadoEm: '2026-11-01T10:00:00Z' });
 const br = await chromium.launch(), ctx = await br.newContext({ viewport: { width: 1280, height: 900 } });
 await ctx.addCookies([{ name: 'sessao', value: TOK, url: B }]);
@@ -31,6 +33,8 @@ check(await page.locator('.es-aviso').innerText().then((x) => /sem advogado defi
 await page.click('.es-b[data-k="meus"]'); await page.waitForTimeout(700); await shot('meus');
 t = await corpo(); check(t.includes('Zeta Meu') && !t.includes('Zeta Outro') && !t.includes('Zeta Sem'), 'em "Meus" só aparece a Inicial em que a OAB do proprietário está entre os advogados');
 check(sub0 !== await page.locator('#subtitle').innerText() && /\b1 caso/.test(await page.locator('#subtitle').innerText()), 'e os totais da tela acompanham ("' + sub0 + '" → "' + await page.locator('#subtitle').innerText() + '")');
+const nAc = async () => (await page.locator('#menuNAcordos').innerText()).trim();
+check(await nAc() === '1', 'em "Meus" o número de Acordos cai para 1: o Acordo sem advogado entra porque o processo (mesmo número) é meu; o de outro processo, não (' + await nAc() + ')');
 await page.click('[data-tab="clientes"]'); await page.waitForTimeout(600);
 check(await page.locator('#esBarra').isVisible(), 'a barra também está em Clientes');
 await page.click('[data-tab="inicio"]'); await page.waitForTimeout(400);

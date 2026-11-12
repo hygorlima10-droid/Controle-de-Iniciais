@@ -54,8 +54,8 @@ export async function semAdvogadoRotas(request, env, partes, auth) {
     for (const [col, campo] of Object.entries(ALVOS)) for (const { id, d } of tudo[col]) {
       if (oabsDoRegistro(d).length || d.arquivado === true) continue;
       const num = digitos(d[campo]); let sug = null, motivo = '';
-      if (num.length >= 15 && porProc.has(num)) { sug = porProc.get(num); motivo = 'outro registro deste processo'; }
-      else { const cli = normNome(d.cliente || ''); if (cli && porCli.has(cli)) { sug = unico(porCli.get(cli)); if (sug) motivo = 'outros registros deste cliente'; } }
+      if (num.length >= 15 && porProc.has(num)) continue;   // herda os advogados do processo (outro registro com o mesmo número já os tem): não está sem advogado
+      { const cli = normNome(d.cliente || ''); if (cli && porCli.has(cli)) { sug = unico(porCli.get(cli)); if (sug) motivo = 'outros registros deste cliente'; } }
       itens.push({ colecao: col, id, rotulo: ROTULOS[col] || col, titulo: nomeDe(col, d), numero: String(d[campo] || ''), semNumero: num.length < 15, sugestao: sug ? sug.map((k) => ({ oab: k, nome: nomeDeOab.get(k) || k })) : [], motivo });
     }
     const contagem = {}; for (const i of itens) contagem[i.colecao] = (contagem[i.colecao] || 0) + 1;

@@ -39,7 +39,8 @@ check(ids(await caio('GET', '/api/db/casos')) === 'c1,c2,c3,c4,c5' && ids(await 
 console.log('\n— gravação do advogado');
 check((await bruno('PUT', '/api/db/casos/c1', { cliente: 'x', advogados: [{ oab: '22222/GO' }] })).s === 404, 'não altera registro de outro advogado');
 check((await bruno('DELETE', '/api/db/casos/c1')).s === 404 || (await bruno('DELETE', '/api/db/casos/c1')).s === 403, 'não exclui registro de outro advogado');
-check((await ana('PUT', '/api/db/casos/c1', { cliente: 'Cliente Um', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '22222/GO' }] })).s === 403, 'não se retira do registro ao salvar');
+check((await ana('PUT', '/api/db/casos/c5', { cliente: 'Cliente Um', numeroProcesso: '0000005-55.2024.8.09.0005', advogados: [{ oab: '22222/GO' }] })).s === 403, 'não se retira do registro ao salvar (processo em que só ela está)');
+check((await ana('PUT', '/api/db/casos/c1', { cliente: 'Cliente Um', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '22222/GO' }] })).s === 200, 'já no processo 0000001, em que ela também está no Acordo e no cadastro, o registro dela pode mudar de advogado: o processo continua dela');
 check((await ana('PUT', '/api/db/casos/c1', { cliente: 'Cliente Um alterado', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '11111/GO', nome: 'Ana' }] })).s === 200, 'altera o que é dela');
 check((await ana('POST', '/api/db/casos', { cliente: 'Sem responsável', numeroProcesso: '0000009-99.2024.8.09.0009' })).s === 400, 'quem cadastra precisa escolher os advogados responsáveis (o app não inclui ninguém sozinho)');
 const nov = await ana('POST', '/api/db/casos', { cliente: 'Novo', numeroProcesso: '0000009-99.2024.8.09.0009', advogados: [{ oab: '11111/GO', nome: 'Ana' }, { oab: '22222/GO', nome: 'Bruno' }] });

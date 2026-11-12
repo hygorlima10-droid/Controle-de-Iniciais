@@ -25,20 +25,30 @@
   function avisarCarga(c, lidos, completo) { try { window.dispatchEvent(new CustomEvent('horus-carga', { detail: { nome: c.nome, lidos: lidos, completo: completo } })); } catch (e) { } }
   /* Escopo "Meus | Escritório" do proprietário (Fase 5, 5.4): em "Meus" o app só enxerga os registros em que alguma das OABs dele está entre os advogados responsáveis.
      É só uma visão: o que está guardado (c.mapa) e as gravações não mudam. Quem não é proprietário não tem este botão (o servidor já filtra para ele). */
-  var ESC = window.__horusEscopo = { modo: 'escritorio', pub: 'minhas', ativo: false, oabs: [], procClienteIds: {} };
+  var ESC = window.__horusEscopo = { modo: 'escritorio', pub: 'minhas', ativo: false, oabs: [], procClienteIds: {}, procNums: {}, nums: {} };
   try { ESC.modo = localStorage.getItem('horus.escopo') === 'meus' ? 'meus' : 'escritorio'; ESC.pub = localStorage.getItem('horus.escopoPub') === 'todas' ? 'todas' : 'minhas'; } catch (e) { }
   var ESCOPADAS = { casos: 1, termosAcordo: 1, alvaras: 1 };
   function oabsDe(d) { return (d && Array.isArray(d.advogados) ? d.advogados : []).map(function (a) { return a && a.oab; }).filter(Boolean); }
-  function souMeu(d) { return oabsDe(d).some(function (k) { return ESC.oabs.indexOf(k) >= 0; }); }
+  function direto(d) { return oabsDe(d).some(function (k) { return ESC.oabs.indexOf(k) >= 0; }); }
+  function numDe(d) { var n = String(d && (d.numero || d.numeroProcesso) || '').replace(/\D/g, ''); return n.length >= 15 ? n : ''; }
+  /* o processo é a unidade: um registro é "meu" se eu estou nele OU se estou em qualquer outro registro do mesmo número (Inicial, Acordo, Alvará ou o cadastro do processo) */
+  function recalcNums() {
+    var n = {}; Object.keys(ESC.procNums || {}).forEach(function (k) { n[k] = 1; });
+    ['casos', 'termosAcordo', 'alvaras'].forEach(function (k) { var m = colecoes[k] ? colecoes[k].mapa : {}; Object.keys(m).forEach(function (id) { var x = numDe(m[id]); if (x && direto(m[id])) n[x] = 1; }); });
+    ESC.nums = n;
+  }
+  function souMeu(d) { if (direto(d)) return true; var x = numDe(d); return !!(x && ESC.nums && ESC.nums[x]); }
   function normN(x) { var t = String(x == null ? '' : x); try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { } return t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
   function escopoLigado() { return ESC.ativo && ESC.modo === 'meus'; }
-  function nomesMeus() { var n = {}; ['casos', 'termosAcordo', 'alvaras'].forEach(function (k) { var m = colecoes[k] ? colecoes[k].mapa : {}; Object.keys(m).forEach(function (id) { if (souMeu(m[id]) && m[id].cliente) n[normN(m[id].cliente)] = 1; }); }); return n; }
+  function nomesMeus() { var n = {}; recalcNums(); ['casos', 'termosAcordo', 'alvaras'].forEach(function (k) { var m = colecoes[k] ? colecoes[k].mapa : {}; Object.keys(m).forEach(function (id) { if (souMeu(m[id]) && m[id].cliente) n[normN(m[id].cliente)] = 1; }); }); return n; }
   function visivel(nome, id, d) {
     if (!escopoLigado()) return true;
-    if (ESCOPADAS[nome]) return souMeu(d);
+    if (ESCOPADAS[nome]) return souMeu(d);   // (recalcNums já rodou no início de c.docs)
     if (nome === 'clientes') { var nm = nomesMeus(); return !!ESC.procClienteIds[id] || !!nm[normN(d && d.nome)]; }
     return true;
   }
+  ESC.meuDoc = function (d) { recalcNums(); return souMeu(d); };
+  ESC.meuNum = function (n) { recalcNums(); return !!ESC.nums[String(n || '').replace(/\D/g, '')]; };
   ESC.aplicar = function (modo) {
     if (modo) { ESC.modo = modo === 'meus' ? 'meus' : 'escritorio'; try { localStorage.setItem('horus.escopo', ESC.modo); } catch (e) { } }
     Object.keys(colecoes).forEach(function (k) { colecoes[k].avisar(); });
@@ -49,7 +59,7 @@
     var c = colecoes[nome] = { nome: nome, mapa: {}, versoes: {}, fila: {}, inscritos: [], carregada: false, parcial: false, pendentes: 0, assinatura: '', token: '', timer: null };
     c.docs = function (lim) {
       var ids = Object.keys(c.mapa).sort();
-      if (escopoLigado()) ids = ids.filter(function (id) { return visivel(c.nome, id, c.mapa[id]); });
+      if (escopoLigado()) { recalcNums(); ids = ids.filter(function (id) { return visivel(c.nome, id, c.mapa[id]); }); }
       if (lim) ids = ids.slice(0, lim);
       return ids.map(function (id) { var v = c.mapa[id]; return { id: id, data: function () { return JSON.parse(JSON.stringify(v)); } }; });
     };
@@ -103,6 +113,7 @@
         paginas++; docs = docs.concat(j.docs);
         if (j.mais && j.docs.length && paginas < MAX_PAGINAS) return pagina(j.docs[j.docs.length - 1].id);
         if (nome === 'processos') {   // guarda quais clientes estão nos processos "meus" (para o filtro de Clientes); a lista de processos continua inteira (o cadastro precisa conhecer todos, para não duplicar): a tela Processos é que filtra
+          var pn = {}; docs.forEach(function (d) { var x = numDe(d.data); if (x && direto(d.data)) pn[x] = 1; }); ESC.procNums = pn; recalcNums();
           var ci = {}; docs.forEach(function (d) { if (souMeu(d.data) && Array.isArray(d.data.clienteIds)) d.data.clienteIds.forEach(function (i) { ci[String(i)] = 1; }); }); ESC.procClienteIds = ci;
         }
         return { docs: docs };
