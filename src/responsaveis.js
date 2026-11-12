@@ -29,7 +29,9 @@ export async function rosterAdvogados(env) {
 
 export async function equipeRotas(request, env) {
   if (request.method !== 'GET') return erro(405, 'method', 'Método não permitido.');
-  return json({ advogados: await rosterAdvogados(env) });
+  const { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ?').bind(COL_USU).all();
+  const estagiarios = results.map((r) => ({ id: r.id, ...JSON.parse(r.dados) })).filter((u) => u.papel === 'estagiario' && u.ativo !== false).map((u) => ({ id: u.id, nome: String(u.nome || '').slice(0, 80) }));
+  return json({ advogados: await rosterAdvogados(env), estagiarios });
 }
 
 async function carregarTudo(env) {
@@ -83,4 +85,37 @@ export async function semAdvogadoRotas(request, env, partes, auth) {
     return json({ ok: true, alterados: n });
   }
   return erro(405, 'method', 'Método não permitido.');
+}
+
+/* ---------- Agenda: carga por pessoa (visível para todos: só contagens, nunca o conteúdo dos itens) ----------
+   GET /api/agenda/carga?dias=7 → { inicio, dias, pessoas: [{ chave, nome, dias: [n…], total }] }
+   Conta prazos, audiências e tarefas abertas dos próximos dias por responsável; item sem responsável conta para os advogados do processo;
+   tarefa "só eu" (sem responsável, sem processo e não compartilhada) não entra: é privada. */
+const somaDias = (iso, n) => new Date(Date.parse(iso + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+export async function agendaRotas(request, env, partes) {
+  if (partes[1] !== 'carga' || request.method !== 'GET') return erro(404, 'not_found', 'Não encontrado.');
+  const dias = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get('dias') || '7', 10) || 7, 1), 14);
+  const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), fim = somaDias(hoje, dias - 1);
+  const tudo = await carregarTudo(env), { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ?').bind('agenda').all();
+  const roster = await rosterAdvogados(env), nomes = new Map(roster.map((r) => [r.oab, r.nome])), porProc = new Map(), arq = new Set();
+  for (const [col, campo] of Object.entries(ALVOS)) for (const { d } of tudo[col]) {
+    const num = digitos(d[campo]); if (num.length < 15) continue;
+    if (col === 'processos' && d.arquivado === true) arq.add(num);
+    const ks = oabsDoRegistro(d); if (ks.length) porProc.set(num, [...new Set([...(porProc.get(num) || []), ...ks])]);
+  }
+  const us = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ?').bind(COL_USU).all(), usuarios = new Map(us.results.map((r) => [r.id, JSON.parse(r.dados)]));
+  const chaveDe = (id) => { const u = usuarios.get(id); if (!u) return null; const k = (u.oabs || [])[0]; if (k) return k; nomes.set('u:' + id, u.nome || 'Usuário'); return 'u:' + id; };
+  const pessoas = new Map(), conta = (k, i) => { if (!k) return; if (!pessoas.has(k)) pessoas.set(k, { chave: k, nome: nomes.get(k) || k, dias: Array(dias).fill(0), total: 0 }); const p = pessoas.get(k); p.dias[i]++; p.total++; };
+  for (const r of results) {
+    const d = JSON.parse(r.dados); if (d.concluido === true || d.cancelado === true || !/^\d{4}-\d{2}-\d{2}$/.test(d.data || '') || d.data < hoje || d.data > fim) continue;
+    const num = digitos(d.processo); if (num.length >= 15 && arq.has(num)) continue;
+    let resp = Array.isArray(d.resp) && d.resp.length ? d.resp : (num.length >= 15 && porProc.has(num) ? porProc.get(num) : null);
+    if (!resp) { if (d.compartilhada === true || d.processo) resp = [chaveDe(d.criadoPor)].filter(Boolean); else continue; }
+    const i = Math.round((Date.parse(d.data) - Date.parse(hoje)) / 864e5);
+    for (const k of new Set(resp)) conta(k, i);
+  }
+  for (const r of roster) if (!pessoas.has(r.oab)) pessoas.set(r.oab, { chave: r.oab, nome: r.nome, dias: Array(dias).fill(0), total: 0 });
+  for (const [id, u] of usuarios) if (u.papel === 'estagiario' && u.ativo !== false && !pessoas.has('u:' + id)) pessoas.set('u:' + id, { chave: 'u:' + id, nome: u.nome || 'Usuário', dias: Array(dias).fill(0), total: 0 });
+  for (const p of pessoas.values()) if (p.chave.startsWith('u:')) p.nome = (usuarios.get(p.chave.slice(2)) || {}).nome || p.nome;
+  return json({ inicio: hoje, dias, pessoas: [...pessoas.values()].sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR')) });
 }

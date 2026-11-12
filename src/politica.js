@@ -80,10 +80,13 @@ export function podeVer(colecao, d, auth, esc) {
   return false;
 }
 /* agenda: a própria, as compartilhadas e as de processos em que participa (prazos e audiências do processo são sempre do escritório) */
+/* responsável: `resp` guarda chaves de pessoas — a OAB do advogado ("60456/GO") ou "u:<id>" (estagiário e quem não tem OAB) */
+export const ehResponsavel = (d, u) => Array.isArray(d && d.resp) && d.resp.some((k) => u.oabs.includes(k) || k === 'u:' + u.id);
 function agendaVisivel(d, u, esc) {
   d = d || {};
   if (d.criadoPor && d.criadoPor === u.id) return true;
   if (d.compartilhada === true) return true;
+  if (ehResponsavel(d, u)) return true;   // quem é responsável vê o item (prazo, audiência ou tarefa)
   return !!esc && !!d.processo && esc.processos.has(digitos(d.processo));
 }
 
@@ -129,7 +132,7 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes) { const ant = { ...antes, id: antes.id || id }; if (!podeVer(colecao, ant, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.'); }
   if (LIVRES.has(colecao)) return null;
-  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo)))) return NEGADO('Só quem criou pode alterar esta tarefa.');
+  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo))) && !ehResponsavel(antes, u)) return NEGADO('Só quem criou pode alterar esta tarefa.');
   if (!antes && (colecao === 'agenda' || colecao === 'clientes')) depois.criadoPor = u.id;
   if (antes && antes.criadoPor && (colecao === 'agenda' || colecao === 'clientes')) depois.criadoPor = antes.criadoPor;   // o autor não muda
   if (u.papel === 'estagiario') {
@@ -152,7 +155,7 @@ export async function autorizarExclusao(env, colecao, id, antes, auth, esc) {
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes && !podeVer(colecao, { ...antes, id: antes.id || id }, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.');
   if (!podeExcluir(auth)) return NEGADO('Você não tem permissão para excluir registros.');
-  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo)))) return NEGADO('Só quem criou pode excluir esta tarefa.');
+  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo))) && !ehResponsavel(antes, u)) return NEGADO('Só quem criou pode excluir esta tarefa.');
   return null;
 }
 
