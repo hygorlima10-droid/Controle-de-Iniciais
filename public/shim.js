@@ -23,11 +23,33 @@
      da coleção (quantidade + última alteração) mudou. Cada registro guarda a versão (carimbo) que o app leu, para o servidor detectar edição em outro aparelho. */
   var MAX_PAGINAS = 120;
   function avisarCarga(c, lidos, completo) { try { window.dispatchEvent(new CustomEvent('horus-carga', { detail: { nome: c.nome, lidos: lidos, completo: completo } })); } catch (e) { } }
+  /* Escopo "Meus | Escritório" do proprietário (Fase 5, 5.4): em "Meus" o app só enxerga os registros em que alguma das OABs dele está entre os advogados responsáveis.
+     É só uma visão: o que está guardado (c.mapa) e as gravações não mudam. Quem não é proprietário não tem este botão (o servidor já filtra para ele). */
+  var ESC = window.__horusEscopo = { modo: 'escritorio', pub: 'minhas', ativo: false, oabs: [], procClienteIds: {} };
+  try { ESC.modo = localStorage.getItem('horus.escopo') === 'meus' ? 'meus' : 'escritorio'; ESC.pub = localStorage.getItem('horus.escopoPub') === 'todas' ? 'todas' : 'minhas'; } catch (e) { }
+  var ESCOPADAS = { casos: 1, termosAcordo: 1, alvaras: 1 };
+  function oabsDe(d) { return (d && Array.isArray(d.advogados) ? d.advogados : []).map(function (a) { return a && a.oab; }).filter(Boolean); }
+  function souMeu(d) { return oabsDe(d).some(function (k) { return ESC.oabs.indexOf(k) >= 0; }); }
+  function normN(x) { var t = String(x == null ? '' : x); try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { } return t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function escopoLigado() { return ESC.ativo && ESC.modo === 'meus'; }
+  function nomesMeus() { var n = {}; ['casos', 'termosAcordo', 'alvaras'].forEach(function (k) { var m = colecoes[k] ? colecoes[k].mapa : {}; Object.keys(m).forEach(function (id) { if (souMeu(m[id]) && m[id].cliente) n[normN(m[id].cliente)] = 1; }); }); return n; }
+  function visivel(nome, id, d) {
+    if (!escopoLigado()) return true;
+    if (ESCOPADAS[nome]) return souMeu(d);
+    if (nome === 'clientes') { var nm = nomesMeus(); return !!ESC.procClienteIds[id] || !!nm[normN(d && d.nome)]; }
+    return true;
+  }
+  ESC.aplicar = function (modo) {
+    if (modo) { ESC.modo = modo === 'meus' ? 'meus' : 'escritorio'; try { localStorage.setItem('horus.escopo', ESC.modo); } catch (e) { } }
+    Object.keys(colecoes).forEach(function (k) { colecoes[k].avisar(); });
+    try { window.dispatchEvent(new CustomEvent('horus-escopo')); } catch (e) { }
+  };
   function colecao(nome) {
     if (colecoes[nome]) return colecoes[nome];
     var c = colecoes[nome] = { nome: nome, mapa: {}, versoes: {}, fila: {}, inscritos: [], carregada: false, parcial: false, pendentes: 0, assinatura: '', token: '', timer: null };
     c.docs = function (lim) {
       var ids = Object.keys(c.mapa).sort();
+      if (escopoLigado()) ids = ids.filter(function (id) { return visivel(c.nome, id, c.mapa[id]); });
       if (lim) ids = ids.slice(0, lim);
       return ids.map(function (id) { var v = c.mapa[id]; return { id: id, data: function () { return JSON.parse(JSON.stringify(v)); } }; });
     };
@@ -80,13 +102,16 @@
       return req('GET', '/api/db/' + encodeURIComponent(nome) + '?limit=1000' + (depois ? '&after=' + encodeURIComponent(depois) : '')).then(function (j) {
         paginas++; docs = docs.concat(j.docs);
         if (j.mais && j.docs.length && paginas < MAX_PAGINAS) return pagina(j.docs[j.docs.length - 1].id);
+        if (nome === 'processos') {   // guarda quais clientes estão nos processos "meus" (para o filtro de Clientes); a lista de processos continua inteira (o cadastro precisa conhecer todos, para não duplicar): a tela Processos é que filtra
+          var ci = {}; docs.forEach(function (d) { if (souMeu(d.data) && Array.isArray(d.data.clienteIds)) d.data.clienteIds.forEach(function (i) { ci[String(i)] = 1; }); }); ESC.procClienteIds = ci;
+        }
         return { docs: docs };
       });
     }
     return pagina('');
   }
   window.__horusListarTudo = listarTudo;
-  window.__horusDb = { total: function (n) { return Object.keys(colecao(n).mapa).length; }, completo: function () { return Object.keys(colecoes).every(function (n) { return !colecoes[n].parcial; }); }, versao: function (n, id) { return colecao(n).versoes[id]; } };
+  window.__horusDb = { recarregar: function (n) { return colecao(n).lerTudo(); }, total: function (n) { return Object.keys(colecao(n).mapa).length; }, completo: function () { return Object.keys(colecoes).every(function (n) { return !colecoes[n].parcial; }); }, versao: function (n, id) { return colecao(n).versoes[id]; } };
 
   /* Diário do "Desfazer": guarda como cada documento estava antes de cada gravação/exclusão (últimas 20 ações). */
   var ROTULO_COL = { casos: 'petição', termosAcordo: 'acordo', alvaras: 'alvará', clientes: 'cliente', despesas: 'despesa', receitasManuais: 'receita', metas: 'meta', saldos: 'saldo', obraMov: 'lançamento da obra', extratos: 'extrato' };

@@ -107,13 +107,20 @@ if '/*US-INICIO*/' in s:
 else:
     assert s.count('/*SG-FIM*/\n') == 1
     s = s.replace('/*SG-FIM*/\n', '/*SG-FIM*/\n' + bloco_us)
+es = open(R + 'cliente/responsaveis.js', encoding='utf-8').read()
+bloco_es = '/*ES-INICIO*/\n' + es + '\n/*ES-FIM*/\n'
+if '/*ES-INICIO*/' in s:
+    s = re.sub(r'/\*ES-INICIO\*/.*?/\*ES-FIM\*/\n', lambda m: bloco_es, s, flags=re.S)
+else:
+    assert s.count('/*US-FIM*/\n') == 1
+    s = s.replace('/*US-FIM*/\n', '/*US-FIM*/\n' + bloco_es)
 agi = open(R + 'cliente/agenda-importar.js', encoding='utf-8').read()
 bloco_agi = '/*AGI-INICIO*/\n' + agi + '\n/*AGI-FIM*/\n'
 if '/*AGI-INICIO*/' in s:
     s = re.sub(r'/\*AGI-INICIO\*/.*?/\*AGI-FIM\*/\n', lambda m: bloco_agi, s, flags=re.S)
 else:
-    assert s.count('/*US-FIM*/\n') == 1
-    s = s.replace('/*US-FIM*/\n', '/*US-FIM*/\n' + bloco_agi)
+    assert s.count('/*ES-FIM*/\n') == 1
+    s = s.replace('/*ES-FIM*/\n', '/*ES-FIM*/\n' + bloco_agi)
 agd = open(R + 'cliente/agenda-detalhe.js', encoding='utf-8').read()
 bloco_agd = '/*AGD-INICIO*/\n' + agd + '\n/*AGD-FIM*/\n'
 if '/*AGD-INICIO*/' in s:
@@ -379,5 +386,21 @@ for _id in ('ic-proc', 'ic-gear'):
     _ms = list(re.finditer(r'<symbol id="' + _id + r'"[^>]*>.*?</symbol>', s, flags=re.S))
     for _m in reversed(_ms[1:]): s = s[:_m.start()] + s[_m.end():]
 
+
+rep('<div class="form-error" id="formError"></div>', '<div class="field" id="esResp_casos"></div>\n      <div class="form-error" id="formError"></div>')
+rep('<div class="form-error" id="formErrorAcordo"></div>', '<div class="field" id="esResp_termosAcordo"></div>\n      <div class="form-error" id="formErrorAcordo"></div>')
+rep('<div class="form-error" id="formErrorAlvara"></div>', '<div class="field" id="esResp_alvaras"></div>\n      <div class="form-error" id="formErrorAlvara"></div>')
+rep("    qs('modalTitle').textContent = 'Nova inicial';\n", "    qs('modalTitle').textContent = 'Nova inicial';\n    esRespIniciar('casos', null);\n")
+rep("    qs('modalTitle').textContent = 'Editar inicial';\n", "    qs('modalTitle').textContent = 'Editar inicial';\n    esRespIniciar('casos', c);\n")
+rep("    qs('modalAcordoTitle').textContent = 'Novo termo de acordo';\n", "    qs('modalAcordoTitle').textContent = 'Novo termo de acordo';\n    esRespIniciar('termosAcordo', null);\n")
+rep("    qs('modalAcordoTitle').textContent = 'Editar termo de acordo';\n", "    qs('modalAcordoTitle').textContent = 'Editar termo de acordo';\n    esRespIniciar('termosAcordo', a);\n")
+rep("    qs('modalAlvaraTitle').textContent = 'Novo alvará';\n", "    qs('modalAlvaraTitle').textContent = 'Novo alvará';\n    esRespIniciar('alvaras', null);\n")
+rep("    qs('modalAlvaraTitle').textContent = 'Editar alvará';\n", "    qs('modalAlvaraTitle').textContent = 'Editar alvará';\n    esRespIniciar('alvaras', a);\n")
+rep("    qs('saveBtn').disabled = true;\n    var casoAntAt =", "    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n    qs('saveBtn').disabled = true;\n    var casoAntAt =")
+rep("    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)")
+rep("    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)")
+rep("    try{ window.scrollTo(0, 0); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ window.scrollTo(0, 0); }catch(e){}\n    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
+
+# ---------- Fase 5, etapa 5.4: advogados responsáveis e escopo "Meus | Escritório" (ganchos; cliente/responsaveis.js tem a lógica) ----------

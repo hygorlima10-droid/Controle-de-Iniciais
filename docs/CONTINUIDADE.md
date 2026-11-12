@@ -183,3 +183,6 @@ Feita (servidor + tela + testes). Detalhes em `docs/DECISOES.md`. **Antes de pub
 
 ## Fase 5, etapa 5.3 (12/11/2026): publicações por OAB
 Feita (servidor). Detalhes em `docs/DECISOES.md`. Próxima: **5.4** ("Meus | Escritório" nas listas do proprietário, campo "Advogados responsáveis" e a revisão de processos sem advogado definido, com a indicação das OABs do proprietário) — tem tela, então vem com esboço em imagem.
+
+## Fase 5, etapa 5.4 (12/11/2026): Meus | Escritório, advogados responsáveis, sem advogado
+Feita (servidor + tela + testes), detalhes em `docs/DECISOES.md`. **Próxima: 5.5** (Agenda: "Minha agenda | Escritório", responsáveis em tarefa/prazo/audiência sugeridos pelo cadastro do processo, tarefas compartilhadas; o proprietário abre em "Minha agenda"). Tem tela: precisa de esboço em imagem e OK antes.

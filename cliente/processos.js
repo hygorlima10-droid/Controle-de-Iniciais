@@ -220,8 +220,10 @@ function prPainel(){
 /* a lista que o filtro e a busca deixam (usada na tela e nos relatórios) */
 function prFiltrar(filtro){
   var mp = prMapa(), q = normNome(prS.busca), pmEsp = prS.f.esp === 'parado' ? pendentesPorDoc() : null; filtro = filtro || prS.filtro;
+  var E = window.__horusEscopo, so = !!(E && E.ativo && E.modo === 'meus');   /* "Meus": só os processos cadastrados com um dos meus advogados */
   return mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){
     var arq = prArquivado(r);
+    if (so && !(r.doc && (r.doc.advogados || []).some(function(a){ return a && E.oabs.indexOf(a.oab) >= 0; }))) return false;
     if (filtro === 'andamento' && arq) return false;
     if (filtro === 'prazo' && (arq || !prPrazosAbertos(r).length)) return false;
     if (filtro === 'revisar' && (arq || !(r.doc && r.doc.revisar))) return false;
@@ -527,9 +529,10 @@ function prDesenhar(){
     '<div class="field"><label class="field-label" for="pr_proxdata">Fazer até (a data coloca a tarefa na Agenda)</label><input type="date" id="pr_proxdata" value="' + escapeHtml(doc ? (doc.proximaData || '') : '') + '">' + (pxi && pxi.feito ? '<div class="saldo-data" style="color:var(--success)">✓ Concluída' + (pxi.concluidoEm ? ' em ' + escapeHtml(fmtData(pxi.concluidoEm)) : '') + '. Escreva a próxima ou limpe o campo.</div>' : '') + '</div>';
   h += '<div class="field"><label class="field-label" for="pr_obs">Observações</label><textarea id="pr_obs" rows="3" maxlength="600" placeholder="Anotações sobre o processo">' + escapeHtml(novo ? '' : ((doc && doc.obs) || '')) + '</textarea></div>';
   if (novo) h += '<div class="field"><label class="field-label" for="pr_hon">Honorários</label><select id="pr_hon" class="filter-select" style="width:100%">' + ['sem', 'quitados'].map(function(k){ return '<option value="' + k + '">' + PR_HON[k] + '</option>'; }).join('') + '<option value="receber">Tenho honorários a receber (fixo, êxito…)</option></select><div class="saldo-data">Ao escolher a última opção, depois de salvar abre o cadastro dos honorários.</div></div>';
+  h += '<div class="field" id="esResp_processos"></div>';
   h += '<div class="form-error" id="pr_erro"></div><button type="button" class="btn btn-primary" data-prf="salvar" style="width:100%;justify-content:center;">' + (novo ? 'Cadastrar processo' : 'Salvar') + '</button>';
   if (!novo) h += (arq ? '<button type="button" class="btn btn-ghost" data-prf="reabrir" style="width:100%;justify-content:center;">Reabrir processo</button>' : '<button type="button" class="btn btn-ghost" data-prf="arquivar" style="width:100%;justify-content:center;">Concluir e arquivar</button>') + (doc && !r.links.length ? '<button type="button" class="btn-text" data-prf="excluir" style="color:var(--urgente)">Excluir este processo</button>' : '');
-  qs('prCorpo').innerHTML = h; prChips(); prInfoNumero(); prRefazVinc(); try{ adAbrirData(qs('pr_ajuiz')); adAbrirData(qs('pr_proxdata')); }catch(e){}
+  qs('prCorpo').innerHTML = h; try{ esRespIniciar('processos', doc); }catch(e){} prChips(); prInfoNumero(); prRefazVinc(); try{ adAbrirData(qs('pr_ajuiz')); adAbrirData(qs('pr_proxdata')); }catch(e){}
   prEd.buscadoDj = '';
   if (novo){ prEd.iniPartes = qs('pr_partes').value; prEd.buscado = ''; if (qs('pr_numero').value.trim()){ prBuscarDados(); prBuscarDatajud(); } }
 }
@@ -545,6 +548,7 @@ function prSalvar(){
   campos.proxima = qs('pr_prox').value.trim(); campos.proximaData = campos.proxima ? (qs('pr_proxdata').value || '') : '';
   var hon = qs('pr_hon'), querHon = hon && hon.value === 'receber'; if (hon) campos.honorarios = querHon ? ((ex && ex.doc && PR_HON[ex.doc.honorarios]) ? ex.doc.honorarios : 'sem') : hon.value;
   var ho = qs('pr_honobs'); if (ho) campos.honObs = ho.value.trim();
+  if (!esRespAplicar('processos', campos, err)) return;
   var doc = ex && ex.doc, p, vincId = novo && prEd.vinc ? prEd.vinc : null, vincAnt = '';
   var pedirAuto = null;
   if (doc && doc.revisar && campos.clienteIds.length){ pedirAuto = { cli: campos.clienteIds[0], nome: doc.parteNome || '' }; campos.revisar = ''; campos.revisadoEm = new Date().toISOString(); campos.sugestaoClienteId = ''; }

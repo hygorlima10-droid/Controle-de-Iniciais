@@ -99,7 +99,7 @@ function pbQuandoAtualizou(){
 function pbCarregar(silencioso){
   if (!window.__SERVIDOR) return Promise.resolve();
   pbS.carregando = true;
-  return Promise.all([pbApi('/api/djen/estado'), pbApi('/api/djen/lista?dias=90')]).then(function(r){
+  return Promise.all([pbApi('/api/djen/estado'), pbApi('/api/djen/lista?dias=90' + ((window.__horusEscopo && window.__horusEscopo.ativo && window.__horusEscopo.pub === 'minhas') ? '&escopo=meus' : ''))]).then(function(r){
     pbS.oabs = r[0].oabs || []; pbS.ultima = r[0].ultimaLeitura; pbS.pubs = r[1].pubs || []; pbAgrupaTodos(); pbS.carregado = true;
   }).catch(function(e){ pbS.erro = e.message; pbS.carregado = true; }).then(function(){
     pbS.carregando = false; pbAtualizarBadge(); if (!silencioso && activeTab === 'publicacoes') pbRender();
