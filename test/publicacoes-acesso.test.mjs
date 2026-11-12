@@ -34,7 +34,7 @@ check((await ana('GET', '/api/djen/texto?id=101')).s === 404, 'texto de publica�
 check((await ana('GET', '/api/djen/processo?numero=0000002-22.2024.8.09.0002')).s === 403 && (await caio('GET', '/api/djen/processo?numero=1')).s === 400, 'advogado só consulta processos em que está cadastrado');
 
 console.log('\n— o que continua só do proprietário');
-for (const [n, u] of [['advogada', ana], ['estagiário', caio]]) check((await u('POST', '/api/djen/buscar', {})).s === 403 && (await u('POST', '/api/djen/importar', {})).s === 403 && (await u('PUT', '/api/djen/oabs', { oabs: [] })).s === 403 && (await u('POST', '/api/djen/advogados', {})).s === 403 && (await u('GET', '/api/djen/teste')).s === 403 && (await u('GET', '/api/notif/x')).s === 403, n + ': buscar, importar, OABs, completar advogados, teste e notificações são recusados');
+for (const [n, u] of [['advogada', ana], ['estagiário', caio]]) check((await u('POST', '/api/djen/buscar', {})).s === 403 && (await u('POST', '/api/djen/importar', {})).s === 403 && (await u('PUT', '/api/djen/oabs', { oabs: [] })).s === 403 && (await u('POST', '/api/djen/advogados', {})).s === 403 && (await u('GET', '/api/djen/teste')).s === 403, n + ': buscar, importar, OABs, completar advogados e teste são recusados (os avisos no celular agora são de cada pessoa, desde a 5.8)');
 check((await ana('GET', '/api/datajud/processo?numero=1')).s === 400, 'consulta ao DataJud está liberada (dado público do tribunal)');
 
 console.log('\n— OAB do proprietário (para "só as minhas")');

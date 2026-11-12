@@ -71,10 +71,10 @@ await page.addInitScript(`(function(){ var sub=null; var fake={endpoint:'http://
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2000);
 await page.evaluate(() => document.getElementById('abrirLembretesBtn').click()); await page.waitForTimeout(700);
 let txt = await page.evaluate(() => document.getElementById('ntCorpo').innerText);
-check(/10:00/.test(txt) && /vence hoje/.test(txt) && /Ativar notificações neste aparelho/.test(txt) && !!(await page.evaluate(() => document.getElementById('overlayLembretes').classList.contains('show'))), 'a tela "Lembretes no iPhone" explica as regras (10:00, só o que vence hoje) e oferece Ativar');
+check(/10:00/.test(txt) && /vence hoje/.test(txt) && /Ativar avisos neste aparelho/.test(txt) && !!(await page.evaluate(() => document.getElementById('overlayLembretes').classList.contains('show'))), 'a tela "Lembretes no iPhone" explica as regras (10:00, só o que vence hoje) e oferece Ativar');
 await api('DELETE', '/api/notif/inscrever', sub); await page.evaluate(() => document.querySelector('[data-nt="ativar"]').click()); await page.waitForTimeout(1500);
 j = await (await api('GET', '/api/notif/estado')).json(); txt = await page.evaluate(() => document.getElementById('ntCorpo').innerText);
-check(j.aparelhos === 1 && /Ativadas/.test(txt), 'tocar em Ativar pede a permissão, inscreve o aparelho e mostra "Ativadas"');
+check(j.aparelhos === 1 && /Ativados/.test(txt), 'tocar em Ativar pede a permissão, inscreve o aparelho e mostra "Ativados"');
 await page.waitForTimeout(5000); j = await (await api('GET', '/api/notif/estado')).json(); check(!!j.resumoEm, 'depois de ativar, o app envia sozinho a lista de vencimentos ao servidor');
 caixa.length = 0; await page.evaluate(() => document.querySelector('[data-nt="teste"]').click()); await page.waitForTimeout(1200); check(caixa.length === 1 && (await lidas())[0].titulo === 'Notificação de teste', 'o botão de teste manda a notificação ao aparelho');
 await page.evaluate(() => { const e = document.getElementById('ntEsconder'); e.checked = true; e.dispatchEvent(new Event('change', { bubbles: true })); }); await page.waitForTimeout(600);
