@@ -29,6 +29,7 @@ check(lista.length === 10, 'guarda 10 publicações (as repetidas entre as duas 
 const p1 = lista.find(p => p.id === '1'); check(p1 && p1.oabs.length === 2, 'a mesma publicação (mesmo id) fica com as duas OABs de origem');
 check(lista.every(p => p.th && p.th.length > 3), 'toda publicação nova guarda a impressão digital do texto');
 const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); await page.route(/fonts\./, x => x.abort());
+await page.addInitScript(() => { try { localStorage.setItem('horus.escopoPub', 'todas'); } catch (e) { } });   /* o proprietário abre em "Minhas"; este teste usa duas OABs e precisa ver "Todas" */
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(4500);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="publicacoes"]').click()); await page.waitForTimeout(1500);
 await page.click('[data-pb="filtro"][data-v="todas"]'); await page.waitForTimeout(500);
