@@ -21,7 +21,9 @@ function esIniciar(){
     if (!oabs.length && dono) (r[2].oabs || []).forEach(function(o){ if (o.principal && o.numero) oabs.push(String(o.numero).replace(/\D/g, '').replace(/^0+/, '') + '/' + String(o.uf).toUpperCase()); });
     E.oabs = oabs; E.ativo = dono;
     if (dono && E.modo === 'meus' && typeof E.aplicar === 'function') E.aplicar();
-    if (dono && E.pub === 'minhas' && typeof pbS !== 'undefined' && pbS.carregado){ pbS.carregado = false; if (activeTab === 'publicacoes') pbRender(); }   // proprietário abre em "Minhas" publicações
+    if (dono && E.pub === 'minhas' && typeof pbCarregar === 'function' && typeof pbS !== 'undefined' && pbS.carregado){   // proprietário abre em "Minhas" publicações: relê já com o filtro (o que carregou antes de saber quem é o usuário veio inteiro)
+      pbCarregar(true).then(function(){ try{ if (activeTab === 'publicacoes') pbRender(); prDepois(); renderPainelAtencao(); }catch(e){} });
+    }
     esBarra();
   }).catch(function(){});
 }

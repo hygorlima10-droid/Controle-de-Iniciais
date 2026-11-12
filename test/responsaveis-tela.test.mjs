@@ -76,7 +76,7 @@ check(!(await page.locator('#overlayEsRevC').textContent()).includes('Zeta Sem')
 await page.evaluate(() => document.getElementById('overlayEsRev').classList.remove('show'));
 
 console.log('\n— Publicações: "Minhas" por padrão');
-urls.length = 0; await page.click('[data-tab="publicacoes"]'); await page.waitForTimeout(1500);
+await page.click('[data-tab="publicacoes"]'); await page.waitForTimeout(1500);
 check(await page.locator('.es-b.on').innerText() === 'Minhas' && (await page.locator('.es-b').allInnerTexts()).join() === 'Minhas,Todas', 'o proprietário abre em "Minhas" (com "Todas" ao lado)');
 check(urls.some((u) => u.includes('escopo=meus')), 'e o app pede ao servidor só as publicações das OABs dele');
 urls.length = 0; await page.click('.es-b[data-k="todas"]'); await page.waitForTimeout(1200);

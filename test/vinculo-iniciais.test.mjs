@@ -92,7 +92,7 @@ await f('PUT', '/api/db/casos/cb', Object.assign((await docs('casos')).filter(c 
 await f('PUT', '/api/db/casos/cc', Object.assign((await docs('casos')).filter(c => c.id === 'cc')[0], { id: undefined, semProcesso: true }));
 await page.reload(); await page.waitForTimeout(3500);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(800);
-check(await t('#prAvisoVinc') === '', 'sem pendências, o aviso da aba Processos some');
+check(!/Inicia/.test(await t('#prAvisoVinc')), 'sem pendências de Inicial, o aviso de Iniciais da aba Processos some (o de "ligações a revisar" é outro)');
 await page.evaluate(() => window.__horusTeste.prAbrirNovo({ numero: '5400200-20.2026.8.09.0107', nomes: [], ids: [], origem: 'publicacao' })); await page.waitForTimeout(400);
 check(await t('#pr_vinc') === '', 'sem pendências, o cadastro de processo não oferece mais o vínculo');
 // Iniciais criadas depois do corte TAMBÉM entram (o vínculo agora é permanente)
