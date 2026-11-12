@@ -105,6 +105,8 @@ console.log('\n— Clientes por papel');
   check(!/R\$|a receber/.test(subC), 'estagiário: o subtítulo não mostra o total a receber: "' + subC + '"');
   check(!temCobrar && !opts.includes('receber') && !opts.includes('atraso'), 'estagiário: sem botão "Cobrar" nem filtros de cobrança');
   check(/R\$/.test(await c.locator('#listClientes').innerText()), 'estagiário: continua vendo o valor de cada cliente');
+  const rec = await c.evaluate(() => { const r = {}; for (const sel of ['button[data-baixa-doc]', 'button[data-pf="baixa"]', 'button[data-acordo-status]', 'button[data-alvara-status]']) { const e = document.createElement('button'); e.setAttribute(sel.match(/\[([a-z-]+)(=|\])/)[1], sel.includes('=') ? 'baixa' : 'x'); document.body.appendChild(e); r[sel] = getComputedStyle(e).display; e.remove(); } const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('data-parcela', 'x'); document.body.appendChild(i); r.chk = getComputedStyle(i).pointerEvents; i.remove(); r.pode = window.__horusTeste.ppPodeReceber(); return r; });
+  check(Object.entries(rec).filter(([k]) => k.startsWith('button')).every(([, v]) => v === 'none') && rec.chk === 'none' && rec.pode === false, 'estagiário: sem "Registrar pagamento" / "Marcar como recebido" e os quadradinhos de pago só para ver: ' + JSON.stringify(rec));
   await c.context().close();
   const a = await abrir('ana'); await a.evaluate(() => document.querySelector('#drawer [data-tab="clientes"]').click()); await a.waitForTimeout(1200);
   const abA = await abasDe(a);

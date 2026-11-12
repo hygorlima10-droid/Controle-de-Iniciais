@@ -1714,6 +1714,8 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -10371,6 +10373,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     abrirBaixa({ titulo: 'Recebi R$', unidades: un, global: true });
   }
   function abrirBaixa(opts){
+    if (!ppPodeReceber()) return;   /* o estagiário não registra recebimento */
     bx.unidades = opts.unidades.filter(function(u){ return restanteUn(u) > 0.004; });
     bx.aoConcluir = opts.aoConcluir || null;
     bx.modo = 'cobrancas';
@@ -22092,6 +22095,8 @@ function ppPapel(){ return window.__papel || 'proprietario'; }
 function ppDono(){ return ppPapel() === 'proprietario'; }
 function ppVerTotais(){ if (ppDono()) return true; var e = window.__horusEu; return !!(e && e.permissoes && e.permissoes.verTotais); }
 /* cobrar clientes: o proprietário e o advogado (só os clientes dos processos dele, que são os que o servidor entrega); o estagiário não cobra */
+/* registrar ou desfazer recebimento: o estagiário não (o servidor também recusa); some o botão e os quadradinhos de "pago" ficam só para ver */
+function ppPodeReceber(){ return ppPapel() !== 'estagiario'; }
 function ppPodeCobrar(){ var p = ppPapel(); return p === 'proprietario' || p === 'advogado'; }
 function ppTelaPermitida(tab){ return ppDono() || !PP_TELAS_DONO[tab]; }
 /* a aba de quem pediu: devolve uma aba que a pessoa pode abrir (usada ao trocar de aba) */
@@ -22147,6 +22152,8 @@ function ppPor(n){
   var st = document.createElement('style');
   var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
   st.textContent = fin.map(function(s){ return '.so-central ' + s; }).join(',') + '{display:none!important}' +
+    '.papel-estagiario [data-baixa-doc],.papel-estagiario [data-pf="baixa"],.papel-estagiario [data-arq-act="baixa"],.papel-estagiario [data-acordo-status],.papel-estagiario [data-alvara-status],.papel-estagiario [data-receita-receber]{display:none!important}' +
+    '.papel-estagiario input[data-avista],.papel-estagiario input[data-parcela],.papel-estagiario input[data-acordo-parcela],.papel-estagiario input[data-exavista],.papel-estagiario input[data-exparcela]{pointer-events:none;opacity:.55}' +
     '.papel-estagiario #abrirCobrancaMenuBtn,.papel-estagiario #abrirCobrancaProprioBtn,.papel-estagiario [data-cli-cobrar],.papel-estagiario [data-pf="cobrar"]{display:none!important}' +
     '.sem-totais .ini-hero,.sem-totais .ini-kpi,.sem-totais #rsPainel,.sem-totais .rs-wrap,.sem-totais #stats{display:none!important}' +
     '#inicioAcoes{display:flex;flex-wrap:wrap;gap:8px;max-width:none}#inicioAcoes .acao{flex:0 0 auto;min-width:104px;padding:9px 16px}' +
@@ -22166,7 +22173,7 @@ function ppPor(n){
   }
   window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
 
 /*PP-FIM*/

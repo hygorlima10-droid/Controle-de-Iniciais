@@ -466,6 +466,7 @@ rep("qs('subtitle').textContent = 'Notificações, backup e exportações';", "q
 rep("qs('subtitle').textContent = ativos.length + (ativos.length === 1 ? ' cliente' : ' clientes') + ' · ' + fmtMoeda(tot.receber) + ' a receber';", "qs('subtitle').textContent = ativos.length + (ativos.length === 1 ? ' cliente' : ' clientes') + (ppVerTotais() ? ' · ' + fmtMoeda(tot.receber) + ' a receber' : '');")
 rep("(r.receber > 0.004 && !c.arquivado ? '<button type=\"button\" class=\"btn btn-ghost\" style=\"padding:6px 12px;font-size:var(--t3);\" data-cli-cobrar=\"'", "(r.receber > 0.004 && !c.arquivado && ppPodeCobrar() ? '<button type=\"button\" class=\"btn btn-ghost\" style=\"padding:6px 12px;font-size:var(--t3);\" data-cli-cobrar=\"'")
 rep("'<button type=\"button\" class=\"btn btn-ghost\" data-pf=\"cobrar\">' + (c.pagador === 'murilo' ? 'Relatório do Murilo' : 'Cobrar') + '</button>' +", "(ppPodeCobrar() ? '<button type=\"button\" class=\"btn btn-ghost\" data-pf=\"cobrar\">' + (c.pagador === 'murilo' ? 'Relatório do Murilo' : 'Cobrar') + '</button>' : '') +")
+rep("  function abrirBaixa(opts){\n", "  function abrirBaixa(opts){\n    if (!ppPodeReceber()) return;   /* o estagiário não registra recebimento */\n")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

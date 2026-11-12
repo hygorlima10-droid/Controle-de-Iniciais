@@ -16,6 +16,8 @@ function ppPapel(){ return window.__papel || 'proprietario'; }
 function ppDono(){ return ppPapel() === 'proprietario'; }
 function ppVerTotais(){ if (ppDono()) return true; var e = window.__horusEu; return !!(e && e.permissoes && e.permissoes.verTotais); }
 /* cobrar clientes: o proprietário e o advogado (só os clientes dos processos dele, que são os que o servidor entrega); o estagiário não cobra */
+/* registrar ou desfazer recebimento: o estagiário não (o servidor também recusa); some o botão e os quadradinhos de "pago" ficam só para ver */
+function ppPodeReceber(){ return ppPapel() !== 'estagiario'; }
 function ppPodeCobrar(){ var p = ppPapel(); return p === 'proprietario' || p === 'advogado'; }
 function ppTelaPermitida(tab){ return ppDono() || !PP_TELAS_DONO[tab]; }
 /* a aba de quem pediu: devolve uma aba que a pessoa pode abrir (usada ao trocar de aba) */
@@ -71,6 +73,8 @@ function ppPor(n){
   var st = document.createElement('style');
   var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
   st.textContent = fin.map(function(s){ return '.so-central ' + s; }).join(',') + '{display:none!important}' +
+    '.papel-estagiario [data-baixa-doc],.papel-estagiario [data-pf="baixa"],.papel-estagiario [data-arq-act="baixa"],.papel-estagiario [data-acordo-status],.papel-estagiario [data-alvara-status],.papel-estagiario [data-receita-receber]{display:none!important}' +
+    '.papel-estagiario input[data-avista],.papel-estagiario input[data-parcela],.papel-estagiario input[data-acordo-parcela],.papel-estagiario input[data-exavista],.papel-estagiario input[data-exparcela]{pointer-events:none;opacity:.55}' +
     '.papel-estagiario #abrirCobrancaMenuBtn,.papel-estagiario #abrirCobrancaProprioBtn,.papel-estagiario [data-cli-cobrar],.papel-estagiario [data-pf="cobrar"]{display:none!important}' +
     '.sem-totais .ini-hero,.sem-totais .ini-kpi,.sem-totais #rsPainel,.sem-totais .rs-wrap,.sem-totais #stats{display:none!important}' +
     '#inicioAcoes{display:flex;flex-wrap:wrap;gap:8px;max-width:none}#inicioAcoes .acao{flex:0 0 auto;min-width:104px;padding:9px 16px}' +
@@ -90,5 +94,5 @@ function ppPor(n){
   }
   window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
