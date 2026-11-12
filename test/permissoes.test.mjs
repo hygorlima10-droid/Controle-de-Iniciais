@@ -41,9 +41,9 @@ check((await bruno('PUT', '/api/db/casos/c1', { cliente: 'x', advogados: [{ oab:
 check((await bruno('DELETE', '/api/db/casos/c1')).s === 404 || (await bruno('DELETE', '/api/db/casos/c1')).s === 403, 'não exclui registro de outro advogado');
 check((await ana('PUT', '/api/db/casos/c1', { cliente: 'Cliente Um', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '22222/GO' }] })).s === 403, 'não se retira do registro ao salvar');
 check((await ana('PUT', '/api/db/casos/c1', { cliente: 'Cliente Um alterado', numeroProcesso: '0000001-11.2024.8.09.0001', advogados: [{ oab: '11111/GO', nome: 'Ana' }] })).s === 200, 'altera o que é dela');
-const nov = await ana('POST', '/api/db/casos', { cliente: 'Novo', numeroProcesso: '0000009-99.2024.8.09.0009' });
-check(nov.s === 200 && (await ana('GET', '/api/db/casos')).j.docs.find((d) => d.id === nov.j.id).data.advogados[0].oab === '11111/GO', 'o que ela cria já nasce com ela como advogada responsável');
-check(ids(await bruno('GET', '/api/db/casos')) === 'c2,c3', 'e o outro advogado não vê o que ela criou');
+check((await ana('POST', '/api/db/casos', { cliente: 'Sem responsável', numeroProcesso: '0000009-99.2024.8.09.0009' })).s === 400, 'quem cadastra precisa escolher os advogados responsáveis (o app não inclui ninguém sozinho)');
+const nov = await ana('POST', '/api/db/casos', { cliente: 'Novo', numeroProcesso: '0000009-99.2024.8.09.0009', advogados: [{ oab: '11111/GO', nome: 'Ana' }, { oab: '22222/GO', nome: 'Bruno' }] });
+check(nov.s === 200 && ids(await bruno('GET', '/api/db/casos')).includes(nov.j.id), 'ao escolher os responsáveis, o registro aparece para cada um deles');
 check((await ana('DELETE', '/api/db/casos/' + nov.j.id)).s === 403, 'advogado também só exclui com permissão (desligada por padrão)');
 check((await ana('PUT', '/api/db/casos/c5', { cliente: 'Cliente Um', advogados: [{ oab: '11111/GO' }], parcelas: [{ numero: 1, valor: 100, pago: true, dataRecebimento: '2026-01-10', recebidoEm: '2026-01-10T10:00:00Z' }, { numero: 2, valor: 100, pago: true, dataRecebimento: '2026-11-11' }] })).s === 200, 'o advogado marca recebimento no processo em que participa');
 const ag = await ana('POST', '/api/db/agenda', { tipo: 'tarefa', titulo: 'Minha', data: '2026-11-14' });

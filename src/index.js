@@ -11,6 +11,7 @@ import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao,
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { usuariosRotas } from './usuarios.js';
+import { equipeRotas, semAdvogadoRotas } from './responsaveis.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
 
@@ -531,6 +532,7 @@ const ROTAS = {
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
+  equipe: ['sessao', (r, e) => equipeRotas(r, e)], 'sem-advogado': ['proprietario', (r, e, p, a) => semAdvogadoRotas(r, e, p, a)],
   eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ papel, nome, oabs, permissoes }) => ({ papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);

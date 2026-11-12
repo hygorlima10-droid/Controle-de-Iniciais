@@ -131,7 +131,7 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
   if (u.papel !== 'advogado') return NEGADO();
   if (PARTICIPACAO.has(colecao)) {
     if (!u.oabs.length) return NEGADO('Cadastre a sua OAB antes de lançar registros.');
-    if (!antes) { const ja = new Set(oabsDoRegistro(depois)); if (![...ja].some((k) => u.oabs.includes(k))) depois.advogados = [...(Array.isArray(depois.advogados) ? depois.advogados : []), { oab: u.oabs[0], nome: u.nome }].slice(0, 12); }
+    if (!antes) { if (!oabsDoRegistro(depois).length) return erro(400, 'invalid', 'Escolha os advogados responsáveis.'); }   // quem cadastra escolhe os responsáveis (o app sugere); o advogado não é incluído sozinho
     else if (!participa(auth, depois)) return NEGADO('Você não pode se retirar deste registro.');
   }
   return null;
