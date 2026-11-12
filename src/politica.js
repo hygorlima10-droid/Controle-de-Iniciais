@@ -70,6 +70,7 @@ export function podeVer(colecao, d, auth, esc) {
   if (ehDono(auth)) return true;
   const u = usu(auth);
   if (colecao === 'config') return false;                       // config só pelas rotas de documento liberado (ver checarDocConfig)
+  if (colecao === 'repasses') return u.papel === 'advogado' && envolvidoNoRepasse(d, u);   // quem paga ou quem recebe (o proprietário vê todos)
   if (LIVRES.has(colecao)) return true;
   if (u.papel === 'estagiario') return colecao !== 'agenda' || u.permissoes.verAgendas || agendaVisivel(d, u, null) || !!(d && d.processo);   // o estagiário vê o escritório inteiro (jurídico); a agenda de todos, se a permissão estiver ligada
   if (u.papel !== 'advogado') return false;
@@ -80,6 +81,25 @@ export function podeVer(colecao, d, auth, esc) {
   return false;
 }
 /* agenda: a própria, as compartilhadas e as de processos em que participa (prazos e audiências do processo são sempre do escritório) */
+/* ---------- repasses entre advogados (coleção `repasses`) ---------- */
+export const envolvidoNoRepasse = (d, u) => { const ks = new Set(u.oabs); return !!d && ((d.de && ks.has(d.de.oab)) || (d.para && ks.has(d.para.oab))); };
+const STATUS_REPASSE = ['pendente', 'feito', 'confirmado', 'cancelado'];
+/* quem pode mudar o quê: quem paga marca "feito"; quem recebe confirma (ou devolve para "pendente"); qualquer envolvido ou o autor cancela */
+function checarRepasse(antes, depois, u) {
+  if (!depois || typeof depois !== 'object' || !depois.de || !depois.para || !(Number(depois.valor) > 0) || !STATUS_REPASSE.includes(depois.status)) return NEGADO('Repasse inválido.');
+  if (!antes) return u.papel === 'advogado' ? null : NEGADO();   // criar: quem marca o recebimento (advogado)
+  const pagador = new Set(u.oabs).has(antes.de && antes.de.oab), recebedor = new Set(u.oabs).has(antes.para && antes.para.oab), autor = antes.criadoPorId === u.id;
+  if (!pagador && !recebedor && !autor) return erro(404, 'not_found', 'Registro não encontrado.');
+  for (const k of ['valor', 'de', 'para', 'chave', 'docTipo', 'docId']) if (JSON.stringify(antes[k]) !== JSON.stringify(depois[k])) return NEGADO('O valor e as partes do repasse não mudam: cancele e refaça.');
+  const a = antes.status, b = depois.status;
+  if (a === b) return null;
+  if (b === 'cancelado') return a === 'confirmado' ? NEGADO('Repasse já confirmado.') : null;
+  if (a === 'pendente' && b === 'feito') return pagador ? null : NEGADO('Quem paga marca "já repassei".');
+  if ((a === 'feito' || a === 'pendente') && b === 'confirmado') return recebedor ? null : NEGADO('Quem recebe confirma.');
+  if (a === 'feito' && b === 'pendente') return recebedor ? null : NEGADO('Quem recebe devolve o aviso.');
+  return NEGADO('Mudança de situação não permitida.');
+}
+
 /* responsável: `resp` guarda chaves de pessoas — a OAB do advogado ("60456/GO") ou "u:<id>" (estagiário e quem não tem OAB) */
 export const ehResponsavel = (d, u) => Array.isArray(d && d.resp) && d.resp.some((k) => u.oabs.includes(k) || k === 'u:' + u.id);
 function agendaVisivel(d, u, esc) {
@@ -91,7 +111,7 @@ function agendaVisivel(d, u, esc) {
 }
 
 /* ---------- decisão por rota e coleção ---------- */
-const COL_JURIDICAS = new Set(['casos', 'termosAcordo', 'alvaras', 'clientes', 'processos', 'agenda', 'pecasAprendidas', 'prazosPub']);
+const COL_JURIDICAS = new Set(['repasses', 'casos', 'termosAcordo', 'alvaras', 'clientes', 'processos', 'agenda', 'pecasAprendidas', 'prazosPub']);
 /* coleção inteira: o papel pode abri-la? (a filtragem registro a registro vem depois) */
 export function checarAcessoColecao(colecao, auth) {
   if (ehDono(auth)) return null;
@@ -135,6 +155,7 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
   if (ehDono(auth)) { carimbarAutor(colecao, antes, depois, auth); return null; }
   const u = usu(auth);
   if (colecao === 'config') return checarDocConfig(id, auth);
+  if (colecao === 'repasses') { const r = checarRepasse(antes, depois, u); if (r) return r; if (!antes) depois.criadoPorId = u.id; return null; }
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes) { const ant = { ...antes, id: antes.id || id }; if (!podeVer(colecao, ant, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.'); }
   if (LIVRES.has(colecao)) return null;
@@ -157,7 +178,7 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
 export async function autorizarExclusao(env, colecao, id, antes, auth, esc) {
   if (ehDono(auth)) return null;
   const u = usu(auth);
-  if (colecao === 'config') return NEGADO();
+  if (colecao === 'config' || colecao === 'repasses') return NEGADO();
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes && !podeVer(colecao, { ...antes, id: antes.id || id }, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.');
   if (!podeExcluir(auth)) return NEGADO('Você não tem permissão para excluir registros.');

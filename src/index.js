@@ -11,6 +11,7 @@ import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao,
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { usuariosRotas } from './usuarios.js';
+import { avisarRepasse } from './repasses.js';
 import { equipeRotas, semAdvogadoRotas, agendaRotas } from './responsaveis.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
 import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
@@ -458,6 +459,7 @@ async function api(request, env, partes, auth) {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
     const novo = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
     const negPost = await autorizarGravacao(env, colecao, novo, null, dados, auth); if (negPost) return negPost;
+    if (colecao === 'repasses') await avisarRepasse(env, enviarAviso, novo, null, dados);
     if (registraColecao(colecao)) await env.DB.batch([stmtGravar(env, colecao, novo, dados), stmtRegistro(env, { op: 'criou', colecao, id: novo, titulo: tituloDe(colecao, dados) })]);
     else await gravar(env, colecao, novo, dados);
     return json({ id: novo });
@@ -472,6 +474,7 @@ async function api(request, env, partes, auth) {
       const at = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
       const neg = await autorizarGravacao(env, colecao, id, at ? JSON.parse(at.dados) : null, dados, auth); if (neg) return neg;
     }
+    if (colecao === 'repasses') { const at1 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first(); await avisarRepasse(env, enviarAviso, id, at1 ? JSON.parse(at1.dados) : null, dados); }
     if (new URL(request.url).searchParams.get('soNovo') === '1') {
       /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
       const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
