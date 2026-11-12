@@ -23,10 +23,16 @@ function mdLer(){
   try{ var o = JSON.parse(localStorage.getItem(MD_CHAVE) || '{}'); if (o && typeof o === 'object'){ mdS.sub = o.sub || {}; if (o.per === 12 || o.per === 6) mdS.per = o.per; } }catch(e){}
 }
 function mdGravar(){ try{ localStorage.setItem(MD_CHAVE, JSON.stringify({ sub: mdS.sub, per: mdS.per })); }catch(e){} }
+/* sub-abas do módulo: quem não tem "Ver totais" fica sem "Resumo" e "Recebimentos" (são os totais e gráficos de honorários) */
+function mdAbasDe(mod){
+  var d = MD_DEF[mod]; if (!d) return [];
+  var sem = (typeof ppVerTotais === 'function') && !ppVerTotais();
+  return sem ? d.abas.filter(function(a){ return a[0] !== 'resumo' && a[0] !== 'receb'; }) : d.abas;
+}
 function mdSubAtual(mod){
   mdLer();
-  var d = MD_DEF[mod], s = mdS.sub[mod];
-  return d && d.abas.some(function(a){ return a[0] === s; }) ? s : 'resumo';
+  var d = MD_DEF[mod], s = mdS.sub[mod], abas = mdAbasDe(mod);
+  return d && abas.some(function(a){ return a[0] === s; }) ? s : (abas[0] ? abas[0][0] : 'resumo');
 }
 /* troca a sub-aba; "lembrar" = foi o usuário que escolheu (fica gravado para a próxima vez) */
 function mdIrSub(mod, sub, lembrar){
@@ -309,7 +315,7 @@ function mdAplicar(mod){
     head.insertBefore(bar, head.firstChild);
     bar.addEventListener('click', function(ev){ var b = ev.target.closest ? ev.target.closest('[data-md-aba]') : null; if (b) mdIrSub(mod, b.getAttribute('data-md-aba')); });
   }
-  bar.innerHTML = d.abas.map(function(a){ return '<button type="button" role="tab" data-md-aba="' + a[0] + '" aria-selected="' + (a[0] === sub) + '" class="' + (a[0] === sub ? 'on' : '') + '">' + a[1] + '</button>'; }).join('');
+  bar.innerHTML = mdAbasDe(mod).map(function(a){ return '<button type="button" role="tab" data-md-aba="' + a[0] + '" aria-selected="' + (a[0] === sub) + '" class="' + (a[0] === sub ? 'on' : '') + '">' + a[1] + '</button>'; }).join('');
   var on = bar.querySelector('.on'); if (on && bar.scrollWidth > bar.clientWidth){ try{ bar.scrollLeft = Math.max(0, on.offsetLeft - 24); }catch(e){} }
   var p = document.getElementById('mdPainel-' + mod);
   if (!p){

@@ -199,6 +199,7 @@ function rcPerguntaClique(a){
 /* ---------- card "Repasses" no Início ---------- */
 function rcMeus(){ var ks = rcMinhas(); return rcS.lista.filter(function(r){ return r.status !== 'cancelado' || (r.para && ks.indexOf(r.para.oab) >= 0 && !(r.vistoPor && ks.some(function(k){ return r.vistoPor[k]; }))); }).filter(function(r){ return ks.indexOf(r.de && r.de.oab) >= 0 || ks.indexOf(r.para && r.para.oab) >= 0 || rcSouDono(); }); }
 function rcDesenharInicio(){
+  try{ ppDesenharHon(); }catch(e){}
   var el = qs('rcInicio'); if (!el) return;
   var ks = rcMinhas(), euPaga = function(r){ return ks.indexOf(r.de && r.de.oab) >= 0; }, euRecebo = function(r){ return ks.indexOf(r.para && r.para.oab) >= 0; }, visto = function(r){ return r.vistoPor && ks.some(function(k){ return r.vistoPor[k]; }); };
   var lin = [];

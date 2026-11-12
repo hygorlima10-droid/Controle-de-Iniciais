@@ -1700,6 +1700,9 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -1994,6 +1997,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       </div>
       <div class="ini-prazos" id="inicioPrazos"></div>
       <div class="ini-atencao">
+  <div id="ppHon"></div>
   <div id="rcInicio"></div>
   <section class="upcoming" id="atencaoSection" style="display:none;">
     <h2>Central de atenção<span class="count-badge" id="atencaoBadge"></span></h2>
@@ -4733,7 +4737,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     renderResumoGeral();
     if (activeTab === 'peticoes'){
       var stats = computeStats(true);
-      qs('subtitle').textContent = stats.count + (stats.count === 1 ? ' caso ativo' : ' casos ativos') + ' · ' + fmtMoeda(stats.total) + ' em honorários';
+      qs('subtitle').textContent = stats.count + (stats.count === 1 ? ' caso ativo' : ' casos ativos') + (ppVerTotais() ? ' · ' + fmtMoeda(stats.total) + ' em honorários' : '');
     }
   }
 
@@ -5284,11 +5288,11 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       if (open){
         var linhasParcelas = '';
         if (c.formaPagamento === 'avista' && c.avista){
-          linhasParcelas = '<div class="parcela-row"><label><input type="checkbox" data-avista="'+escapeHtml(c.id)+'" '+(c.avista.pago?'checked':'')+'> Pagamento à vista — '+fmtData(c.avista.data)+'</label><span class="p-info">'+fmtMoeda(c.valorHonorarios)+'</span></div>';
+          linhasParcelas = '<div class="parcela-row"><label><input type="checkbox" data-avista="'+escapeHtml(c.id)+'" '+(c.avista.pago?'checked':'')+'> Pagamento à vista — '+fmtData(c.avista.data)+'</label><span class="p-info">'+fmtMoeda(c.valorHonorarios)+ppPor(c.avista)+'</span></div>';
         } else if (c.formaPagamento === 'parcelado' && Array.isArray(c.parcelas)){
           linhasParcelas = c.parcelas.map(function(p){
             var parcP = somaParciais({ parciais: p.parciais });
-            return '<div class="parcela-row"><label><input type="checkbox" data-parcela="'+escapeHtml(c.id)+'" data-num="'+p.numero+'" '+(p.pago?'checked':'')+'> Parcela '+p.numero+' — '+fmtData(p.data)+'</label><span class="p-info">'+fmtMoeda(p.valor)+(!p.pago && parcP > 0 ? ' (falta '+fmtMoeda(Math.max(0, p.valor - parcP))+')' : '')+'</span></div>';
+            return '<div class="parcela-row"><label><input type="checkbox" data-parcela="'+escapeHtml(c.id)+'" data-num="'+p.numero+'" '+(p.pago?'checked':'')+'> Parcela '+p.numero+' — '+fmtData(p.data)+'</label><span class="p-info">'+fmtMoeda(p.valor)+(!p.pago && parcP > 0 ? ' (falta '+fmtMoeda(Math.max(0, p.valor - parcP))+')' : '')+ppPor(p)+'</span></div>';
           }).join('');
         }
         if (c.avista && !c.avista.pago && c.avista.parciais && c.avista.parciais.length){
@@ -5538,7 +5542,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     renderPainelAtencao();
     if (activeTab === 'acordos'){
       var s = computeStatsAcordos();
-      qs('subtitle').textContent = s.count + (s.count===1?' termo de acordo':' termos de acordo') + ' · ' + fmtMoeda(s.total) + ' em honorários';
+      qs('subtitle').textContent = s.count + (s.count===1?' termo de acordo':' termos de acordo') + (ppVerTotais() ? ' · ' + fmtMoeda(s.total) + ' em honorários' : '');
     }
   }
 
@@ -6090,7 +6094,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     renderPainelAtencao();
     if (activeTab === 'alvaras'){
       var s = computeStatsAlvaras();
-      qs('subtitle').textContent = s.count + (s.count===1?' alvará':' alvarás') + ' · ' + fmtMoeda(s.total) + ' em honorários';
+      qs('subtitle').textContent = s.count + (s.count===1?' alvará':' alvarás') + (ppVerTotais() ? ' · ' + fmtMoeda(s.total) + ' em honorários' : '');
     }
   }
 
@@ -21951,6 +21955,7 @@ function rcPerguntaClique(a){
 /* ---------- card "Repasses" no Início ---------- */
 function rcMeus(){ var ks = rcMinhas(); return rcS.lista.filter(function(r){ return r.status !== 'cancelado' || (r.para && ks.indexOf(r.para.oab) >= 0 && !(r.vistoPor && ks.some(function(k){ return r.vistoPor[k]; }))); }).filter(function(r){ return ks.indexOf(r.de && r.de.oab) >= 0 || ks.indexOf(r.para && r.para.oab) >= 0 || rcSouDono(); }); }
 function rcDesenharInicio(){
+  try{ ppDesenharHon(); }catch(e){}
   var el = qs('rcInicio'); if (!el) return;
   var ks = rcMinhas(), euPaga = function(r){ return ks.indexOf(r.de && r.de.oab) >= 0; }, euRecebo = function(r){ return ks.indexOf(r.para && r.para.oab) >= 0; }, visto = function(r){ return r.vistoPor && ks.some(function(k){ return r.vistoPor[k]; }); };
   var lin = [];
@@ -22029,6 +22034,38 @@ function ppItemAtencaoOk(x){
   if (dinheiro) return ppPapel() === 'advogado';
   return true;
 }
+
+/* ---------- "Honorários dos seus processos" (advogado com "Ver totais"): a parte dele, pela divisão cadastrada em cada registro ---------- */
+/* a fração que cabe a esta pessoa no registro: pela divisão; sem divisão e com um só advogado, tudo; sem divisão e com vários, não dá para saber (null) */
+function ppFracaoMinha(doc){
+  if (!doc) return null;
+  var ks = esMinhasChaves(), partes = doc.divisao && Array.isArray(doc.divisao.partes) ? doc.divisao.partes : [];
+  if (partes.length){ var s = 0, achou = false; partes.forEach(function(p){ if (p.oab && ks.indexOf(p.oab) >= 0){ s += Number(p.pct) || 0; achou = true; } }); return achou ? Math.max(0, Math.min(1, s / 100)) : null; }
+  var adv = Array.isArray(doc.advogados) ? doc.advogados.length : 0;
+  return adv <= 1 ? 1 : null;
+}
+function ppHonorariosMeus(){
+  var mes = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : todayISO().slice(0, 7), aReceber = 0, recebido = 0, sem = {};
+  listarUnidades().forEach(function(u){
+    if (u.arquivado) return;
+    var doc = rcDocDe(u), f = ppFracaoMinha(doc);
+    if (f === null){ sem[u.docTipo + '|' + u.docId] = 1; return; }
+    aReceber += restanteUn(u) * f; recebido += recebidoNoMesUn(u, mes) * f;
+  });
+  return { aReceber: aReceber, recebido: recebido, sem: Object.keys(sem).length, mes: mes };
+}
+function ppDesenharHon(){
+  var el = document.getElementById('ppHon'); if (!el) return;
+  if (ppPapel() !== 'advogado' || !ppVerTotais()){ el.innerHTML = ''; return; }
+  var h = ppHonorariosMeus();
+  el.innerHTML = '<div class="ini-card"><div class="lbl">Honorários dos seus processos</div><div class="hero-val" style="font-size:var(--t7,22px)">' + fmtMoeda(h.aReceber) + ' <span class="saldo-data" style="font-weight:600">sua parte a receber</span></div>' +
+    '<div class="saldo-data">recebido em ' + mesLabel(h.mes) + ': ' + fmtMoeda(h.recebido) + ' · só os processos em que você está' + (h.sem ? ' · ' + h.sem + (h.sem === 1 ? ' registro sem divisão definida não entra' : ' registros sem divisão definida não entram') : '') + '</div></div>';
+}
+/* rótulo "recebida por X" nas parcelas pagas de processos com divisão */
+function ppPor(n){
+  var s = n && n.pago && n.divisaoRec && n.divisaoRec.por ? String(n.divisaoRec.por).split(' ')[0] : '';
+  return s ? ' <span class="pp-por">recebida por ' + escapeHtml(s) + '</span>' : '';
+}
 (function(){
   var st = document.createElement('style');
   var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
@@ -22045,12 +22082,13 @@ function ppItemAtencaoOk(x){
     var cf = document.querySelector('#drawer [data-tab="configuracoes"] .lab'); if (cf) cf.textContent = 'Minha conta';
     try{ if (typeof TITULOS_TELA !== 'undefined') TITULOS_TELA.configuracoes = 'Minha conta'; if (typeof atualizarTituloTela === 'function') atualizarTituloTela(); }catch(e){}
     try{ if (typeof renderPainelAtencao === 'function') renderPainelAtencao(); }catch(e){}
+    try{ if (typeof MD_DEF !== 'undefined' && MD_DEF[activeTab]) mdRedesenhar(activeTab); }catch(e){}
     try{ var bg = document.getElementById('buscaGlobalInput'); if (bg) bg.placeholder = 'Buscar em tudo: clientes, processos, publicações…'; }catch(e){}
     try{ var m = document.getElementById('relModoSeg'); if (m && typeof relModo !== 'undefined') relModo = 'proprio'; }catch(e){}
   }
-  window.addEventListener('horus-eu', aplicar);
+  window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
 
 /*PP-FIM*/
@@ -22817,10 +22855,16 @@ function mdLer(){
   try{ var o = JSON.parse(localStorage.getItem(MD_CHAVE) || '{}'); if (o && typeof o === 'object'){ mdS.sub = o.sub || {}; if (o.per === 12 || o.per === 6) mdS.per = o.per; } }catch(e){}
 }
 function mdGravar(){ try{ localStorage.setItem(MD_CHAVE, JSON.stringify({ sub: mdS.sub, per: mdS.per })); }catch(e){} }
+/* sub-abas do módulo: quem não tem "Ver totais" fica sem "Resumo" e "Recebimentos" (são os totais e gráficos de honorários) */
+function mdAbasDe(mod){
+  var d = MD_DEF[mod]; if (!d) return [];
+  var sem = (typeof ppVerTotais === 'function') && !ppVerTotais();
+  return sem ? d.abas.filter(function(a){ return a[0] !== 'resumo' && a[0] !== 'receb'; }) : d.abas;
+}
 function mdSubAtual(mod){
   mdLer();
-  var d = MD_DEF[mod], s = mdS.sub[mod];
-  return d && d.abas.some(function(a){ return a[0] === s; }) ? s : 'resumo';
+  var d = MD_DEF[mod], s = mdS.sub[mod], abas = mdAbasDe(mod);
+  return d && abas.some(function(a){ return a[0] === s; }) ? s : (abas[0] ? abas[0][0] : 'resumo');
 }
 /* troca a sub-aba; "lembrar" = foi o usuário que escolheu (fica gravado para a próxima vez) */
 function mdIrSub(mod, sub, lembrar){
@@ -23103,7 +23147,7 @@ function mdAplicar(mod){
     head.insertBefore(bar, head.firstChild);
     bar.addEventListener('click', function(ev){ var b = ev.target.closest ? ev.target.closest('[data-md-aba]') : null; if (b) mdIrSub(mod, b.getAttribute('data-md-aba')); });
   }
-  bar.innerHTML = d.abas.map(function(a){ return '<button type="button" role="tab" data-md-aba="' + a[0] + '" aria-selected="' + (a[0] === sub) + '" class="' + (a[0] === sub ? 'on' : '') + '">' + a[1] + '</button>'; }).join('');
+  bar.innerHTML = mdAbasDe(mod).map(function(a){ return '<button type="button" role="tab" data-md-aba="' + a[0] + '" aria-selected="' + (a[0] === sub) + '" class="' + (a[0] === sub ? 'on' : '') + '">' + a[1] + '</button>'; }).join('');
   var on = bar.querySelector('.on'); if (on && bar.scrollWidth > bar.clientWidth){ try{ bar.scrollLeft = Math.max(0, on.offsetLeft - 24); }catch(e){} }
   var p = document.getElementById('mdPainel-' + mod);
   if (!p){

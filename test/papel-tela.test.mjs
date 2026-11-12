@@ -71,6 +71,30 @@ console.log('\n— proprietário não muda');
   check(await p.locator('#bodyFinanceiro').isVisible(), 'o proprietário abre as Finanças');
   await p.context().close();
 }
+console.log('\n— totais e honorários por papel');
+{
+  const c = await abrir('caio'); await c.evaluate(() => document.querySelector('#drawer [data-tab="peticoes"]').click()); await c.waitForTimeout(900);
+  const abas = await c.evaluate(() => [...document.querySelectorAll('#mdAbas-peticoes button')].map((b) => b.textContent.trim()));
+  const sub = await c.locator('#subtitle').innerText();
+  check(!abas.some((x) => /Resumo|Recebimentos/.test(x)) && abas.length >= 2, 'estagiário sem "Ver totais": Iniciais sem as sub-abas Resumo e Recebimentos: ' + abas.join(' · '));
+  check(!/R\$/.test(sub), 'o subtítulo não soma honorários: "' + sub + '"');
+  await c.context().close();
+  const a = await abrir('ana'); await a.evaluate(() => document.querySelector('#drawer [data-tab="peticoes"]').click()); await a.waitForTimeout(900);
+  const abasA = await a.evaluate(() => [...document.querySelectorAll('#mdAbas-peticoes button')].map((b) => b.textContent.trim()));
+  check(abasA.some((x) => /Resumo/.test(x)) && abasA.some((x) => /Recebimentos/.test(x)), 'advogada com "Ver totais": Iniciais continua com Resumo e Recebimentos: ' + abasA.join(' · '));
+  await a.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await a.waitForTimeout(800);
+  const h = await a.evaluate(() => window.__horusTeste.ppHonorariosMeus());
+  const cardTxt = await a.locator('#ppHon').innerText();
+  check(h.aReceber >= 700 && /Honorários dos seus processos/.test(cardTxt) && /700,00|R\$/.test(cardTxt), 'o Início da advogada mostra "Honorários dos seus processos" só com a parte dela: a receber ' + h.aReceber + ' · ' + cardTxt.replace(/\n/g, ' ').slice(0, 120));
+  check(!/Cobranca do Bruno/.test(JSON.stringify(h)) && h.aReceber < 1400, 'sem somar o processo do outro advogado (a receber ' + h.aReceber + ')');
+  const por = await a.evaluate(() => window.__horusTeste.ppPor({ pago: true, divisaoRec: { por: 'Ana Advogada' } }) + '|' + window.__horusTeste.ppPor({ pago: false, divisaoRec: { por: 'Ana' } }));
+  check(/recebida por Ana/.test(por.split('|')[0]) && por.split('|')[1] === '', 'o rótulo "recebida por Ana" aparece só em parcela paga com divisão');
+  await a.context().close();
+  const d = await abrir('dono'); await d.evaluate(() => document.querySelector('#drawer [data-tab="peticoes"]').click()); await d.waitForTimeout(900);
+  const abasD = await d.evaluate(() => [...document.querySelectorAll('#mdAbas-peticoes button')].map((b) => b.textContent.trim()));
+  check(abasD.some((x) => /Resumo/.test(x)) && /R\$/.test(await d.locator('#subtitle').innerText()), 'proprietário: Resumo e totais como sempre');
+  await d.context().close();
+}
 console.log('\n— Início: botão + redondo');
 for (const q of ['dono', 'ana']) {
   const p = await abrir(q); await p.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await p.waitForTimeout(600);

@@ -33,6 +33,38 @@ function ppItemAtencaoOk(x){
   if (dinheiro) return ppPapel() === 'advogado';
   return true;
 }
+
+/* ---------- "Honorários dos seus processos" (advogado com "Ver totais"): a parte dele, pela divisão cadastrada em cada registro ---------- */
+/* a fração que cabe a esta pessoa no registro: pela divisão; sem divisão e com um só advogado, tudo; sem divisão e com vários, não dá para saber (null) */
+function ppFracaoMinha(doc){
+  if (!doc) return null;
+  var ks = esMinhasChaves(), partes = doc.divisao && Array.isArray(doc.divisao.partes) ? doc.divisao.partes : [];
+  if (partes.length){ var s = 0, achou = false; partes.forEach(function(p){ if (p.oab && ks.indexOf(p.oab) >= 0){ s += Number(p.pct) || 0; achou = true; } }); return achou ? Math.max(0, Math.min(1, s / 100)) : null; }
+  var adv = Array.isArray(doc.advogados) ? doc.advogados.length : 0;
+  return adv <= 1 ? 1 : null;
+}
+function ppHonorariosMeus(){
+  var mes = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : todayISO().slice(0, 7), aReceber = 0, recebido = 0, sem = {};
+  listarUnidades().forEach(function(u){
+    if (u.arquivado) return;
+    var doc = rcDocDe(u), f = ppFracaoMinha(doc);
+    if (f === null){ sem[u.docTipo + '|' + u.docId] = 1; return; }
+    aReceber += restanteUn(u) * f; recebido += recebidoNoMesUn(u, mes) * f;
+  });
+  return { aReceber: aReceber, recebido: recebido, sem: Object.keys(sem).length, mes: mes };
+}
+function ppDesenharHon(){
+  var el = document.getElementById('ppHon'); if (!el) return;
+  if (ppPapel() !== 'advogado' || !ppVerTotais()){ el.innerHTML = ''; return; }
+  var h = ppHonorariosMeus();
+  el.innerHTML = '<div class="ini-card"><div class="lbl">Honorários dos seus processos</div><div class="hero-val" style="font-size:var(--t7,22px)">' + fmtMoeda(h.aReceber) + ' <span class="saldo-data" style="font-weight:600">sua parte a receber</span></div>' +
+    '<div class="saldo-data">recebido em ' + mesLabel(h.mes) + ': ' + fmtMoeda(h.recebido) + ' · só os processos em que você está' + (h.sem ? ' · ' + h.sem + (h.sem === 1 ? ' registro sem divisão definida não entra' : ' registros sem divisão definida não entram') : '') + '</div></div>';
+}
+/* rótulo "recebida por X" nas parcelas pagas de processos com divisão */
+function ppPor(n){
+  var s = n && n.pago && n.divisaoRec && n.divisaoRec.por ? String(n.divisaoRec.por).split(' ')[0] : '';
+  return s ? ' <span class="pp-por">recebida por ' + escapeHtml(s) + '</span>' : '';
+}
 (function(){
   var st = document.createElement('style');
   var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
@@ -49,10 +81,11 @@ function ppItemAtencaoOk(x){
     var cf = document.querySelector('#drawer [data-tab="configuracoes"] .lab'); if (cf) cf.textContent = 'Minha conta';
     try{ if (typeof TITULOS_TELA !== 'undefined') TITULOS_TELA.configuracoes = 'Minha conta'; if (typeof atualizarTituloTela === 'function') atualizarTituloTela(); }catch(e){}
     try{ if (typeof renderPainelAtencao === 'function') renderPainelAtencao(); }catch(e){}
+    try{ if (typeof MD_DEF !== 'undefined' && MD_DEF[activeTab]) mdRedesenhar(activeTab); }catch(e){}
     try{ var bg = document.getElementById('buscaGlobalInput'); if (bg) bg.placeholder = 'Buscar em tudo: clientes, processos, publicações…'; }catch(e){}
     try{ var m = document.getElementById('relModoSeg'); if (m && typeof relModo !== 'undefined') relModo = 'proprio'; }catch(e){}
   }
-  window.addEventListener('horus-eu', aplicar);
+  window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
