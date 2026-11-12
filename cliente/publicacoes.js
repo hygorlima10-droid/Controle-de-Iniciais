@@ -692,7 +692,7 @@ function pbSalvarOabs(){
 })();
 
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
+window.__horusTeste = { mudarStatusCaso: function(id, st){ return mudarStatusCaso(id, st); }, cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(arq){ return prIniciaisPend(!!arq).map(function(c){ return c.id; }); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){

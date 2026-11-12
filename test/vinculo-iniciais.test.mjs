@@ -30,10 +30,10 @@ await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await pag
 const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
 const cfg = (await docs('config')).filter(d => d.id === 'vinculoIniciais')[0];
 check(cfg && cfg.corte && cfg.corte >= agora, 'a data de corte (dia da implantação) foi gravada na primeira abertura');
-const pend = await page.evaluate(() => window.__horusTeste.prIniciaisPend().sort());
+const pend = await page.evaluate(() => window.__horusTeste.prIniciaisPend(true).sort());
 check(JSON.stringify(pend) === JSON.stringify(['ca', 'cb', 'cc']), 'pendentes: Iniciais sem processo cadastrado, inclusive arquivada e a que tem número solto; ficam de fora extrajudicial, "sem processo" e a já ligada: ' + pend.join(','));
 await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]').click()); await page.waitForTimeout(800);
-check(/3 Iniciais antigas ainda não estão ligadas/.test(await t('#prAvisoVinc')), 'a aba Processos avisa quantas Iniciais antigas faltam: ' + (await t('#prAvisoVinc')).slice(0, 60));
+check(/2 Iniciais ainda não estão ligadas/.test(await t('#prAvisoVinc')), 'a aba Processos avisa quantas Iniciais faltam (as arquivadas não contam no aviso): ' + (await t('#prAvisoVinc')).slice(0, 60));
 
 // cadastrar processo (como se viesse da publicação, com o nome completo do cliente)
 await page.evaluate(n => window.__horusTeste.prAbrirNovo({ numero: n, partes: 'Cooperativa Mista dos Produtores de Leite de Morrinhos - Complem x Banco Alfa', autor: 'Cooperativa Mista dos Produtores de Leite de Morrinhos - Complem', reu: 'Banco Alfa S/A', nomes: ['Cooperativa Mista dos Produtores de Leite de Morrinhos - Complem'], ids: [], origem: 'publicacao' }), NOVO); await page.waitForTimeout(500);
@@ -66,7 +66,7 @@ check(/Toque|Desfazer/i.test(await t('#toast')) || /ligado à Inicial/i.test(awa
 const mapa = await page.evaluate(n => { const c = document.querySelector('[data-pr-card="' + n.replace(/\D/g, '') + '"]'); return c ? c.innerText : ''; }, NOVO);
 check(/Inicial/.test(mapa) && /Complem/.test(mapa), 'na lista única o processo já aparece junto com a Inicial (sem duplicar): ' + mapa.replace(/\n/g, ' | ').slice(0, 100));
 check(await page.evaluate(n => document.querySelectorAll('[data-pr-card="' + n.replace(/\D/g, '') + '"]').length, NOVO) === 1, 'um só cartão para o processo');
-check(/2 Iniciais antigas/.test(await t('#prAvisoVinc')), 'o aviso caiu para 2');
+check(/1 Inicial ainda/.test(await t('#prAvisoVinc')), 'o aviso caiu para 1');
 // desfazer
 await page.evaluate(() => { const b = document.querySelector('#toast button'); if (b) b.click(); }); await page.waitForTimeout(1200);
 check((await docs('casos')).filter(c => c.id === 'ca')[0].numeroProcesso === '', 'Desfazer devolve a Inicial como estava');
@@ -83,7 +83,7 @@ await page.fill('#processoInput', ''); await page.waitForTimeout(100);
 check(await page.evaluate(() => getComputedStyle(document.getElementById('semProcessoInput').closest('.field')).display) !== 'none', 'sem número, ela volta');
 await page.check('#semProcessoInput'); await page.click('#saveBtn'); await page.waitForTimeout(1200);
 check((await docs('casos')).filter(c => c.id === 'ca')[0].semProcesso === true, 'marcar "não tem processo" grava no cadastro da Inicial');
-check(!(await page.evaluate(() => window.__horusTeste.prIniciaisPend())).includes('ca'), 'e ela sai da lista de pendentes');
+check(!(await page.evaluate(() => window.__horusTeste.prIniciaisPend(true))).includes('ca'), 'e ela sai da lista de pendentes');
 await abrirIni('ca');
 check(await page.evaluate(() => document.getElementById('semProcessoInput').checked), 'ao reabrir a Inicial, a opção continua marcada');
 await page.click('#closeModal'); await page.waitForTimeout(300);
@@ -95,10 +95,10 @@ await page.evaluate(() => document.querySelector('#drawer [data-tab="processos"]
 check(await t('#prAvisoVinc') === '', 'sem pendências, o aviso da aba Processos some');
 await page.evaluate(() => window.__horusTeste.prAbrirNovo({ numero: '5400200-20.2026.8.09.0107', nomes: [], ids: [], origem: 'publicacao' })); await page.waitForTimeout(400);
 check(await t('#pr_vinc') === '', 'sem pendências, o cadastro de processo não oferece mais o vínculo');
-// Iniciais criadas depois do corte nunca entram
+// Iniciais criadas depois do corte TAMBÉM entram (o vínculo agora é permanente)
 await f('PUT', '/api/db/casos/cz', { tipo: 'inicial', cliente: 'Cliente Novo', nomeAcao: 'Nova ação', origem: 'proprio', prioridade: 'normal', status: 'pendente', statusDesde: agora, modalidadeHonorario: 'fixo', formaPagamento: 'avista', valorHonorarios: 1000, avista: { data: hoje, pago: false }, numeroProcesso: '', clienteIds: [], criadoEm: new Date(Date.now() + 60000).toISOString(), atualizadoEm: agora });
 await page.reload(); await page.waitForTimeout(3500);
-check((await page.evaluate(() => window.__horusTeste.prIniciaisPend())).length === 0, 'Inicial cadastrada depois do corte não entra na lista');
+check((await page.evaluate(() => window.__horusTeste.prIniciaisPend(true))).length === 1, 'Inicial cadastrada depois do corte também entra na lista (o vínculo agora é permanente)');
 const cfg2 = (await docs('config')).filter(d => d.id === 'vinculoIniciais')[0];
 check(cfg2.corte === cfg.corte, 'a data de corte não muda nas aberturas seguintes');
 check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));

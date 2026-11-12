@@ -1649,6 +1649,10 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -5105,6 +5109,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   function mudarStatusCaso(id, status){
     var c = casos.find(function(x){ return x.id === id; });
     if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;
+    if (lgPedeNumero(c, status)) return;   /* protocolar pede o número do processo */
     persistPatch(c, { status: status, statusDesde: new Date().toISOString() });
   }
   function kcMais(itens){
@@ -5371,6 +5376,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
         var novoStatus = el.getAttribute('data-sv');
         var c = casos.find(function(x){ return x.id === id; });
         if (!c || statusDe(c) === novoStatus) return;
+        if (lgPedeNumero(c, novoStatus)) return;   /* protocolar pede o número do processo */
         persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });
       });
     });
@@ -7441,6 +7447,10 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     else if (temFixo && formState.pagamento === 'parcelado'){
       if (!parcelasState.length) erro = 'Adicione ao menos uma parcela.';
       else if (parcelasState.some(function(p){ return !p.valor || p.valor <= 0 || !p.data; })) erro = 'Preencha valor e data de todas as parcelas.';
+    }
+    if (!erro && formState.status === 'protocolado' && formState.tipo === 'inicial' && !numeroProcesso && !(qs('semProcessoInput') && qs('semProcessoInput').checked)){   /* protocolar pede o número (ou a marcação de que não há processo) */
+      var antP = editingId ? casos.filter(function(x){ return x.id === editingId; })[0] : null;
+      if (!antP || statusDe(antP) !== 'protocolado') erro = 'Informe o número do processo gerado no protocolo (ou marque que esta inicial não tem processo).';
     }
     if (erro){ qs('formError').textContent = erro; return; }
 
@@ -17993,7 +18003,7 @@ function pbSalvarOabs(){
 })();
 
 /* só para os testes automáticos alcançarem o cálculo de prazos */
-window.__horusTeste = { cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(){ return prIniciaisPend().map(function(c){ return c.id; }); } };
+window.__horusTeste = { mudarStatusCaso: function(id, st){ return mudarStatusCaso(id, st); }, cliNivel: function(a, b){ return cliNivel(a, b); }, agItens: function(){ return agItens(); }, agNomeFeriado: function(d){ return agNomeFeriado(d); }, pbCalcular: pbCalcular, pbFeriadosGeral: pbFeriadosGeral, pbPascoa: pbPascoa, pbNaoUtil: pbNaoUtil, feriados2026: PB_FERIADOS_2026, ntResumo: function(){ return ntResumo(); }, fmtData: function(d){ return fmtData(d); }, prAbrirNovo: function(pre){ return prAbrirNovo(pre); }, pbRender: function(){ return pbRender(); }, prMapa: function(){ return prMapa(); }, prRenderLista: function(){ return prRenderLista(); }, agRender: function(){ return agRender(); }, prIniciaisPend: function(arq){ return prIniciaisPend(!!arq).map(function(c){ return c.id; }); } };
 
 /* ---------- estilo e partida ---------- */
 (function(){
@@ -19370,22 +19380,23 @@ function prCarregarCorte(){
     return pbApi('/api/db/config/vinculoIniciais', 'PUT', { corte: c }).then(function(){ return c; });
   }).then(function(c){ prCorte = c; prDepois(); }).catch(function(){});
 }
-function prIniciaisPend(){
-  if (!prCorte) return [];
+/* Iniciais ainda sem processo cadastrado (com ou sem número). Permanente (antes só valia para as Iniciais anteriores à implantação).
+   Arquivadas só entram na escolha ao cadastrar o processo, não no aviso. */
+function prIniciaisPend(comArquivadas){
   var mp = prMapa().m;
   return casos.filter(function(c){
     if ((c.tipo || 'inicial') !== 'inicial' || c.doProcesso || c.semProcesso) return false;
-    if (c.criadoEm && c.criadoEm > prCorte) return false;
+    if (c.arquivado && !comArquivadas) return false;
     var n = prNum(c.numeroProcesso), r = n ? mp[n] : null;
     return !(r && r.doc);
   });
 }
 function prAvisoVinc(){
   var el = qs('prAvisoVinc'); if (!el) return;
-  var n = prIniciaisPend().length, nr = impContaRev(), rev = '';
+  var n = prIniciaisPend(false).length, nr = impContaRev(), rev = '';
   if (nr && prS.filtro === 'revisar') rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Revisão dos importados</div><div class="pb-aviso">Mostrando só os <b>' + nr + '</b> ' + (nr === 1 ? 'processo' : 'processos') + ' que faltam vincular a um cliente: vincule, escolha outro cliente, cadastre um novo ou exclua o que não quiser no sistema.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pr="filtro" data-v="andamento">Voltar à lista completa</button></div></div>';
   else if (nr) rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Importados do Diário Oficial</div><div class="pb-aviso"><b>' + nr + '</b> ' + (nr === 1 ? 'processo espera' : 'processos esperam') + ' a revisão do cliente.</div><div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="rev-ir">Revisar agora</button></div></div>';
-  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial antiga ainda não está ligada a um processo' : ' Iniciais antigas ainda não estão ligadas a um processo') + '. Ao cadastrar o processo pelas Publicações, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
+  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial ainda não está ligada a um processo cadastrado' : ' Iniciais ainda não estão ligadas a um processo cadastrado') + '. Ao cadastrar o processo, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
 }
 function prVincNivel(c){
   var pre = (prEd && prEd.pre) || {}, nomes = (pre.nomes || []).concat([pre.autor, pre.reu]).filter(Boolean);
@@ -19405,14 +19416,14 @@ function prVincLinha(c, nivel){
 }
 function prRefazVincLista(){
   var box = qs('pr_vinclista'); if (!box || !prEd) return;
-  var q = normNome(prEd.vincQ || ''), pend = prIniciaisPend().map(function(c){ return { c: c, nivel: prVincNivel(c) }; });
+  var q = normNome(prEd.vincQ || ''), pend = prIniciaisPend(true).map(function(c){ return { c: c, nivel: prVincNivel(c) }; });
   var l = pend.filter(function(x){ return !q || normNome([x.c.cliente, x.c.nomeAcao, x.c.numeroProcesso, (x.c.clienteIds || []).map(nomeCliente).join(' ')].join(' ')).indexOf(q) >= 0; });
   l.sort(function(a, b){ return b.nivel - a.nivel || String(b.c.criadoEm || '').localeCompare(String(a.c.criadoEm || '')); });
   box.innerHTML = l.length ? l.slice(0, 30).map(function(x){ return prVincLinha(x.c, x.nivel); }).join('') + (l.length > 30 ? '<div class="saldo-data">Mostrando 30 de ' + l.length + '. Use a busca.</div>' : '') : '<div class="saldo-data">Nenhuma Inicial encontrada.</div>';
 }
 function prRefazVinc(){
   var el = qs('pr_vinc'); if (!el || !prEd || !prEd.novo) return;
-  var esc = prEd.vinc ? casos.filter(function(x){ return x.id === prEd.vinc; })[0] : null, n = prIniciaisPend().length;
+  var esc = prEd.vinc ? casos.filter(function(x){ return x.id === prEd.vinc; })[0] : null, n = prIniciaisPend(true).length;
   if (esc){
     el.innerHTML = '<div class="pb-sec"><div class="pb-sec-t">Ligado à Inicial</div><div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(esc.cliente + ' · ' + (esc.nomeAcao || 'Inicial')) + '</b><br><span class="saldo-data">Ao cadastrar, o número do processo passa para essa Inicial e os honorários dela aparecem na ficha do processo.</span></span><button type="button" class="btn-text pb-b" data-prf="vinc-rm">Remover</button></div></div>';
   } else if (!n){ el.innerHTML = ''; }
@@ -21299,6 +21310,68 @@ function esRevClique(a, k){
 })();
 
 /*ES-FIM*/
+/*LG-INICIO*/
+/* ============================================================
+   LIGAÇÃO ENTRE OS ATOS E O PROCESSO (prefixo lg) — correções da análise de interligação (12/11/2026)
+   - ao protocolar uma Inicial (mover para "Protocolado"), o app pede o número do processo e liga a um processo já cadastrado ou cadastra um novo;
+   - revisão de ligações (Processos): números sem processo cadastrado, processos sem cliente e divergência de cliente entre o ato e o processo.
+   A "cola" continua sendo o número do processo; o cadastro do processo guarda cliente e advogados.
+   ============================================================ */
+var lgS = { c: null, num: '', cad: true, ocupado: false, erro: '', rev: null };
+function lgPrecisaNumero(c){ return !!c && (c.tipo || 'inicial') === 'inicial' && !c.numeroProcesso && !c.semProcesso && !c.doProcesso; }
+/* devolve true se abriu a pergunta (quem chamou não move a Inicial: o diálogo faz isso depois) */
+function lgPedeNumero(c, status){
+  if (status !== 'protocolado' || !lgPrecisaNumero(c)) return false;
+  lgS.c = c; lgS.num = ''; lgS.cad = true; lgS.erro = ''; lgS.ocupado = false;
+  var ov = sgMontar('overlayLgProt', 'Inicial protocolada');
+  if (!ov.getAttribute('data-lg')){
+    ov.setAttribute('data-lg', '1');
+    ov.addEventListener('click', function(e){ var b = e.target.closest ? e.target.closest('[data-lgp]') : null; if (b) lgProtClique(b.getAttribute('data-lgp')); });
+    ov.addEventListener('input', function(e){ if (e.target && e.target.id === 'lgNum'){ lgS.num = e.target.value; lgProtAviso(); } });
+    ov.addEventListener('change', function(e){ if (e.target && e.target.id === 'lgCad') lgS.cad = e.target.checked; });
+  }
+  qs('overlayLgProtC').innerHTML = lgProtHtml(); ov.classList.add('show'); setTimeout(function(){ var i = qs('lgNum'); if (i) i.focus(); }, 60);
+  return true;
+}
+function lgProtHtml(){
+  var c = lgS.c;
+  return '<div class="pb-sec"><div class="pb-sec-t">' + escapeHtml(c.cliente || 'Inicial') + (c.nomeAcao ? ' · ' + escapeHtml(c.nomeAcao) : '') + '</div><div class="pb-aviso">Informe o número do processo gerado no protocolo: é ele que liga esta Inicial ao processo, às publicações, à Agenda e aos honorários.</div></div>' +
+    '<div class="field"><label class="field-label" for="lgNum">Número do processo</label><input type="text" id="lgNum" autocomplete="off" placeholder="0000000-00.0000.0.00.0000" value="' + escapeHtml(lgS.num) + '"><div class="saldo-data" id="lgAviso" style="margin-top:4px"></div></div>' +
+    '<div id="lgCadBox"></div><div class="form-error" id="lgErro">' + escapeHtml(lgS.erro) + '</div>' +
+    '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-lgp="ok">Salvar número e protocolar</button><button type="button" class="btn btn-ghost pb-b" data-lgp="sem">Protocolar sem o número agora</button><button type="button" class="btn btn-ghost pb-b" data-lgp="cancela">Cancelar</button></div>';
+}
+function lgProtAviso(){
+  var el = qs('lgAviso'), box = qs('lgCadBox'); if (!el) return;
+  var a = cnjAnalisar(lgS.num), n = prNum(lgS.num);
+  if (!a){ el.textContent = ''; box.innerHTML = ''; return; }
+  if (!a.completo){ el.textContent = 'Tem ' + a.digitos + ' dígitos; o padrão do CNJ tem 20. Se for protocolo ou número antigo, pode seguir.'; box.innerHTML = ''; return; }
+  el.textContent = a.valido ? ('✓ Número válido' + (a.sigla ? ' · ' + a.sigla : '')) : 'O dígito verificador não confere: confira o número.';
+  var r = prMapa().m[a.formatado ? prNum(a.formatado) : n];
+  if (r && r.doc) box.innerHTML = '<div class="pb-aviso">✓ Este processo já está cadastrado (' + escapeHtml(prTitulo(r)) + '). A Inicial fica ligada a ele.</div>';
+  else box.innerHTML = '<label class="ad-it" style="border:0;padding:4px 0"><input type="checkbox" id="lgCad"' + (lgS.cad ? ' checked' : '') + '><span class="ad-t">Cadastrar também o processo (com o cliente e os advogados desta Inicial)</span></label>';
+}
+function lgProtClique(a){
+  var ov = qs('overlayLgProt'), c = lgS.c; if (!c) return;
+  if (a === 'cancela'){ ov.classList.remove('show'); return; }
+  if (lgS.ocupado) return;
+  var patch = { status: 'protocolado', statusDesde: new Date().toISOString() };
+  if (a === 'sem'){ ov.classList.remove('show'); persistPatch(c, patch); return; }
+  var an = cnjAnalisar(lgS.num), numero = an && an.completo ? an.formatado : String(lgS.num || '').trim();
+  if (!numero){ lgS.erro = 'Informe o número ou escolha “Protocolar sem o número agora”.'; qs('lgErro').textContent = lgS.erro; return; }
+  patch.numeroProcesso = numero; lgS.ocupado = true;
+  var r = prMapa().m[prNum(numero)], criar = !(r && r.doc) && lgS.cad && an && an.completo;
+  Promise.resolve(persistPatch(c, patch)).then(function(){ return criar ? lgCriarProcesso(numero, c) : null; }).then(function(){
+    lgS.ocupado = false; ov.classList.remove('show'); toast(criar ? 'Protocolada. Número salvo e processo cadastrado.' : 'Protocolada. Número salvo.');
+  }).catch(function(e){ lgS.ocupado = false; toast('Não consegui salvar: ' + e.message); });
+}
+/* cadastra o processo a partir de um ato (Inicial, Acordo ou Alvará): leva cliente(s), partes e advogados */
+function lgCriarProcesso(numero, ato, extra){
+  var d = Object.assign({ numero: numero, partes: ato.partes || ato.cliente || '', orgao: '', classe: '', clienteIds: (ato.clienteIds || []).slice(), obs: '', honorarios: 'sem', origem: 'manual', derivado: true, arquivado: false, criadoEm: new Date().toISOString() }, extra || {});
+  if (Array.isArray(ato.advogados) && ato.advogados.length) d.advogados = ato.advogados.slice();
+  return pbApi('/api/db/processos', 'POST', d).then(function(j){ d.id = j.id; prDocs.push(d); try{ prDepois(); }catch(e){} return d; });
+}
+
+/*LG-FIM*/
 /*AGI-INICIO*/
 /* ============================================================
    IMPORTAR COMPROMISSOS DA AGENDA POR ARQUIVO (prefixo agi)

@@ -114,13 +114,20 @@ if '/*ES-INICIO*/' in s:
 else:
     assert s.count('/*US-FIM*/\n') == 1
     s = s.replace('/*US-FIM*/\n', '/*US-FIM*/\n' + bloco_es)
+lg = open(R + 'cliente/ligacoes.js', encoding='utf-8').read()
+bloco_lg = '/*LG-INICIO*/\n' + lg + '\n/*LG-FIM*/\n'
+if '/*LG-INICIO*/' in s:
+    s = re.sub(r'/\*LG-INICIO\*/.*?/\*LG-FIM\*/\n', lambda m: bloco_lg, s, flags=re.S)
+else:
+    assert s.count('/*ES-FIM*/\n') == 1
+    s = s.replace('/*ES-FIM*/\n', '/*ES-FIM*/\n' + bloco_lg)
 agi = open(R + 'cliente/agenda-importar.js', encoding='utf-8').read()
 bloco_agi = '/*AGI-INICIO*/\n' + agi + '\n/*AGI-FIM*/\n'
 if '/*AGI-INICIO*/' in s:
     s = re.sub(r'/\*AGI-INICIO\*/.*?/\*AGI-FIM\*/\n', lambda m: bloco_agi, s, flags=re.S)
 else:
-    assert s.count('/*ES-FIM*/\n') == 1
-    s = s.replace('/*ES-FIM*/\n', '/*ES-FIM*/\n' + bloco_agi)
+    assert s.count('/*LG-FIM*/\n') == 1
+    s = s.replace('/*LG-FIM*/\n', '/*LG-FIM*/\n' + bloco_agi)
 agd = open(R + 'cliente/agenda-detalhe.js', encoding='utf-8').read()
 bloco_agd = '/*AGD-INICIO*/\n' + agd + '\n/*AGD-FIM*/\n'
 if '/*AGD-INICIO*/' in s:
@@ -400,6 +407,10 @@ rep("    qs('saveBtn').disabled = true;\n    var casoAntAt =", "    if (!esRespA
 rep("    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)")
 rep("    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)")
 rep("    try{ window.scrollTo(0, 0); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ window.scrollTo(0, 0); }catch(e){}\n    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
+
+rep("    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });", "    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    if (lgPedeNumero(c, status)) return;   /* protocolar pede o número do processo */\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });")
+rep("        if (!c || statusDe(c) === novoStatus) return;\n        persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });", "        if (!c || statusDe(c) === novoStatus) return;\n        if (lgPedeNumero(c, novoStatus)) return;   /* protocolar pede o número do processo */\n        persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });")
+rep("    if (erro){ qs('formError').textContent = erro; return; }\n\n    var casoAnterior = editingId", "    if (!erro && formState.status === 'protocolado' && formState.tipo === 'inicial' && !numeroProcesso && !(qs('semProcessoInput') && qs('semProcessoInput').checked)){   /* protocolar pede o número (ou a marcação de que não há processo) */\n      var antP = editingId ? casos.filter(function(x){ return x.id === editingId; })[0] : null;\n      if (!antP || statusDe(antP) !== 'protocolado') erro = 'Informe o número do processo gerado no protocolo (ou marque que esta inicial não tem processo).';\n    }\n    if (erro){ qs('formError').textContent = erro; return; }\n\n    var casoAnterior = editingId")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

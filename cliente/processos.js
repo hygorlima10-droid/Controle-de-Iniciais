@@ -779,22 +779,23 @@ function prCarregarCorte(){
     return pbApi('/api/db/config/vinculoIniciais', 'PUT', { corte: c }).then(function(){ return c; });
   }).then(function(c){ prCorte = c; prDepois(); }).catch(function(){});
 }
-function prIniciaisPend(){
-  if (!prCorte) return [];
+/* Iniciais ainda sem processo cadastrado (com ou sem número). Permanente (antes só valia para as Iniciais anteriores à implantação).
+   Arquivadas só entram na escolha ao cadastrar o processo, não no aviso. */
+function prIniciaisPend(comArquivadas){
   var mp = prMapa().m;
   return casos.filter(function(c){
     if ((c.tipo || 'inicial') !== 'inicial' || c.doProcesso || c.semProcesso) return false;
-    if (c.criadoEm && c.criadoEm > prCorte) return false;
+    if (c.arquivado && !comArquivadas) return false;
     var n = prNum(c.numeroProcesso), r = n ? mp[n] : null;
     return !(r && r.doc);
   });
 }
 function prAvisoVinc(){
   var el = qs('prAvisoVinc'); if (!el) return;
-  var n = prIniciaisPend().length, nr = impContaRev(), rev = '';
+  var n = prIniciaisPend(false).length, nr = impContaRev(), rev = '';
   if (nr && prS.filtro === 'revisar') rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Revisão dos importados</div><div class="pb-aviso">Mostrando só os <b>' + nr + '</b> ' + (nr === 1 ? 'processo' : 'processos') + ' que faltam vincular a um cliente: vincule, escolha outro cliente, cadastre um novo ou exclua o que não quiser no sistema.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pr="filtro" data-v="andamento">Voltar à lista completa</button></div></div>';
   else if (nr) rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Importados do Diário Oficial</div><div class="pb-aviso"><b>' + nr + '</b> ' + (nr === 1 ? 'processo espera' : 'processos esperam') + ' a revisão do cliente.</div><div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="rev-ir">Revisar agora</button></div></div>';
-  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial antiga ainda não está ligada a um processo' : ' Iniciais antigas ainda não estão ligadas a um processo') + '. Ao cadastrar o processo pelas Publicações, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
+  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial ainda não está ligada a um processo cadastrado' : ' Iniciais ainda não estão ligadas a um processo cadastrado') + '. Ao cadastrar o processo, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
 }
 function prVincNivel(c){
   var pre = (prEd && prEd.pre) || {}, nomes = (pre.nomes || []).concat([pre.autor, pre.reu]).filter(Boolean);
@@ -814,14 +815,14 @@ function prVincLinha(c, nivel){
 }
 function prRefazVincLista(){
   var box = qs('pr_vinclista'); if (!box || !prEd) return;
-  var q = normNome(prEd.vincQ || ''), pend = prIniciaisPend().map(function(c){ return { c: c, nivel: prVincNivel(c) }; });
+  var q = normNome(prEd.vincQ || ''), pend = prIniciaisPend(true).map(function(c){ return { c: c, nivel: prVincNivel(c) }; });
   var l = pend.filter(function(x){ return !q || normNome([x.c.cliente, x.c.nomeAcao, x.c.numeroProcesso, (x.c.clienteIds || []).map(nomeCliente).join(' ')].join(' ')).indexOf(q) >= 0; });
   l.sort(function(a, b){ return b.nivel - a.nivel || String(b.c.criadoEm || '').localeCompare(String(a.c.criadoEm || '')); });
   box.innerHTML = l.length ? l.slice(0, 30).map(function(x){ return prVincLinha(x.c, x.nivel); }).join('') + (l.length > 30 ? '<div class="saldo-data">Mostrando 30 de ' + l.length + '. Use a busca.</div>' : '') : '<div class="saldo-data">Nenhuma Inicial encontrada.</div>';
 }
 function prRefazVinc(){
   var el = qs('pr_vinc'); if (!el || !prEd || !prEd.novo) return;
-  var esc = prEd.vinc ? casos.filter(function(x){ return x.id === prEd.vinc; })[0] : null, n = prIniciaisPend().length;
+  var esc = prEd.vinc ? casos.filter(function(x){ return x.id === prEd.vinc; })[0] : null, n = prIniciaisPend(true).length;
   if (esc){
     el.innerHTML = '<div class="pb-sec"><div class="pb-sec-t">Ligado à Inicial</div><div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(esc.cliente + ' · ' + (esc.nomeAcao || 'Inicial')) + '</b><br><span class="saldo-data">Ao cadastrar, o número do processo passa para essa Inicial e os honorários dela aparecem na ficha do processo.</span></span><button type="button" class="btn-text pb-b" data-prf="vinc-rm">Remover</button></div></div>';
   } else if (!n){ el.innerHTML = ''; }
