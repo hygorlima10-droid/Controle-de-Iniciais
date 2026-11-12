@@ -1703,6 +1703,15 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
+
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -9849,6 +9858,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';
     else if (activeTab === 'processos') qs('subtitle').textContent = 'Todos os processos, com ou sem honorários';
     else if (activeTab === 'configuracoes') qs('subtitle').textContent = 'Notificações, backup e exportações';
+    else if (activeTab === 'configuracoes') qs('subtitle').textContent = ppDono() ? 'Notificações, backup e exportações' : 'Senha, aparelhos e avisos neste celular';
   }
   function atualizarMenuAtivo(){
     document.body.setAttribute('data-tab', activeTab);
@@ -16530,17 +16540,33 @@ function paBackupsRender(){
 /* ============================================================
    NOTIFICAÇÕES NO IPHONE (Web Push): resumo do que vence hoje, às 10h, e alertas novos do app
    ============================================================ */
-var ntEstado = { carregado: false, aparelhos: 0, config: { alertas: true, esconder: false }, resumoEm: null, neste: false, msg: '' };
+var ntEstado = { carregado: false, aparelhos: 0, config: { alertas: true, esconder: false }, avisos: {}, equipe: null, papel: 'proprietario', resumoEm: null, neste: false, msg: '' };
+/* o que cada pessoa pode ligar e desligar (5.8): as opções do próprio celular e, para o proprietário, os avisos sobre a equipe */
+var NT_AVISOS = [
+  ['resumo', 'Resumo do dia · 10:00', 'o que vence hoje e nos próximos dias, só o que é seu'],
+  ['prazos', 'Prazo ou audiência chegando', 'na véspera e na manhã do dia'],
+  ['indicado', 'Fui indicado como responsável', 'quando alguém me coloca num prazo, tarefa ou registro'],
+  ['publicacoes', 'Publicações novas', 'quando chega publicação no Diário Oficial'],
+  ['repasses', 'Repasses', 'quando alguém diz que repassou, ou há repasse a receber']
+];
+var NT_EQUIPE = [
+  ['convite', 'Alguém aceitar um convite', 'e criar o acesso'],
+  ['aparelho', 'Entrar em aparelho novo', 'qualquer pessoa da equipe'],
+  ['recebeu', 'Outro advogado receber honorários', 'e o meu repasse ficar a receber'],
+  ['desfeito', 'Um recebimento for desfeito', 'por outra pessoa'],
+  ['exclusao', 'Registro for excluído', 'por quem não é o proprietário'],
+  ['honorarios', 'Alterarem honorários ou divisão', 'valor, parcelas, percentual'],
+  ['semanal', 'Resumo semanal do que a equipe fez', 'segunda-feira, 08:00']
+];
 function ntSuportado(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
 function ntB64ParaBytes(s){ var p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 function ntJson(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
     .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); });
 }
-function ntCarregar(){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? ntCarregar0.apply(null, a) : null; }); }
-function ntCarregar0(){
+function ntCarregar(){
   return ntJson('/api/notif/estado').then(function(j){
-    ntEstado.aparelhos = j.aparelhos; ntEstado.config = j.config; ntEstado.resumoEm = j.resumoEm; ntEstado.carregado = true;
+    ntEstado.aparelhos = j.aparelhos; ntEstado.config = j.config; ntEstado.resumoEm = j.resumoEm; ntEstado.carregado = true; ntEstado.avisos = j.avisos || {}; ntEstado.equipe = j.equipe || null; ntEstado.papel = j.papel || 'proprietario';
     if (!ntSuportado()) { ntEstado.neste = false; return; }
     return navigator.serviceWorker.getRegistration('/').then(function(reg){ return reg ? reg.pushManager.getSubscription() : null; }).then(function(s){ ntEstado.neste = !!s && Notification.permission === 'granted'; });
   }).catch(function(){ ntEstado.carregado = true; });
@@ -16548,13 +16574,14 @@ function ntCarregar0(){
 /* o que vence nos próximos dias + os alertas atuais: o servidor escolhe o que é de hoje às 10h */
 function ntResumo(){
   var hoje = todayISO(), lim = somarDias(hoje, 45), itens = [];
-  listarUnidades().forEach(function(u){
+  var papelNt = (typeof ppPapel === 'function') ? ppPapel() : 'proprietario';
+  if (papelNt !== 'estagiario') listarUnidades().forEach(function(u){
     var d = anDocDaUnidade(u);
     if (restanteUn(u) <= 0.004 || !u.data || u.data < hoje || u.data > lim || u.arquivado || (d && d.atipica)) return;
     itens.push({ d: u.data, t: u.docTipo === 'alvara' ? 'alvara' : 'pagamento', n: u.cliente, l: u.labelAlerta || u.label, v: r2(restanteMeu(u)) });
   });
   var m0 = hoje.slice(0, 7);
-  [m0, deslocarMes(m0, 1)].forEach(function(m){
+  if (papelNt === 'proprietario') [m0, deslocarMes(m0, 1)].forEach(function(m){
     comMes(m, function(){
       ['pj', 'pf'].forEach(function(col){
         getDespesasParaMes(col).forEach(function(it){
@@ -16566,9 +16593,9 @@ function ntResumo(){
       return 0;
     });
   });
-  try{ if (typeof ob7Itens === 'function') ob7Itens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
+  try{ if (papelNt === 'proprietario' && typeof ob7Itens === 'function') ob7Itens(hoje, lim).forEach(function(i){ itens.push(i); }); }catch(e){}
   var alertas = []; /* atrasos de clientes você confere no app: só chegam alertas de caixa, reserva, despesas e alvarás */
-  try{ alertas = paAlertas().filter(function(a){ return String(a.chave).indexOf('cliente|') !== 0; }).map(function(a){ return { chave: a.chave, titulo: a.titulo, detalhe: a.detalhe }; }); }catch(e){}
+  try{ if (papelNt === 'proprietario') alertas = paAlertas().filter(function(a){ return String(a.chave).indexOf('cliente|') !== 0; }).map(function(a){ return { chave: a.chave, titulo: a.titulo, detalhe: a.detalhe }; }); }catch(e){}
   var prazos = []; /* prazos processuais, audiências e tarefas da Agenda: aviso separado do dinheiro */
   try{ prazos = agPrazosResumo(hoje, somarDias(hoje, 10)); }catch(e){ console.error('prazos', e); }
   return { itens: itens, alertas: alertas, prazos: prazos };
@@ -16601,8 +16628,11 @@ function ntDesativar(){
   }).then(function(){ ntEstado.msg = 'Notificações desativadas neste aparelho.'; return ntCarregar(); }).catch(function(e){ ntEstado.msg = (e && e.message) || 'Não consegui desativar.'; }).then(ntDesenhar);
 }
 function ntSalvarConfig(){
-  var c = { alertas: qs('ntAlertas').checked, esconder: qs('ntEsconder').checked };
-  return ntJson('/api/notif/config', 'PUT', c).then(function(){ ntEstado.config = c; ntEstado.msg = 'Preferências salvas.'; ntDesenhar(); }).catch(function(e){ ntEstado.msg = e.message; ntDesenhar(); });
+  var c = { esconder: qs('ntEsconder').checked, avisos: {} };
+  if (qs('ntAlertas')) c.alertas = qs('ntAlertas').checked;
+  Array.prototype.forEach.call(document.querySelectorAll('#ntCorpo [data-ntav]'), function(i){ c.avisos[i.getAttribute('data-ntav')] = i.checked; });
+  if (ntEstado.equipe){ c.equipe = {}; Array.prototype.forEach.call(document.querySelectorAll('#ntCorpo [data-nteq]'), function(i){ c.equipe[i.getAttribute('data-nteq')] = i.checked; }); }
+  return ntJson('/api/notif/config', 'PUT', c).then(function(){ Object.assign(ntEstado.avisos, c.avisos); if (c.equipe) Object.assign(ntEstado.equipe, c.equipe); return c; }).then(function(){ ntEstado.config = { alertas: c.alertas !== undefined ? c.alertas : ntEstado.config.alertas, esconder: c.esconder }; ntEstado.msg = 'Preferências salvas.'; ntDesenhar(); }).catch(function(e){ ntEstado.msg = e.message; ntDesenhar(); });
 }
 function ntTeste(){
   ntEstado.msg = 'Enviando…'; ntDesenhar();
@@ -16624,21 +16654,38 @@ function ntMontar(){
     var a = b.getAttribute('data-nt');
     if (a === 'ativar') ntAtivar(); else if (a === 'desativar') ntDesativar(); else if (a === 'teste') ntTeste();
   });
-  d.addEventListener('change', function(e){ if (e.target && (e.target.id === 'ntAlertas' || e.target.id === 'ntEsconder')) ntSalvarConfig(); });
+  d.addEventListener('change', function(e){ if (e.target && (e.target.id === 'ntAlertas' || e.target.id === 'ntEsconder' || (e.target.getAttribute && (e.target.getAttribute('data-ntav') || e.target.getAttribute('data-nteq'))))) ntSalvarConfig(); });
+}
+function ntSwitch(attr, k, ligado, titulo, sub){
+  return '<label class="nt-op"><span class="nt-tx"><b>' + titulo + '</b><small>' + sub + '</small></span><input type="checkbox" class="nt-sw" ' + attr + '="' + k + '"' + (ligado ? ' checked' : '') + '></label>';
 }
 function ntDesenhar(){
   var c = qs('ntCorpo'); if (!c) return;
-  var neste = ntEstado.neste;
-  c.innerHTML = '<div class="parcela-sum">Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir. Prazos processuais e audiências da Agenda avisam em mensagem separada, nos dias de antecedência de cada item (padrão: 5, 2 e 1 dia antes e no dia).</div>' +
-    '<div class="cli-box"><div class="cli-linha"><span class="l">Neste aparelho</span><b style="color:' + (neste ? 'var(--success)' : 'var(--ink-soft)') + '">' + (neste ? 'Ativadas' : 'Desativadas') + '</b></div><div class="cli-linha"><span class="l">Aparelhos recebendo</span><b>' + ntEstado.aparelhos + '</b></div>' +
+  var neste = ntEstado.neste, dono = ntEstado.papel === 'proprietario', av = ntEstado.avisos || {}, eq = ntEstado.equipe || {};
+  var intro = dono
+    ? 'Todo dia às <b>10:00</b> chega uma notificação com o que <b>vence hoje</b>. Os atrasos você confere no app. Os alertas do app também avisam, uma vez por mês cada um, sem repetir. Prazos processuais e audiências avisam nos dias de antecedência escolhidos em cada um.'
+    : 'Todo dia às <b>10:00</b> chega o resumo do que <b>é seu</b>: prazos, audiências e tarefas em que você é responsável' + (ntEstado.papel === 'advogado' ? ' e as publicações das suas OABs' : '') + '. Cada pessoa liga os avisos no próprio celular.';
+  c.innerHTML = '<div class="parcela-sum">' + intro + '</div>' +
+    '<div class="cli-box"><div class="cli-linha"><span class="l">Neste aparelho</span><b style="color:' + (neste ? 'var(--success)' : 'var(--ink-soft)') + '">' + (neste ? 'Ativados' : 'Desativados') + '</b></div><div class="cli-linha"><span class="l">Seus aparelhos com avisos</span><span>' + ntEstado.aparelhos + '</span></div>' +
     (ntEstado.resumoEm ? '<div class="cli-linha"><span class="l">Lista de vencimentos atualizada em</span><span>' + escapeHtml(extFmtQuando(ntEstado.resumoEm)) + '</span></div>' : '') + '</div>' +
-    (neste ? '<button type="button" class="btn btn-ghost" data-nt="desativar" style="width:100%;justify-content:center;">Desativar neste aparelho</button>' : '<button type="button" class="btn btn-primary" data-nt="ativar" style="width:100%;justify-content:center;">Ativar notificações neste aparelho</button>') +
-    '<div class="field"><label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="ntAlertas"' + (ntEstado.config.alertas ? ' checked' : '') + '><span class="ad-t">Incluir os alertas do app (caixa previsto, reserva, despesas e alvarás)</span></label>' +
-    '<label class="ad-it" style="border:0;padding:4px 0;"><input type="checkbox" id="ntEsconder"' + (ntEstado.config.esconder ? ' checked' : '') + '><span class="ad-t">Esconder nomes e valores (a notificação só diz quantos itens vencem)</span></label></div>' +
-    '<button type="button" class="btn btn-ghost" data-nt="teste" style="width:100%;justify-content:center;">Enviar notificação de teste</button>' +
+    (neste ? '<button type="button" class="btn btn-ghost" data-nt="desativar" style="width:100%;justify-content:center;">Desativar neste aparelho</button>' : '<button type="button" class="btn btn-primary" data-nt="ativar" style="width:100%;justify-content:center;">Ativar avisos neste aparelho</button>') +
+    '<div class="pb-sec-t" style="margin:14px 4px 4px">O que receber neste celular</div><div class="nt-lista">' +
+    NT_AVISOS.filter(function(x){ return !(x[0] === 'repasses' && ntEstado.papel === 'estagiario'); }).map(function(x){ return ntSwitch('data-ntav', x[0], av[x[0]] !== false, x[1], (dono && x[0] === 'resumo') ? 'o que vence hoje e nos próximos dias' : x[2]); }).join('') +
+    (dono ? '<label class="nt-op"><span class="nt-tx"><b>Alertas do app</b><small>caixa previsto, reserva, despesas e alvarás</small></span><input type="checkbox" class="nt-sw" id="ntAlertas"' + (ntEstado.config.alertas ? ' checked' : '') + '></label>' : '') +
+    '<label class="nt-op"><span class="nt-tx"><b>Esconder nomes e valores</b><small>a notificação só diz quantos itens vencem</small></span><input type="checkbox" class="nt-sw" id="ntEsconder"' + (ntEstado.config.esconder ? ' checked' : '') + '></label></div>' +
+    (dono && ntEstado.equipe ? '<div class="pb-sec-t" style="margin:14px 4px 4px">Avisos da equipe · me avise quando…</div><div class="nt-lista">' + NT_EQUIPE.map(function(x){ return ntSwitch('data-nteq', x[0], eq[x[0]] === true, x[1], x[2]); }).join('') + '</div>' : '') +
+    '<button type="button" class="btn btn-ghost" data-nt="teste" style="width:100%;justify-content:center;margin-top:12px">Enviar um aviso de teste</button>' +
     (ntEstado.msg ? '<div class="saldo-data" role="status">' + escapeHtml(ntEstado.msg) + '</div>' : '') +
     (!ntSuportado() ? '<div class="aviso-sis"><span class="as-txt">Para receber no iPhone: abra o app pelo ícone na tela de início (não pelo Safari) e use o iOS 16.4 ou mais novo.</span></div>' : '');
+  var h = document.querySelector('#overlayLembretes .modal-head h2'); if (h) h.textContent = dono ? 'Lembretes no iPhone' : 'Avisos neste celular';
 }
+(function(){
+  var st = document.createElement('style');
+  st.textContent = '.nt-lista{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:2px 12px}.nt-op{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer}.nt-op:first-child{border-top:0}' +
+    '.nt-tx{display:flex;flex-direction:column;gap:2px;min-width:0}.nt-tx small{font-size:var(--t2);color:var(--ink-soft);font-weight:400}.nt-sw{appearance:none;-webkit-appearance:none;flex:none;width:42px;height:25px;border-radius:99px;background:var(--border);position:relative;cursor:pointer;transition:background .15s;border:0}' +
+    '.nt-sw::after{content:"";position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}.nt-sw:checked{background:#17895A}.nt-sw:checked::after{transform:translateX(17px)}';
+  document.head.appendChild(st);
+})();
 function ntAbrir(){ ntMontar(); ntDesenhar(); qs('overlayLembretes').classList.add('show'); ntCarregar().then(ntDesenhar); }
 (function(){
   var dr = qs('backupBtn'); if (!dr || qs('abrirLembretesBtn')) return;
@@ -19135,6 +19182,7 @@ function prMontarFicha(){
       abrirClienteEdit({ nome: nome, pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } });
     }
     else if (a === 'tl-tudo'){ prS.tlTudo = true; prDesenhar(); }
+    else if (a === 'hist') prHistCarregar();
     else if (a === 'rel') rptProcesso(prEd.num);
     else if (a === 'vinc-abrir'){ prEd.vincAberto = true; prEd.vincAviso = null; prRefazVinc(); }
     else if (a === 'vinc-fechar'){ prEd.vincAberto = false; prEd.vincAviso = null; prRefazVinc(); }
@@ -19302,6 +19350,18 @@ function prTimelineHtml(r){
   h += '<div class="saldo-data">Publicações: dos últimos 90 dias. Prazos e audiências de processo arquivado não aparecem.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="pubs-todas" data-v="' + escapeHtml(r.num) + '">Ver todas as publicações deste processo</button></div></div>';
   return h;
 }
+/* histórico do processo: quem fez o quê em todos os registros daquele número (a partir da 5.8) */
+function prHistCarregar(){
+  var el = qs('prHistC'); if (!el) return; el.innerHTML = '<div class="saldo-data">Carregando…</div>';
+  fetch('/api/historico/' + encodeURIComponent(prEd.num), { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || 'Erro ' + r.status); return j; }); }).then(function(j){
+    var its = j.itens || [];
+    if (!its.length){ el.innerHTML = '<div class="saldo-data">Ainda não há ações registradas neste processo (o histórico começa a valer a partir de agora).</div>'; return; }
+    el.innerHTML = '<div class="pb-sec">' + its.map(function(x){
+      var op = (typeof SG_OP !== 'undefined' && SG_OP[x.op]) ? SG_OP[x.op][0] : x.op, mud = (x.mud || []).slice(0, 3).map(function(m){ return '<div class="saldo-data" style="margin:0">' + escapeHtml((typeof SG_CAMPOS !== 'undefined' && SG_CAMPOS[m.c]) || m.c) + ': ' + (m.lista ? escapeHtml(String(m.a)) + ' → ' + escapeHtml(String(m.d)) : escapeHtml(sgValor(m.a)) + ' → ' + escapeHtml(sgValor(m.d))) + '</div>'; }).join('');
+      return '<div class="pr-tl-l" style="align-items:flex-start"><span class="pr-tl-d" style="min-width:64px"><small>' + escapeHtml(sgDataHora(x.em)) + '</small></span><span class="pr-t" style="flex:1"><b>' + escapeHtml(x.por || '') + '</b> ' + escapeHtml(op) + ' · ' + escapeHtml(x.rotulo || '') + (x.titulo ? ' — ' + escapeHtml(x.titulo) : '') + mud + '</span></div>';
+    }).join('') + '</div>';
+  }).catch(function(e){ el.innerHTML = '<div class="form-error">Não consegui abrir o histórico: ' + escapeHtml(e.message) + '</div>'; });
+}
 /* "Registrar no processo": anotação sem prazo (ex.: guardar a decisão para a futura preliminar de apelação) */
 function prRegistrar(p, texto){
   var n = prNum(p.processo || p.numero), r = n ? prMapa().m[n] : null;
@@ -19364,7 +19424,7 @@ function prDesenhar(){
     var pz = prPrazosAbertos(r);
     h += '<div class="pb-sec"><div class="pb-sec-t">Prazos e audiências (Agenda)</div>' + (pz.length ? pz.map(function(i){ var c = agChip(i); return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(i.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(agTipoLinha(i)) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-abrir" data-v="' + escapeHtml(i.key) + '">' + escapeHtml(c.t) + ' ›</button></div>'; }).join('') : '<div class="saldo-data">Nenhum prazo aberto.</div>') +
       '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">Novo prazo deste processo</button></div></div>';
-    h += prTimelineHtml(r) + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
+    h += prTimelineHtml(r) + '<div class="pb-sec"><div class="pb-sec-t">Histórico</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="hist">Histórico: quem fez o quê</button></div><div id="prHistC"></div></div>' + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
   }
   var pxi = doc ? prProximaInfo(r) : null;
   h += '<div class="field"><label class="field-label" for="pr_prox">Próxima providência (opcional)</label><input type="text" id="pr_prox" maxlength="140" value="' + escapeHtml(doc ? (doc.proxima || '') : '') + '" placeholder="Ex.: Pedir penhora via SISBAJUD"></div>' +
@@ -19760,6 +19820,8 @@ function prVincEscolher(id, seguir){
   document.head.appendChild(st);
   prCarregar(); prCarregarCorte();
 })();
+
+(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { prAbrir: prAbrir }); })();
 
 /*PR-FIM*/
 /*RL-INICIO*/
@@ -21002,7 +21064,7 @@ function cfRender(){
     });
   }
   if (typeof ppDono === 'function' && !ppDono()){   /* advogado e estagiário: só a conta deles (senha, aparelhos, avisos de acesso) */
-    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + '</div>';
+    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + cfLinha({ id: 'notif', ic: '🔔', t: 'Avisos neste celular', s: 'resumo do dia, prazos, indicações e repasses' }, false) + '</div>';
     return;
   }
   w.innerHTML = '<div class="pb-painel pb-menu">' + CF_LINHAS.map(function(l){ return cfLinha(l, false); }).join('') + '</div>' +
@@ -21050,6 +21112,8 @@ function sgMontar(id, titulo){
     var t = e.target; if (!t || !t.getAttribute) return;
     if (t.getAttribute('data-sgf') === 'lix'){ sgS.filtroLix = t.value; sgLixDesenhar(); }
     if (t.getAttribute('data-sgf') === 'reg'){ sgS.filtroReg = t.value; sgRegCarregar(true); }
+    if (t.getAttribute('data-sgf') === 'pes'){ sgS.filtroPes = t.value; sgRegCarregar(true); }
+    if (t.getAttribute('data-sgf') === 'per'){ sgS.filtroPer = t.value; sgRegCarregar(true); }
     if (t.getAttribute('data-sgf') === 'alertas') sgSegAlertas(t.checked);
   });
   return d;
@@ -21109,17 +21173,26 @@ function sgRestaurar(chave, substituir){
 
 /* ---------- Registro de ações ---------- */
 var SG_OP = { criou: ['criou', 'ok'], alterou: ['alterou', 'nv'], excluiu: ['excluiu', ''], restaurou: ['restaurou', 'ok'], leitura: ['leitura', ''], esvaziou: ['esvaziou', ''], entrou: ['entrou', 'ok'], saiu: ['saiu', ''], falhou: ['falhou', 'pz'], encerrou: ['encerrou', 'nv'] };
-function sgRegAbrir(){ sgMontar('overlaySgReg', 'Registro de ações'); sgS.filtroReg = ''; sgRegCarregar(true); qs('overlaySgReg').classList.add('show'); }
+function sgRegAbrir(){ sgMontar('overlaySgReg', 'Registro de ações'); sgS.filtroReg = ''; sgS.filtroPes = ''; sgS.filtroPer = ''; sgRegCarregar(true); qs('overlaySgReg').classList.add('show'); }
+/* período do filtro do Registro → de/ate (AAAAMMDD, horário de Brasília) */
+function sgPeriodoQuery(p){
+  if (!p) return '';
+  var f = function(d){ return d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2); }, hoje = new Date(), ini = new Date(Date.now() - (p === 'hoje' ? 0 : Number(p)) * 864e5);
+  return '&de=' + f(ini) + '&ate=' + f(hoje);
+}
 function sgRegCarregar(reinicia){
   if (reinicia){ sgS.reg = []; sgS.mais = null; qs('overlaySgRegC').innerHTML = '<div class="saldo-data">Carregando…</div>'; }
-  var q = '/api/auditoria?limite=40' + (!reinicia && sgS.mais ? '&antes=' + encodeURIComponent(sgS.mais) : '') + (sgS.filtroReg ? '&colecao=' + encodeURIComponent(sgS.filtroReg) : '');
-  return sgApi(q).then(function(j){ sgS.reg = sgS.reg.concat(j.itens || []); sgS.mais = j.mais; sgRegDesenhar(); }).catch(function(e){ qs('overlaySgRegC').innerHTML = '<div class="form-error">Não consegui abrir o registro: ' + escapeHtml(e.message) + '</div>'; });
+  var q = '/api/auditoria?limite=40' + (!reinicia && sgS.mais ? '&antes=' + encodeURIComponent(sgS.mais) : '') + (sgS.filtroReg ? '&colecao=' + encodeURIComponent(sgS.filtroReg) : '') + (sgS.filtroPes ? '&por=' + encodeURIComponent(sgS.filtroPes) : '') + sgPeriodoQuery(sgS.filtroPer);
+  return sgApi(q).then(function(j){ sgS.reg = sgS.reg.concat(j.itens || []); sgS.mais = j.mais; if (j.pessoas) sgS.pessoas = j.pessoas; sgRegDesenhar(); }).catch(function(e){ qs('overlaySgRegC').innerHTML = '<div class="form-error">Não consegui abrir o registro: ' + escapeHtml(e.message) + '</div>'; });
 }
 function sgValor(v){ return v === '' || v == null ? '(vazio)' : String(v); }
 function sgRegDesenhar(){
   var el = qs('overlaySgRegC'); if (!el) return;
-  var tipos = [['', 'Tudo'], ['processos', 'Processos'], ['clientes', 'Clientes'], ['casos', 'Iniciais'], ['termosAcordo', 'Acordos'], ['alvaras', 'Alvarás'], ['agenda', 'Agenda'], ['despesas', 'Despesas'], ['receitasManuais', 'Receitas'], ['metas', 'Metas'], ['obraMov', 'Obra']];
-  var h = '<div class="field"><label class="field-label" for="sgFReg">Tipo</label><select id="sgFReg" class="filter-select" data-sgf="reg" style="width:100%">' + tipos.map(function(t){ return '<option value="' + t[0] + '"' + (sgS.filtroReg === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>';
+  var tipos = [['', 'Tudo'], ['processos', 'Processos'], ['clientes', 'Clientes'], ['casos', 'Iniciais'], ['termosAcordo', 'Acordos'], ['alvaras', 'Alvarás'], ['agenda', 'Agenda'], ['despesas', 'Despesas'], ['receitasManuais', 'Receitas'], ['metas', 'Metas'], ['obraMov', 'Obra'], ['acesso', 'Acessos']];
+  var pessoas = sgS.pessoas || [], periodos = [['', 'Todo o período'], ['hoje', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias']];
+  var h = '<div class="field"><label class="field-label" for="sgFPes">Pessoa</label><select id="sgFPes" class="filter-select" data-sgf="pes" style="width:100%"><option value="">Todas</option>' + pessoas.map(function(n){ return '<option value="' + escapeHtml(n) + '"' + (sgS.filtroPes === n ? ' selected' : '') + '>' + escapeHtml(n) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label class="field-label" for="sgFPer">Período</label><select id="sgFPer" class="filter-select" data-sgf="per" style="width:100%">' + periodos.map(function(x){ return '<option value="' + x[0] + '"' + ((sgS.filtroPer || '') === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label class="field-label" for="sgFReg">Tipo</label><select id="sgFReg" class="filter-select" data-sgf="reg" style="width:100%">' + tipos.map(function(t){ return '<option value="' + t[0] + '"' + (sgS.filtroReg === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>';
   if (!sgS.reg.length) h += '<div class="financeiro-vazio">Nenhuma ação registrada ainda.</div>';
   h += sgS.reg.map(function(x){
     var op = SG_OP[x.op] || [x.op, ''], mud = (x.mud || []).slice(0, 6).map(function(m){

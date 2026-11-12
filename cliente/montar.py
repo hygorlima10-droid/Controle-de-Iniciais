@@ -452,7 +452,6 @@ def so_dono(nome, assinatura, corpo_inicio):
     rep(assinatura, 'function ' + nome + '(' + corpo_inicio + '){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? ' + nome + '0.apply(null, a) : null; }); }\n' + assinatura.replace('function ' + nome, 'function ' + nome + '0'))
 
 so_dono('impVerRecebidos', 'function impVerRecebidos(){', '')
-so_dono('ntCarregar', 'function ntCarregar(){', '')
 so_dono('prCarregarCorte', 'function prCarregarCorte(){', '')
 so_dono('impCarregarCfg', 'function impCarregarCfg(){', '')
 so_dono('impAutoLer', 'function impAutoLer(n){', 'n')
@@ -463,6 +462,7 @@ rep("s.count + (s.count===1?' termo de acordo':' termos de acordo') + ' · ' + f
 rep("s.count + (s.count===1?' alvará':' alvarás') + ' · ' + fmtMoeda(s.total) + ' em honorários';", "s.count + (s.count===1?' alvará':' alvarás') + (ppVerTotais() ? ' · ' + fmtMoeda(s.total) + ' em honorários' : '');")
 rep("Pagamento à vista — '+fmtData(c.avista.data)+'</label><span class=\"p-info\">'+fmtMoeda(c.valorHonorarios)+'</span></div>';", "Pagamento à vista — '+fmtData(c.avista.data)+'</label><span class=\"p-info\">'+fmtMoeda(c.valorHonorarios)+ppPor(c.avista)+'</span></div>';")
 rep("(!p.pago && parcP > 0 ? ' (falta '+fmtMoeda(Math.max(0, p.valor - parcP))+')' : '')+'</span></div>';", "(!p.pago && parcP > 0 ? ' (falta '+fmtMoeda(Math.max(0, p.valor - parcP))+')' : '')+ppPor(p)+'</span></div>';")
+rep("qs('subtitle').textContent = 'Notificações, backup e exportações';", "qs('subtitle').textContent = ppDono() ? 'Notificações, backup e exportações' : 'Senha, aparelhos e avisos neste celular';")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

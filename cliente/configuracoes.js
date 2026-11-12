@@ -32,7 +32,7 @@ function cfRender(){
     });
   }
   if (typeof ppDono === 'function' && !ppDono()){   /* advogado e estagiário: só a conta deles (senha, aparelhos, avisos de acesso) */
-    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + '</div>';
+    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + cfLinha({ id: 'notif', ic: '🔔', t: 'Avisos neste celular', s: 'resumo do dia, prazos, indicações e repasses' }, false) + '</div>';
     return;
   }
   w.innerHTML = '<div class="pb-painel pb-menu">' + CF_LINHAS.map(function(l){ return cfLinha(l, false); }).join('') + '</div>' +

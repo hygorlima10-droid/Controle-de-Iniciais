@@ -418,8 +418,9 @@ async function notif(request, env, partes, auth) {
     const c = await request.json().catch(() => null);
     if (!c || typeof c !== 'object') return erro(400, 'invalid', 'Configuração inválida.');
     const antigo = await lerReservado(env, 'config' + s, {}), novo = { ...antigo };
-    if (dono) { novo.alertas = c.alertas !== false; novo.esconder = !!c.esconder; if (c.equipe) novo.equipe = { ...equipeDe(antigo), ...limparPrefs(c.equipe, EQUIPE_PADRAO) }; }
+    if (dono) { if ('alertas' in c) novo.alertas = c.alertas !== false; if ('esconder' in c) novo.esconder = !!c.esconder; if (c.equipe) novo.equipe = { ...equipeDe(antigo), ...limparPrefs(c.equipe, EQUIPE_PADRAO) }; }
     else if (typeof c.esconder === 'boolean') novo.esconder = c.esconder;
+    if (dono && typeof c.esconder === 'boolean') novo.esconder = c.esconder;
     if (c.avisos) novo.avisos = { ...prefsDe(antigo), ...limparPrefs(c.avisos, PREFS_PADRAO) };
     await gravarReservado(env, 'config' + s, novo);
     return json({ ok: true });

@@ -25,6 +25,8 @@ function sgMontar(id, titulo){
     var t = e.target; if (!t || !t.getAttribute) return;
     if (t.getAttribute('data-sgf') === 'lix'){ sgS.filtroLix = t.value; sgLixDesenhar(); }
     if (t.getAttribute('data-sgf') === 'reg'){ sgS.filtroReg = t.value; sgRegCarregar(true); }
+    if (t.getAttribute('data-sgf') === 'pes'){ sgS.filtroPes = t.value; sgRegCarregar(true); }
+    if (t.getAttribute('data-sgf') === 'per'){ sgS.filtroPer = t.value; sgRegCarregar(true); }
     if (t.getAttribute('data-sgf') === 'alertas') sgSegAlertas(t.checked);
   });
   return d;
@@ -84,17 +86,26 @@ function sgRestaurar(chave, substituir){
 
 /* ---------- Registro de ações ---------- */
 var SG_OP = { criou: ['criou', 'ok'], alterou: ['alterou', 'nv'], excluiu: ['excluiu', ''], restaurou: ['restaurou', 'ok'], leitura: ['leitura', ''], esvaziou: ['esvaziou', ''], entrou: ['entrou', 'ok'], saiu: ['saiu', ''], falhou: ['falhou', 'pz'], encerrou: ['encerrou', 'nv'] };
-function sgRegAbrir(){ sgMontar('overlaySgReg', 'Registro de ações'); sgS.filtroReg = ''; sgRegCarregar(true); qs('overlaySgReg').classList.add('show'); }
+function sgRegAbrir(){ sgMontar('overlaySgReg', 'Registro de ações'); sgS.filtroReg = ''; sgS.filtroPes = ''; sgS.filtroPer = ''; sgRegCarregar(true); qs('overlaySgReg').classList.add('show'); }
+/* período do filtro do Registro → de/ate (AAAAMMDD, horário de Brasília) */
+function sgPeriodoQuery(p){
+  if (!p) return '';
+  var f = function(d){ return d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2); }, hoje = new Date(), ini = new Date(Date.now() - (p === 'hoje' ? 0 : Number(p)) * 864e5);
+  return '&de=' + f(ini) + '&ate=' + f(hoje);
+}
 function sgRegCarregar(reinicia){
   if (reinicia){ sgS.reg = []; sgS.mais = null; qs('overlaySgRegC').innerHTML = '<div class="saldo-data">Carregando…</div>'; }
-  var q = '/api/auditoria?limite=40' + (!reinicia && sgS.mais ? '&antes=' + encodeURIComponent(sgS.mais) : '') + (sgS.filtroReg ? '&colecao=' + encodeURIComponent(sgS.filtroReg) : '');
-  return sgApi(q).then(function(j){ sgS.reg = sgS.reg.concat(j.itens || []); sgS.mais = j.mais; sgRegDesenhar(); }).catch(function(e){ qs('overlaySgRegC').innerHTML = '<div class="form-error">Não consegui abrir o registro: ' + escapeHtml(e.message) + '</div>'; });
+  var q = '/api/auditoria?limite=40' + (!reinicia && sgS.mais ? '&antes=' + encodeURIComponent(sgS.mais) : '') + (sgS.filtroReg ? '&colecao=' + encodeURIComponent(sgS.filtroReg) : '') + (sgS.filtroPes ? '&por=' + encodeURIComponent(sgS.filtroPes) : '') + sgPeriodoQuery(sgS.filtroPer);
+  return sgApi(q).then(function(j){ sgS.reg = sgS.reg.concat(j.itens || []); sgS.mais = j.mais; if (j.pessoas) sgS.pessoas = j.pessoas; sgRegDesenhar(); }).catch(function(e){ qs('overlaySgRegC').innerHTML = '<div class="form-error">Não consegui abrir o registro: ' + escapeHtml(e.message) + '</div>'; });
 }
 function sgValor(v){ return v === '' || v == null ? '(vazio)' : String(v); }
 function sgRegDesenhar(){
   var el = qs('overlaySgRegC'); if (!el) return;
-  var tipos = [['', 'Tudo'], ['processos', 'Processos'], ['clientes', 'Clientes'], ['casos', 'Iniciais'], ['termosAcordo', 'Acordos'], ['alvaras', 'Alvarás'], ['agenda', 'Agenda'], ['despesas', 'Despesas'], ['receitasManuais', 'Receitas'], ['metas', 'Metas'], ['obraMov', 'Obra']];
-  var h = '<div class="field"><label class="field-label" for="sgFReg">Tipo</label><select id="sgFReg" class="filter-select" data-sgf="reg" style="width:100%">' + tipos.map(function(t){ return '<option value="' + t[0] + '"' + (sgS.filtroReg === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>';
+  var tipos = [['', 'Tudo'], ['processos', 'Processos'], ['clientes', 'Clientes'], ['casos', 'Iniciais'], ['termosAcordo', 'Acordos'], ['alvaras', 'Alvarás'], ['agenda', 'Agenda'], ['despesas', 'Despesas'], ['receitasManuais', 'Receitas'], ['metas', 'Metas'], ['obraMov', 'Obra'], ['acesso', 'Acessos']];
+  var pessoas = sgS.pessoas || [], periodos = [['', 'Todo o período'], ['hoje', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias']];
+  var h = '<div class="field"><label class="field-label" for="sgFPes">Pessoa</label><select id="sgFPes" class="filter-select" data-sgf="pes" style="width:100%"><option value="">Todas</option>' + pessoas.map(function(n){ return '<option value="' + escapeHtml(n) + '"' + (sgS.filtroPes === n ? ' selected' : '') + '>' + escapeHtml(n) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label class="field-label" for="sgFPer">Período</label><select id="sgFPer" class="filter-select" data-sgf="per" style="width:100%">' + periodos.map(function(x){ return '<option value="' + x[0] + '"' + ((sgS.filtroPer || '') === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="field"><label class="field-label" for="sgFReg">Tipo</label><select id="sgFReg" class="filter-select" data-sgf="reg" style="width:100%">' + tipos.map(function(t){ return '<option value="' + t[0] + '"' + (sgS.filtroReg === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>';
   if (!sgS.reg.length) h += '<div class="financeiro-vazio">Nenhuma ação registrada ainda.</div>';
   h += sgS.reg.map(function(x){
     var op = SG_OP[x.op] || [x.op, ''], mud = (x.mud || []).slice(0, 6).map(function(m){

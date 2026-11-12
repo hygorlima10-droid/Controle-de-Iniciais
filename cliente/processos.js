@@ -293,6 +293,7 @@ function prMontarFicha(){
       abrirClienteEdit({ nome: nome, pagador: 'cliente', aoSalvar: function(c){ if (prEd.ids.indexOf(c.id) < 0) prEd.ids.push(c.id); prChips(); } });
     }
     else if (a === 'tl-tudo'){ prS.tlTudo = true; prDesenhar(); }
+    else if (a === 'hist') prHistCarregar();
     else if (a === 'rel') rptProcesso(prEd.num);
     else if (a === 'vinc-abrir'){ prEd.vincAberto = true; prEd.vincAviso = null; prRefazVinc(); }
     else if (a === 'vinc-fechar'){ prEd.vincAberto = false; prEd.vincAviso = null; prRefazVinc(); }
@@ -460,6 +461,18 @@ function prTimelineHtml(r){
   h += '<div class="saldo-data">Publicações: dos últimos 90 dias. Prazos e audiências de processo arquivado não aparecem.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="pubs-todas" data-v="' + escapeHtml(r.num) + '">Ver todas as publicações deste processo</button></div></div>';
   return h;
 }
+/* histórico do processo: quem fez o quê em todos os registros daquele número (a partir da 5.8) */
+function prHistCarregar(){
+  var el = qs('prHistC'); if (!el) return; el.innerHTML = '<div class="saldo-data">Carregando…</div>';
+  fetch('/api/historico/' + encodeURIComponent(prEd.num), { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json().then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || 'Erro ' + r.status); return j; }); }).then(function(j){
+    var its = j.itens || [];
+    if (!its.length){ el.innerHTML = '<div class="saldo-data">Ainda não há ações registradas neste processo (o histórico começa a valer a partir de agora).</div>'; return; }
+    el.innerHTML = '<div class="pb-sec">' + its.map(function(x){
+      var op = (typeof SG_OP !== 'undefined' && SG_OP[x.op]) ? SG_OP[x.op][0] : x.op, mud = (x.mud || []).slice(0, 3).map(function(m){ return '<div class="saldo-data" style="margin:0">' + escapeHtml((typeof SG_CAMPOS !== 'undefined' && SG_CAMPOS[m.c]) || m.c) + ': ' + (m.lista ? escapeHtml(String(m.a)) + ' → ' + escapeHtml(String(m.d)) : escapeHtml(sgValor(m.a)) + ' → ' + escapeHtml(sgValor(m.d))) + '</div>'; }).join('');
+      return '<div class="pr-tl-l" style="align-items:flex-start"><span class="pr-tl-d" style="min-width:64px"><small>' + escapeHtml(sgDataHora(x.em)) + '</small></span><span class="pr-t" style="flex:1"><b>' + escapeHtml(x.por || '') + '</b> ' + escapeHtml(op) + ' · ' + escapeHtml(x.rotulo || '') + (x.titulo ? ' — ' + escapeHtml(x.titulo) : '') + mud + '</span></div>';
+    }).join('') + '</div>';
+  }).catch(function(e){ el.innerHTML = '<div class="form-error">Não consegui abrir o histórico: ' + escapeHtml(e.message) + '</div>'; });
+}
 /* "Registrar no processo": anotação sem prazo (ex.: guardar a decisão para a futura preliminar de apelação) */
 function prRegistrar(p, texto){
   var n = prNum(p.processo || p.numero), r = n ? prMapa().m[n] : null;
@@ -522,7 +535,7 @@ function prDesenhar(){
     var pz = prPrazosAbertos(r);
     h += '<div class="pb-sec"><div class="pb-sec-t">Prazos e audiências (Agenda)</div>' + (pz.length ? pz.map(function(i){ var c = agChip(i); return '<div class="pb-lin"><span><b style="color:var(--ink)">' + escapeHtml(i.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(agTipoLinha(i)) + '</span></span><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-abrir" data-v="' + escapeHtml(i.key) + '">' + escapeHtml(c.t) + ' ›</button></div>'; }).join('') : '<div class="saldo-data">Nenhum prazo aberto.</div>') +
       '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="prazo-novo">Novo prazo deste processo</button></div></div>';
-    h += prTimelineHtml(r) + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
+    h += prTimelineHtml(r) + '<div class="pb-sec"><div class="pb-sec-t">Histórico</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="hist">Histórico: quem fez o quê</button></div><div id="prHistC"></div></div>' + '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-prf="rel">🖨 Relatório deste processo</button></div>';
   }
   var pxi = doc ? prProximaInfo(r) : null;
   h += '<div class="field"><label class="field-label" for="pr_prox">Próxima providência (opcional)</label><input type="text" id="pr_prox" maxlength="140" value="' + escapeHtml(doc ? (doc.proxima || '') : '') + '" placeholder="Ex.: Pedir penhora via SISBAJUD"></div>' +
@@ -917,3 +930,5 @@ function prVincEscolher(id, seguir){
   document.head.appendChild(st);
   prCarregar(); prCarregarCorte();
 })();
+
+(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { prAbrir: prAbrir }); })();
