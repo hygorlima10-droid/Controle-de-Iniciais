@@ -31,6 +31,10 @@ function cfRender(){
       var l = CF_LINHAS.filter(function(x){ return x.id === b.getAttribute('data-cf'); })[0]; if (l && l.go) l.go();
     });
   }
+  if (typeof ppDono === 'function' && !ppDono()){   /* advogado e estagiário: só a conta deles (senha, aparelhos, avisos de acesso) */
+    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + '</div>';
+    return;
+  }
   w.innerHTML = '<div class="pb-painel pb-menu">' + CF_LINHAS.map(function(l){ return cfLinha(l, false); }).join('') + '</div>' +
     '<div class="pb-sec-t" style="margin:16px 4px 6px">Reservado para as próximas fases</div>' +
     '<div class="pb-painel pb-menu">' + CF_FUTURAS.map(function(l){ return cfLinha(l, true); }).join('') + '</div>' +

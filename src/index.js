@@ -538,7 +538,7 @@ const ROTAS = {
   lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
-  seguranca: ['proprietario', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
+  seguranca: ['sessao', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
   equipe: ['sessao', (r, e) => equipeRotas(r, e)], agenda: ['sessao', (r, e, p, a) => agendaRotas(r, e, p, a)], 'sem-advogado': ['proprietario', (r, e, p, a) => semAdvogadoRotas(r, e, p, a)],
   eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ id, papel, nome, oabs, permissoes }) => ({ id, papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };

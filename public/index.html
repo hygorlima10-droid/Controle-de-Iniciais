@@ -1686,6 +1686,17 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -1718,7 +1729,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       <button type="button" class="dr-it" data-tab="clientes" title="Clientes"><svg><use href="#ic-users"/></svg><span class="lab">Clientes</span></button>
       <button type="button" class="dr-it" data-tab="arquivados" title="Arquivados"><svg><use href="#ic-arch"/></svg><span class="lab">Arquivados</span></button>
       <button type="button" class="dr-it" id="abrirCobrancaMenuBtn" title="Cobrar clientes inadimplentes"><svg><use href="#ic-receipt"/></svg><span class="lab">Cobrança de clientes</span></button>
-      <div class="dr-grp">Financeiro</div>
+      <div class="dr-grp" id="drGrpFin">Financeiro</div>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="resumo" title="Visão geral das finanças"><svg><use href="#ic-chart"/></svg><span class="lab">Visão geral</span></button>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="geral" title="Divisão do mês"><svg><use href="#ic-pie"/></svg><span class="lab">Divisão do mês</span></button>
       <button type="button" class="dr-it" data-tab="financeiro" data-fin="pj" title="Hygor (PJ)"><svg><use href="#ic-brief"/></svg><span class="lab">Hygor (PJ)</span></button>
@@ -1748,6 +1759,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     <button type="button" class="bt-it" data-tab="peticoes"><svg><use href="#ic-file"/></svg><span>Iniciais</span></button>
     <button type="button" class="bt-it" data-tab="acordos"><svg><use href="#ic-clip"/></svg><span>Acordos</span></button>
     <button type="button" class="bt-it" data-tab="alvaras"><svg><use href="#ic-stamp"/></svg><span>Alvarás</span></button>
+    <button type="button" class="bt-it bt-so" data-tab="agenda"><svg><use href="#ic-agenda"/></svg><span>Agenda</span></button>
     <button type="button" class="bt-it" data-tab="financeiro"><svg><use href="#ic-pie"/></svg><span>Finanças</span></button>
     <button type="button" class="bt-it" id="btMais"><svg><use href="#ic-menu"/></svg><span>Mais</span></button>
   </nav>
@@ -4642,6 +4654,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     if (typeof ob7Avisos === 'function'){
       try{ ob7Avisos().forEach(function(a){ itens.push({ origem: 'obra', ordem: 1, dataOrdenacao: a.d, atrasado: !!a.atraso, a: a }); }); }catch(e){ console.error('avisos da obra', e); }
     }
+    try{ itens = itens.filter(ppItemAtencaoOk); }catch(e){}
     itens.sort(function(a,b){
       if (a.ordem !== b.ordem) return a.ordem - b.ordem;
       if (a.ordem === 1) return String(a.dataOrdenacao).localeCompare(String(b.dataOrdenacao));
@@ -4802,7 +4815,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   }
   function atualizarAvisosSistema(){
     var el = qs('avisoSistema');
-    if (!el) return;
+    if (!el || !ppDono()) return;
     var itens = [];
     var listas = [['petições', casos], ['termos de acordo', acordos], ['alvarás', alvaras], ['clientes', clientes], ['despesas', despesas], ['receitas lançadas', receitasManuais], ['metas', metas], ['extratos do banco', extratos], ['lançamentos da obra', obraMov]];
     listas.forEach(function(l){
@@ -9764,6 +9777,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   /* ---------- abas ---------- */
   function setActiveTab(tab){
     if (!TITULOS_TELA[tab]) tab = 'inicio';
+    try{ tab = ppAbaValida(tab); }catch(e){}
     activeTab = tab;
     qs('bodyInicio').style.display = (tab === 'inicio') ? '' : 'none';
     qs('headPeticoes').style.display = (tab === 'peticoes') ? '' : 'none';
@@ -12278,6 +12292,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   qs('relSelTodos').addEventListener('click', function(){ relMarcarTodos(true); });
   qs('relSelNenhum').addEventListener('click', function(){ relMarcarTodos(false); });
   function abrirRelMurilo(mes, modo, cliente){
+    if (!ppDono()){ if (ppPapel() !== 'advogado') return; modo = 'proprio'; }
     relMes = mes || mesSelecionado;
     relModo = modo || 'murilo';
     relClienteExtra = cliente || '';
@@ -13940,13 +13955,15 @@ function impLerArquivos(files){
   });
   return cadeia.then(function(){ return persistExtCfg({ ultimaLeitura: new Date().toISOString(), iniciado: true }); }).then(function(){ impResumir(res, falhas); }).then(function(){ impEstado.rodando = false; renderExtratos(); renderInicioExtratos(); renderPainelAtencao(); });
 }
-function impVerRecebidos(){
+function impVerRecebidos(){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? impVerRecebidos0.apply(null, a) : null; }); }
+function impVerRecebidos0(){
   return fetch('/api/recebidos', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){ impEstado.recebidos = (j && j.itens) || []; impEstado.carregou = true; renderExtratos(); renderInicioExtratos(); try{ renderPainelAtencao(); }catch(e){} impAutoLer(0); }).catch(function(){ impEstado.carregou = true; });
 }
 function impB64ParaBuf(b64){ var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
 /* leitura automática: arquivo que chega pelo Atalho do iPhone é lido assim que o app percebe (ao abrir, ao voltar para o app, ao abrir Extratos).
    Só vira fila de conferência: nada é lançado antes de você confirmar. Cada arquivo é tentado uma vez sozinho; se falhar, fica na lista para você decidir. */
-function impAutoLer(n){
+function impAutoLer(n){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? impAutoLer0.apply(null, a) : null; }); }
+function impAutoLer0(n){
   if (!window.__SERVIDOR || window.__papel && window.__papel !== 'proprietario') return Promise.resolve();
   var novos = (impEstado.recebidos || []).filter(function(it){ return !impEstado.tentados[it.id]; });
   if (!novos.length || impEstado.rodando) return Promise.resolve();
@@ -16522,7 +16539,8 @@ function ntJson(url, metodo, corpo){
   return fetch(url, { method: metodo || 'GET', credentials: 'same-origin', cache: 'no-store', headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined })
     .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) throw new Error((j.error && j.error.message) || ('Erro ' + r.status)); return j; }); });
 }
-function ntCarregar(){
+function ntCarregar(){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? ntCarregar0.apply(null, a) : null; }); }
+function ntCarregar0(){
   return ntJson('/api/notif/estado').then(function(j){
     ntEstado.aparelhos = j.aparelhos; ntEstado.config = j.config; ntEstado.resumoEm = j.resumoEm; ntEstado.carregado = true;
     if (!ntSuportado()) { ntEstado.neste = false; return; }
@@ -19596,7 +19614,8 @@ function prEscolherCadastro(pubId){
 /* ---------- vincular a uma Inicial já cadastrada (transitório) ----------
    Só Iniciais cadastradas até o dia da implantação e que ainda não têm processo cadastrado com o mesmo número.
    Vincular = gravar o número do processo na Inicial; daí a lista única junta os dois. Quando não sobrar nenhuma, a opção some. */
-function prCarregarCorte(){
+function prCarregarCorte(){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? prCarregarCorte0.apply(null, a) : null; }); }
+function prCarregarCorte0(){
   if (!window.__SERVIDOR) return;
   pbApi('/api/db/config').then(function(r){
     var d = (r.docs || []).filter(function(x){ return x.id === 'vinculoIniciais'; })[0];
@@ -20344,7 +20363,8 @@ var impS = { fase: 'config', dias: 90, oabs: {}, ach: null, filtro: 'curso', sel
 var IMP_PERIODOS = [[30, '30 dias'], [90, '90 dias'], [180, '6 meses'], [365, '12 meses']];
 
 /* ---------- configuração guardada (config/importacaoAuto e config/processosIgnorados) ---------- */
-function impCarregarCfg(){
+function impCarregarCfg(){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? impCarregarCfg0.apply(null, a) : null; }); }
+function impCarregarCfg0(){
   if (!window.__SERVIDOR) return Promise.resolve();
   return Promise.all([pbApi('/api/db/config'), pbApi('/api/djen/estado').catch(function(){ return {}; })]).then(function(r){
     var docs = r[0].docs || [], porId = {}; docs.forEach(function(d){ porId[d.id] = d.data || {}; });
@@ -20426,6 +20446,7 @@ function impGravarProcesso(d){
 /* ---------- processo novo que aparece nas publicações: cadastra sozinho (se estiver ligado) ---------- */
 function impTalvezAuto(){
   if (!window.__SERVIDOR || impS.autoRodando) return;
+  if (window.__horusEu && window.__horusEu.pronto && window.__horusEu.papel !== 'proprietario') return;   /* o cadastro automático de processos é do proprietário */
   if (!impS.cfgOk){ if (!impS.cfgCarregando){ impS.cfgCarregando = true; impCarregarCfg().then(function(){ impS.cfgCarregando = false; impTalvezAuto(); }); } return; }
   if (!impS.cfg.ativo || !impS.cli || !prOk || !pbS.carregado || document.hidden) return;
   if (Date.now() - impS.autoEm < 4000) return;
@@ -20981,6 +21002,10 @@ function cfRender(){
       var b = e.target.closest ? e.target.closest('[data-cf]') : null; if (!b) return;
       var l = CF_LINHAS.filter(function(x){ return x.id === b.getAttribute('data-cf'); })[0]; if (l && l.go) l.go();
     });
+  }
+  if (typeof ppDono === 'function' && !ppDono()){   /* advogado e estagiário: só a conta deles (senha, aparelhos, avisos de acesso) */
+    w.innerHTML = '<div class="pb-painel pb-menu">' + cfLinha({ id: 'seguranca', ic: '🔒', t: 'Minha conta', s: 'trocar a senha, aparelhos conectados, avisos de acesso' }, false) + '</div>';
+    return;
   }
   w.innerHTML = '<div class="pb-painel pb-menu">' + CF_LINHAS.map(function(l){ return cfLinha(l, false); }).join('') + '</div>' +
     '<div class="pb-sec-t" style="margin:16px 4px 6px">Reservado para as próximas fases</div>' +
@@ -21974,6 +21999,65 @@ document.addEventListener('click', function(e){
 })();
 
 /*RC-FIM*/
+/*PP-INICIO*/
+/* ============================================================
+   O APLICATIVO POR PAPEL (prefixo pp) — Fase 5, etapa 5.7.
+   O app marca a página (<html>) com o papel de quem entrou (public/shim.js): "so-central" (não é o proprietário), "papel-advogado",
+   "papel-estagiario" e "sem-totais" (sem a permissão "Ver totais"). Aqui fica o que depende disso:
+   - Finanças, Análises, Construção, Extratos, Recebi R$, Fechamento, Relatório do Murilo, Backup e Exportar SOMEM para quem não é o proprietário
+     (e as telas não abrem nem pela barra, nem por atalho, nem pelo endereço);
+   - Cobrança de clientes: só o advogado, e só com os clientes dos processos em que ele está (o servidor já entrega só esses registros);
+   - Central de atenção e avisos do sistema: o que é financeiro ou do proprietário (relatório do Murilo, obra, despesas, backup) não aparece;
+   - totais e indicadores de honorários somem de quem não tem "Ver totais";
+   - barra de baixo do celular: "Finanças" dá lugar a "Agenda";
+   - "Configurações" vira "Minha conta" (senha e aparelhos).
+   O servidor continua sendo quem decide o que cada pessoa pode ler e gravar; isto aqui só tira da tela o que a pessoa não pode usar.
+   ============================================================ */
+var PP_TELAS_DONO = { financeiro: 1, analises: 1, obra: 1, extratos: 1 };
+function ppPapel(){ return window.__papel || 'proprietario'; }
+function ppDono(){ return ppPapel() === 'proprietario'; }
+function ppVerTotais(){ if (ppDono()) return true; var e = window.__horusEu; return !!(e && e.permissoes && e.permissoes.verTotais); }
+function ppTelaPermitida(tab){ return ppDono() || !PP_TELAS_DONO[tab]; }
+/* a aba de quem pediu: devolve uma aba que a pessoa pode abrir (usada ao trocar de aba) */
+/* espera o servidor dizer quem é a pessoa; resolve true só para o proprietário (quem não é nunca pede o que é do proprietário) */
+function ppDonoP(){
+  var e = window.__horusEu;
+  if (e && e.pronto) return Promise.resolve(e.papel === 'proprietario');
+  return new Promise(function(res){ window.addEventListener('horus-eu', function(){ res(window.__horusEu.papel === 'proprietario'); }, { once: true }); });
+}
+function ppAbaValida(tab){ return ppTelaPermitida(tab) ? tab : 'inicio'; }
+/* itens da Central de atenção que a pessoa pode ver */
+function ppItemAtencaoOk(x){
+  if (ppDono()) return true;
+  var o = x.origem;
+  if (o === 'despesa' || o === 'relatorio' || o === 'obra' || o === 'murilo') return false;
+  var dinheiro = (o === 'upcoming' && !x.ehPrazo) || o === 'promessa';
+  if (dinheiro) return ppPapel() === 'advogado';
+  return true;
+}
+(function(){
+  var st = document.createElement('style');
+  var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
+  st.textContent = fin.map(function(s){ return '.so-central ' + s; }).join(',') + '{display:none!important}' +
+    '.papel-estagiario #abrirCobrancaMenuBtn,.papel-estagiario #abrirCobrancaProprioBtn{display:none!important}' +
+    '.sem-totais .ini-hero,.sem-totais .ini-kpi,.sem-totais #rsPainel,.sem-totais .rs-wrap,.sem-totais #stats{display:none!important}' +
+    '.bt-so{display:none!important}.so-central .bt-so{display:flex!important}';
+  document.head.appendChild(st);
+  /* quando o servidor responde quem é a pessoa: sai de uma tela que não é dela e ajusta os rótulos */
+  function aplicar(){
+    if (ppDono()) return;
+    try{ if (typeof activeTab !== 'undefined' && !ppTelaPermitida(activeTab)) setActiveTab('inicio'); }catch(e){}
+    var cf = document.querySelector('#drawer [data-tab="configuracoes"] .lab'); if (cf) cf.textContent = 'Minha conta';
+    try{ if (typeof TITULOS_TELA !== 'undefined') TITULOS_TELA.configuracoes = 'Minha conta'; if (typeof atualizarTituloTela === 'function') atualizarTituloTela(); }catch(e){}
+    try{ if (typeof renderPainelAtencao === 'function') renderPainelAtencao(); }catch(e){}
+    try{ var m = document.getElementById('relModoSeg'); if (m && typeof relModo !== 'undefined') relModo = 'proprio'; }catch(e){}
+  }
+  window.addEventListener('horus-eu', aplicar);
+  if (window.__horusEu && window.__horusEu.pronto) aplicar();
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+})();
+
+/*PP-FIM*/
 /*AGI-INICIO*/
 /* ============================================================
    IMPORTAR COMPROMISSOS DA AGENDA POR ARQUIVO (prefixo agi)

@@ -3,6 +3,18 @@
 (function () {
   window.__SERVIDOR = true;
   var colecoes = {};
+  /* Quem está usando (Fase 5, 5.7): o app pergunta uma vez ao servidor e marca a página (<html>) com o papel. Quem não é o proprietário não pede ao servidor as coleções de
+     finanças (despesas, receitas, saldos, metas, extratos, obra, configurações do proprietário): elas ficam vazias e nenhuma mensagem de "sincronizando" aparece. */
+  var DONO = { despesas: 1, receitasManuais: 1, saldos: 1, metas: 1, extratos: 1, obraMov: 1, configDono: 1 };
+  var EU = window.__horusEu = { papel: 'proprietario', pronto: false, permissoes: {} };
+  var EUP = fetch('/api/eu', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    if (j && j.papel) { EU.papel = j.papel; EU.nome = j.nome; EU.id = j.id; EU.oabs = j.oabs || []; EU.permissoes = j.permissoes || {}; }
+    window.__papel = EU.papel;
+    var h = document.documentElement.classList, so = EU.papel !== 'proprietario';
+    h.toggle('so-central', so); h.toggle('papel-advogado', EU.papel === 'advogado'); h.toggle('papel-estagiario', EU.papel === 'estagiario');
+    h.toggle('sem-totais', so && !EU.permissoes.verTotais);
+  }).catch(function () { }).then(function () { EU.pronto = true; try { window.dispatchEvent(new CustomEvent('horus-eu')); } catch (e) { } });
+  function semAcesso(nome) { return !!DONO[nome] && EU.papel !== 'proprietario'; }
   function req(metodo, caminho, corpo) {
     return fetch(caminho, { method: metodo, headers: corpo !== undefined ? { 'content-type': 'application/json' } : undefined, body: corpo !== undefined ? JSON.stringify(corpo) : undefined, credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
@@ -89,7 +101,12 @@
       }
       return pagina('');
     };
+    var lerTudoOrig = c.lerTudo;
+    var vazia = function () { if (!c.carregada) { c.carregada = true; c.parcial = false; c.avisar(); } return Promise.resolve(); };   /* coleção do proprietário para outro papel: nasce vazia, uma vez, sem pedir nada ao servidor */
+    c.lerTudo = function () { return semAcesso(c.nome) ? vazia() : lerTudoOrig(); };
     c.carregar = function () {
+      if (!EU.pronto) return EUP.then(function () { return c.carregar(); });
+      if (semAcesso(c.nome)) return vazia();
       if (c.carregada && !c.parcial) {
         return req('GET', base + '?resumo=1').then(function (r) {
           if (c.pendentes > 0 || (r.n + '|' + r.t) === c.token) return;
@@ -107,6 +124,8 @@
   }
   /* lê uma coleção inteira (todas as páginas) sem passar pelo cache: usado pelas telas que carregam a sua própria lista (agenda, processos…) */
   function listarTudo(nome) {
+    if (!EU.pronto && DONO[nome]) return EUP.then(function () { return listarTudo(nome); });
+    if (semAcesso(nome)) return Promise.resolve({ docs: [] });
     var docs = [], paginas = 0;
     function pagina(depois) {
       return req('GET', '/api/db/' + encodeURIComponent(nome) + '?limit=1000' + (depois ? '&after=' + encodeURIComponent(depois) : '')).then(function (j) {
@@ -281,7 +300,7 @@
   var amostra = null;
   function sample() {
     if (amostra) return Promise.resolve(amostra);
-    return fetch('/api/ler/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    return EUP.then(function () { return EU.papel !== 'proprietario' ? { ok: false } : fetch('/api/ler/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }); }).then(function (j) {
       if (!j || !j.ok) return null;
       var f = function (prompt, opts) {
         opts = opts || {};

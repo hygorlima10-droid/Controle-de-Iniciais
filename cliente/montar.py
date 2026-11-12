@@ -128,6 +128,13 @@ if '/*RC-INICIO*/' in s:
 else:
     assert s.count('/*LG-FIM*/\n') == 1
     s = s.replace('/*LG-FIM*/\n', '/*LG-FIM*/\n' + bloco_rc)
+pp = open(R + 'cliente/papel.js', encoding='utf-8').read()
+bloco_pp = '/*PP-INICIO*/\n' + pp + '\n/*PP-FIM*/\n'
+if '/*PP-INICIO*/' in s:
+    s = re.sub(r'/\*PP-INICIO\*/.*?/\*PP-FIM\*/\n', lambda m: bloco_pp, s, flags=re.S)
+else:
+    assert s.count('/*RC-FIM*/\n') == 1
+    s = s.replace('/*RC-FIM*/\n', '/*RC-FIM*/\n' + bloco_pp)
 agi = open(R + 'cliente/agenda-importar.js', encoding='utf-8').read()
 bloco_agi = '/*AGI-INICIO*/\n' + agi + '\n/*AGI-FIM*/\n'
 if '/*AGI-INICIO*/' in s:
@@ -430,6 +437,26 @@ rep("    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) retur
 rep("    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    if (!rcDivAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n")
 rep("    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ esBarra(); }catch(e){}\n    try{ rcDesenharInicio(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
 repm('id="rcInicio"', '      <div class="ini-atencao">\n', '      <div class="ini-atencao">\n  <div id="rcInicio"></div>\n')
+# ---------- Fase 5, etapa 5.7: o app por papel (ganchos; cliente/papel.js tem a lógica) ----------
+rep('<div class="dr-grp">Financeiro</div>', '<div class="dr-grp" id="drGrpFin">Financeiro</div>')
+rep('    <button type="button" class="bt-it" data-tab="alvaras"><svg><use href="#ic-stamp"/></svg><span>Alvarás</span></button>\n',
+    '    <button type="button" class="bt-it" data-tab="alvaras"><svg><use href="#ic-stamp"/></svg><span>Alvarás</span></button>\n    <button type="button" class="bt-it bt-so" data-tab="agenda"><svg><use href="#ic-agenda"/></svg><span>Agenda</span></button>\n')
+rep("  function setActiveTab(tab){\n    if (!TITULOS_TELA[tab]) tab = 'inicio';\n", "  function setActiveTab(tab){\n    if (!TITULOS_TELA[tab]) tab = 'inicio';\n    try{ tab = ppAbaValida(tab); }catch(e){}\n")
+rep("    itens.sort(function(a,b){\n      if (a.ordem !== b.ordem) return a.ordem - b.ordem;\n      if (a.ordem === 1) return String(a.dataOrdenacao).localeCompare(String(b.dataOrdenacao));",
+    "    try{ itens = itens.filter(ppItemAtencaoOk); }catch(e){}\n    itens.sort(function(a,b){\n      if (a.ordem !== b.ordem) return a.ordem - b.ordem;\n      if (a.ordem === 1) return String(a.dataOrdenacao).localeCompare(String(b.dataOrdenacao));")
+rep("  function abrirRelMurilo(mes, modo, cliente){\n", "  function abrirRelMurilo(mes, modo, cliente){\n    if (!ppDono()){ if (ppPapel() !== 'advogado') return; modo = 'proprio'; }\n")
+rep("  function atualizarAvisosSistema(){\n    var el = qs('avisoSistema');\n    if (!el) return;\n", "  function atualizarAvisosSistema(){\n    var el = qs('avisoSistema');\n    if (!el || !ppDono()) return;\n")
+def so_dono(nome, assinatura, corpo_inicio):
+    """a função passa a esperar o servidor dizer quem é a pessoa e só roda para o proprietário (outros não pedem o que é dele)"""
+    if 'function ' + nome + '0(' in s: return
+    rep(assinatura, 'function ' + nome + '(' + corpo_inicio + '){ var a = arguments; return ppDonoP().then(function(ok){ return ok ? ' + nome + '0.apply(null, a) : null; }); }\n' + assinatura.replace('function ' + nome, 'function ' + nome + '0'))
+
+so_dono('impVerRecebidos', 'function impVerRecebidos(){', '')
+so_dono('ntCarregar', 'function ntCarregar(){', '')
+so_dono('prCarregarCorte', 'function prCarregarCorte(){', '')
+so_dono('impCarregarCfg', 'function impCarregarCfg(){', '')
+so_dono('impAutoLer', 'function impAutoLer(n){', 'n')
+rep("function impTalvezAuto(){\n  if (!window.__SERVIDOR || impS.autoRodando) return;\n", "function impTalvezAuto(){\n  if (!window.__SERVIDOR || impS.autoRodando) return;\n  if (window.__horusEu && window.__horusEu.pronto && window.__horusEu.papel !== 'proprietario') return;   /* o cadastro automático de processos é do proprietário */\n")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 
