@@ -121,13 +121,20 @@ if '/*LG-INICIO*/' in s:
 else:
     assert s.count('/*ES-FIM*/\n') == 1
     s = s.replace('/*ES-FIM*/\n', '/*ES-FIM*/\n' + bloco_lg)
+rc = open(R + 'cliente/repasses.js', encoding='utf-8').read()
+bloco_rc = '/*RC-INICIO*/\n' + rc + '\n/*RC-FIM*/\n'
+if '/*RC-INICIO*/' in s:
+    s = re.sub(r'/\*RC-INICIO\*/.*?/\*RC-FIM\*/\n', lambda m: bloco_rc, s, flags=re.S)
+else:
+    assert s.count('/*LG-FIM*/\n') == 1
+    s = s.replace('/*LG-FIM*/\n', '/*LG-FIM*/\n' + bloco_rc)
 agi = open(R + 'cliente/agenda-importar.js', encoding='utf-8').read()
 bloco_agi = '/*AGI-INICIO*/\n' + agi + '\n/*AGI-FIM*/\n'
 if '/*AGI-INICIO*/' in s:
     s = re.sub(r'/\*AGI-INICIO\*/.*?/\*AGI-FIM\*/\n', lambda m: bloco_agi, s, flags=re.S)
 else:
-    assert s.count('/*LG-FIM*/\n') == 1
-    s = s.replace('/*LG-FIM*/\n', '/*LG-FIM*/\n' + bloco_agi)
+    assert s.count('/*RC-FIM*/\n') == 1
+    s = s.replace('/*RC-FIM*/\n', '/*RC-FIM*/\n' + bloco_agi)
 agd = open(R + 'cliente/agenda-detalhe.js', encoding='utf-8').read()
 bloco_agd = '/*AGD-INICIO*/\n' + agd + '\n/*AGD-FIM*/\n'
 if '/*AGD-INICIO*/' in s:
@@ -411,6 +418,18 @@ rep("    try{ window.scrollTo(0, 0); }catch(e){}\n    if (tab === 'inicio'){ ren
 rep("    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });", "    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    if (lgPedeNumero(c, status)) return;   /* protocolar pede o número do processo */\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });")
 rep("        if (!c || statusDe(c) === novoStatus) return;\n        persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });", "        if (!c || statusDe(c) === novoStatus) return;\n        if (lgPedeNumero(c, novoStatus)) return;   /* protocolar pede o número do processo */\n        persistPatch(c, { status: novoStatus, statusDesde: new Date().toISOString() });")
 rep("    if (erro){ qs('formError').textContent = erro; return; }\n\n    var casoAnterior = editingId", "    if (!erro && formState.status === 'protocolado' && formState.tipo === 'inicial' && !numeroProcesso && !(qs('semProcessoInput') && qs('semProcessoInput').checked)){   /* protocolar pede o número (ou a marcação de que não há processo) */\n      var antP = editingId ? casos.filter(function(x){ return x.id === editingId; })[0] : null;\n      if (!antP || statusDe(antP) !== 'protocolado') erro = 'Informe o número do processo gerado no protocolo (ou marque que esta inicial não tem processo).';\n    }\n    if (erro){ qs('formError').textContent = erro; return; }\n\n    var casoAnterior = editingId")
+
+rep("function repasseDoc(doc){\n  var r = doc && doc.repasse;", "function repasseDoc(doc){\n  var rd = rcRepasseDeDivisao(doc); if (rd !== undefined) return rd;   /* divisão entre advogados (5.6) */\n  var r = doc && doc.repasse;")
+rep("    u.parceiro = r ? String(r.parceiro || '').trim() : '';\n  });", "    u.parceiro = r ? String(r.parceiro || '').trim() : '';\n    rcAjustarUnidade(u, doc);   /* pagamento já feito: vale a divisão e a conta daquele momento */\n  });")
+rep("        if (!pagoV) n.recebidoEm = agora;\n        else if (v && v.recebidoEm) n.recebidoEm = v.recebidoEm;\n      } else if ('recebidoEm' in n){\n        delete n.recebidoEm;\n      }", "        if (!pagoV){ n.recebidoEm = agora; rcCarimbarDivisao(n, novo, agora); }\n        else if (v && v.recebidoEm) n.recebidoEm = v.recebidoEm;\n      } else if ('recebidoEm' in n){\n        delete n.recebidoEm; delete n.divisaoRec;\n      }")
+rep('<div class="field" id="esResp_casos"></div>', '<div class="field" id="esResp_casos"></div>\n      <div class="field" id="rcDiv_casos"></div>')
+rep('<div class="field" id="esResp_termosAcordo"></div>', '<div class="field" id="esResp_termosAcordo"></div>\n      <div class="field" id="rcDiv_termosAcordo"></div>')
+rep('<div class="field" id="esResp_alvaras"></div>', '<div class="field" id="esResp_alvaras"></div>\n      <div class="field" id="rcDiv_alvaras"></div>')
+rep("    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n", "    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n    if (!rcDivAplicar('casos', dados, qs('formError'))) return;\n")
+rep("    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    if (!rcDivAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n")
+rep("    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    if (!rcDivAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n")
+rep("    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ esBarra(); }catch(e){}\n    try{ rcDesenharInicio(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
+repm('id="rcInicio"', '      <div class="ini-atencao">\n', '      <div id="rcInicio"></div>\n      <div class="ini-atencao">\n')
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

@@ -192,3 +192,6 @@ Feitas antes da 5.5 (pontos 1, 2, 3, 4 e 6); o ponto 5 (Agenda) entra na **5.5**
 
 ## Fase 5, etapa 5.5 (12/11/2026): Agenda por pessoa
 Feita (servidor + tela + testes), detalhes em `docs/DECISOES.md`. **Próxima: 5.6** (honorários, cobrança e recebimento por participação; alerta na Central de atenção do proprietário quando outro advogado marca recebimento num processo em que ele também está). Avisos de celular por responsável ficam para a 5.8. Tem tela: esboço em imagem e OK antes.
+
+## Fase 5, etapa 5.6 (12/11/2026): divisão dos honorários e repasses entre advogados
+Feita (servidor + tela + testes); decisões e limites em `docs/DECISOES.md`. **Para o proprietário testar no app publicado:** cadastrar/editar uma Inicial com dois advogados e ver a divisão; marcar uma parcela como recebida (pergunta em que conta entrou); conferir o card "Repasses" no Início; confirmar um repasse recebido (entra na PJ). **Próxima: 5.7** (o app por papel: menu, barra de baixo e Início de cada pessoa; esconder totais para estagiário sem permissão; "Cobrança" e "Honorários dos seus processos" do advogado; rótulo "recebida por X").

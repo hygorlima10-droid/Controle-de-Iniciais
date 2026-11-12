@@ -28,6 +28,7 @@ function esIniciar(){
     }
     esBarra();
     try{ if (activeTab === 'agenda') agRender(); }catch(e){}
+    try{ rcCarregar().then(function(){ rcSincronizar(); rcDesenharInicio(); }); }catch(e){}
   }).catch(function(){});
 }
 /* ---------- barra Meus | Escritório ---------- */
@@ -74,6 +75,7 @@ function esRespIniciar(chave, doc){
   if (esS.sugerido) delete esS.sugerido[chave];
   esS.resp[chave] = (doc && Array.isArray(doc.advogados) ? doc.advogados : []).filter(function(a){ return a && a.oab; }).map(function(a){ return { oab: a.oab, nome: a.nome || '' }; });
   esS.abertoSel = '';
+  if (/^(casos|termosAcordo|alvaras)$/.test(chave) && typeof rcDivIniciar === 'function') rcDivIniciar(chave, doc);   // a divisão dos honorários acompanha os advogados escolhidos
   esRespDesenhar(chave);
 }
 function esLista(chave){ return String(chave || '').indexOf('agenda') === 0 ? esS.equipeAg : esS.equipe; }
@@ -95,7 +97,7 @@ function esRespHtml(chave){
   h += '<div class="saldo-data">' + (ag ? 'Quem é responsável vê este item na própria agenda.' : 'Quem está marcado vê este registro no próprio app.') + '</div>';
   return h;
 }
-function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); if (chave === 'agenda' && typeof agDicasConflito === 'function') agDicasConflito(); }
+function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); if (/^(casos|termosAcordo|alvaras)$/.test(chave) && typeof rcDivSync === 'function'){ rcDivSync(chave); rcDivDesenhar(chave); } if (chave === 'agenda' && typeof agDicasConflito === 'function') agDicasConflito(); }
 function esRespLer(chave){ return esS.resp[chave] ? esS.resp[chave].map(function(a){ return { oab: a.oab, nome: esRespNome(a) }; }) : null; }
 /* aplica no registro antes de gravar; devolve false (e mostra o aviso) se quem não é proprietário não escolheu ninguém */
 function esRespAplicar(chave, dados, erroEl){

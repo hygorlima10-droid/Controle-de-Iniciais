@@ -192,7 +192,7 @@
       return apagar ? req('DELETE', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id)).then(function (j) { delete c.versoes[id]; return j; })
                     : enviar(c, id, dados, false);
     });
-    return p.then(function () { c.pendentes--; c.assinatura = ''; }, function (e) {
+    return p.then(function () { c.pendentes--; c.assinatura = ''; try { if (window.__aposGravar) window.__aposGravar(c.nome); } catch (e) { } }, function (e) {
       c.pendentes--;
       if (existia) c.mapa[id] = antes; else delete c.mapa[id];
       c.avisar(); throw e;
