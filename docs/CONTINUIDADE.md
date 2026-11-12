@@ -189,3 +189,6 @@ Feita (servidor + tela + testes), detalhes em `docs/DECISOES.md`. **Próxima: 5.
 
 ## Correções da análise de interligação (12/11/2026)
 Feitas antes da 5.5 (pontos 1, 2, 3, 4 e 6); o ponto 5 (Agenda) entra na **5.5**. Detalhes em `docs/DECISOES.md`. Próxima: **5.5** (esboço em imagem e OK antes), já contando com: seletor de processo no formulário da Agenda, aviso de duplicidade, conflito prazo×audiência do mesmo processo e por pessoa, responsáveis sugeridos pelo processo, "Minha agenda | Escritório" (o proprietário abre em "Minha agenda"), tarefas compartilhadas.
+
+## Fase 5, etapa 5.5 (12/11/2026): Agenda por pessoa
+Feita (servidor + tela + testes), detalhes em `docs/DECISOES.md`. **Próxima: 5.6** (honorários, cobrança e recebimento por participação; alerta na Central de atenção do proprietário quando outro advogado marca recebimento num processo em que ele também está). Avisos de celular por responsável ficam para a 5.8. Tem tela: esboço em imagem e OK antes.

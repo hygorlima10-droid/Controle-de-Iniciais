@@ -125,8 +125,14 @@ export async function linhasVisiveis(env, colecao, auth) {
 /* ---------- gravação e exclusão ---------- */
 /* Confere (e ajusta) a gravação de um registro. `antes` = registro atual (ou null se é novo), `depois` = o que se quer gravar.
    Devolve uma resposta de recusa, ou null se pode (e então `depois` já vem com os carimbos do servidor). */
+/* carimbo de autor (agenda e clientes): quem criou, inclusive o proprietário; o autor não muda depois */
+export function carimbarAutor(colecao, antes, depois, auth) {
+  if (!auth || !auth.usuario || (colecao !== 'agenda' && colecao !== 'clientes')) return;
+  if (!antes) { if (!(ehDono(auth) && depois.criadoPor)) depois.criadoPor = auth.usuario.id; }   // o proprietário pode informar o autor (importações); os demais, nunca
+  else if (antes.criadoPor) depois.criadoPor = antes.criadoPor;
+}
 export async function autorizarGravacao(env, colecao, id, antes, depois, auth, esc) {
-  if (ehDono(auth)) return null;
+  if (ehDono(auth)) { carimbarAutor(colecao, antes, depois, auth); return null; }
   const u = usu(auth);
   if (colecao === 'config') return checarDocConfig(id, auth);
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);

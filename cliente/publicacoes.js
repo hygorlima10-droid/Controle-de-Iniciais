@@ -592,6 +592,7 @@ function pbDesenharDetalhe(){
       '<div class="pb-dois"><div class="field"><label class="field-label" for="pbf_dias">Dias</label><input type="number" id="pbf_dias" min="1" max="365" inputmode="numeric" value="' + (usaPc ? pcSel.dias : (sug ? sug.dias : 15)) + '"></div><div class="field"><label class="field-label" for="pbf_tipo">Contagem</label><select id="pbf_tipo" class="filter-select"><option value="uteis"' + ((usaPc ? pcSel.contagem === 'uteis' : (!sug || sug.tipo === 'uteis')) ? ' selected' : '') + '>dias úteis</option><option value="corridos"' + ((usaPc ? pcSel.contagem === 'corridos' : (sug && sug.tipo === 'corridos')) ? ' selected' : '') + '>dias corridos</option></select></div></div>' +
       ((pc && pc.instancia === 'juizado') ? '' : '<div class="field"><label class="field-label" for="pbf_dobro">Prazo em dobro?</label><select id="pbf_dobro" class="filter-select" style="width:100%"><option value="">Não</option><option value="fazenda"' + (((typeof stp.dobro === 'string') ? stp.dobro : (pc ? pc.dobro : '')) === 'fazenda' ? ' selected' : '') + '>Sim: Fazenda Pública, Ministério Público ou Defensoria (CPC 180, 183 e 186)</option><option value="litis"' + (stp.dobro === 'litis' ? ' selected' : '') + '>Sim: litisconsortes com advogados de escritórios diferentes (CPC 229; não vale em processo eletrônico, §2º)</option></select></div>') +
       '<div class="pb-calc" id="pbCalc"></div><button type="button" class="btn-text" data-pbd="manual">Corrigir a data manualmente</button><div class="field" id="pbManualBox" style="display:none;"><label class="field-label" for="pbf_manual">Data do vencimento (substitui o cálculo)</label><input type="date" id="pbf_manual"></div>' +
+      '<div class="field" id="esResp_agendapub"></div>' +
       '<div class="pb-aviso">O app só sugere. Confira a contagem (data da publicação, feriados, suspensões e o tipo de prazo) antes de confirmar. Nada entra na Central de atenção sem o seu OK.</div><div class="form-error" id="pbErro"></div>' +
       '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="confirmar">Confirmar prazo</button>' + (!p.semPrazo ? '<button type="button" class="btn btn-ghost pb-b" data-pbd="naoe">Não é prazo</button>' : '') + '</div>';
   }
@@ -603,6 +604,7 @@ function pbDesenharDetalhe(){
       (naAg ? '<div class="saldo-data">✓ Esta audiência já está na Agenda.</div>' : '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="aud">Criar audiência na Agenda</button></div><div class="pb-aviso">O app só sugere. Confira data, hora e local no texto antes de salvar.</div>') + '</div>';
   }
   c.innerHTML = h;
+  try{ if (qs('esResp_agendapub')){ if (esS.respPubId !== p.id){ var sg = agChavesProcesso(p.numero || p.processo), me = esMinhasChaves(); esRespIniciarAg('agendapub', sg.length ? sg : (me.length ? [me[0]] : []), sg.length ? 'proc' : 'eu'); esS.respPubId = p.id; } else esRespDesenhar('agendapub'); } }catch(e){ console.error('responsáveis do prazo', e); }
   var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();
 }
@@ -624,7 +626,7 @@ function pbSalvarPrazo(){
   var mult = pbMult(), r = pbCalcular(p.data, dias * mult, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '', psel = pbPecaSel(p), pcz = pbPecasDe(p);
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
   var pcMostrado = pbPecasDe(p);
-  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
     peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? (psel.rid === 'catalogo' ? 'escolhida' : 'sugerida') : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
     try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }

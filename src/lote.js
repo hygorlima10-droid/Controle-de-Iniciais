@@ -29,6 +29,7 @@ export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, 
   for (const o of ops) {
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(o.colecao, o.id).first(), antesObj = antes ? JSON.parse(antes.dados) : null;
     const dono = !auth || !auth.usuario || auth.usuario.papel === 'proprietario';
+    if (dono && o.acao === 'gravar' && auth && auth.usuario && (o.colecao === 'agenda' || o.colecao === 'clientes')) { if (!antesObj) { if (!o.dados.criadoPor) o.dados.criadoPor = auth.usuario.id; } else if (antesObj.criadoPor) o.dados.criadoPor = antesObj.criadoPor; }
     if (!dono) { const neg = o.acao === 'gravar' ? await autorizarGravacao(env, o.colecao, o.id, antesObj, o.dados, auth) : await autorizarExclusao(env, o.colecao, o.id, antesObj, auth); if (neg) return neg; }
     if (o.acao === 'gravar') {
       cmds.push(stmtGravar(env, o.colecao, o.id, o.dados));

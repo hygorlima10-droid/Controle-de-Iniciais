@@ -5,7 +5,7 @@
    - aviso e revisão de registros sem advogado definido (só o proprietário), com sugestão quando outro registro do mesmo processo ou cliente já tem advogado.
    O filtro em si está em public/shim.js (window.__horusEscopo); o servidor já entrega a cada pessoa só o que ela pode ver.
    ============================================================ */
-var esS = { eu: null, equipe: [], sem: null, semEm: 0, resp: {}, abertoSel: '', rev: null, ocupado: false };
+var esS = { sugerido: {}, eu: null, equipe: [], equipeAg: [], sem: null, semEm: 0, resp: {}, abertoSel: '', rev: null, ocupado: false };
 var ES_TABS = { processos: 1, peticoes: 1, acordos: 1, alvaras: 1, clientes: 1, arquivados: 1 };
 function esEsc(){ return window.__horusEscopo || { modo: 'escritorio', pub: 'minhas', ativo: false, oabs: [] }; }
 function esJson(url, metodo, corpo){
@@ -16,15 +16,18 @@ function esIniciar(){
   if (!window.__SERVIDOR) return;
   Promise.all([esJson('/api/eu'), esJson('/api/equipe').catch(function(){ return { advogados: [] }; }), esJson('/api/djen/estado').catch(function(){ return { oabs: [] }; })]).then(function(r){
     esS.eu = r[0]; esS.equipe = r[1].advogados || [];
+    esS.equipeAg = esS.equipe.concat((r[1].estagiarios || []).map(function(e){ return { oab: 'u:' + e.id, nome: e.nome + ' (estagiário)' }; }));   // quem pode ser responsável na Agenda: advogados (chave = OAB) e estagiários (chave = u:id)
     var E = esEsc(), dono = r[0].papel === 'proprietario';
     var oabs = (r[0].oabs || []).slice();
     if (!oabs.length && dono) (r[2].oabs || []).forEach(function(o){ if (o.principal && o.numero) oabs.push(String(o.numero).replace(/\D/g, '').replace(/^0+/, '') + '/' + String(o.uf).toUpperCase()); });
     E.oabs = oabs; E.ativo = dono;
+    if (dono && !(r[0].oabs || []).length) esS.eu.oabs = oabs.slice();   // proprietário sem OAB indicada: vale a principal de Publicações (também na Agenda)
     if (dono && E.modo === 'meus' && typeof E.aplicar === 'function') E.aplicar();
     if (dono && E.pub === 'minhas' && typeof pbCarregar === 'function' && typeof pbS !== 'undefined' && pbS.carregado){   // proprietário abre em "Minhas" publicações: relê já com o filtro (o que carregou antes de saber quem é o usuário veio inteiro)
       pbCarregar(true).then(function(){ try{ if (activeTab === 'publicacoes') pbRender(); prDepois(); renderPainelAtencao(); }catch(e){} });
     }
     esBarra();
+    try{ if (activeTab === 'agenda') agRender(); }catch(e){}
   }).catch(function(){});
 }
 /* ---------- barra Meus | Escritório ---------- */
@@ -38,16 +41,18 @@ function esBarra(){
       var a = b.getAttribute('data-es'), k = b.getAttribute('data-k');
       if (a === 'modo') esMudarModo(k);
       else if (a === 'definir') esAbrirRev();
+      else if (a === 'agrev') agAbrirRevResp();
     });
   }
-  var pub = activeTab === 'publicacoes';
-  if (!E.ativo || !(ES_TABS[activeTab] || pub)){ barra.style.display = 'none'; return; }
-  var sel = pub ? E.pub : E.modo, ops = pub ? [['minhas', 'Minhas'], ['todas', 'Todas']] : [['meus', 'Meus'], ['escritorio', 'Escritório']];
+  var pub = activeTab === 'publicacoes', age = activeTab === 'agenda';
+  if (age ? !esS.eu : (!E.ativo || !(ES_TABS[activeTab] || pub))){ barra.style.display = 'none'; return; }   // a Agenda tem a barra para todas as pessoas; as demais listas, só para o proprietário
+  var sel = age ? agS.escopo : (pub ? E.pub : E.modo), ops = age ? [['minha', 'Minha agenda'], ['escritorio', 'Escritório']] : (pub ? [['minhas', 'Minhas'], ['todas', 'Todas']] : [['meus', 'Meus'], ['escritorio', 'Escritório']]);
   var h2 = '<div class="es-seg">' + ops.map(function(o){ return '<button type="button" class="es-b' + (sel === o[0] ? ' on' : '') + '" data-es="modo" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
   var n = esS.sem ? esS.sem.itens.length : 0;
-  if (!pub && n) h2 += '<span class="es-aviso"><b>' + n + (n === 1 ? ' registro' : ' registros') + '</b> sem advogado definido <button type="button" class="es-lk" data-es="definir">Definir</button></span>';
+  if (age && esS.eu.papel === 'proprietario'){ var ns = agSemResp().length; if (ns) h2 += '<span class="es-aviso"><b>' + ns + (ns === 1 ? ' prazo ou audiência' : ' prazos e audiências') + '</b> sem responsável <button type="button" class="es-lk" data-es="agrev">Definir</button></span>'; }
+  if (!pub && !age && n) h2 += '<span class="es-aviso"><b>' + n + (n === 1 ? ' registro' : ' registros') + '</b> sem advogado definido <button type="button" class="es-lk" data-es="definir">Definir</button></span>';
   barra.innerHTML = h2; barra.style.display = '';
-  if (!pub && (!esS.sem || Date.now() - esS.semEm > 60000)) esCarregarSem();
+  if (!pub && !age && (!esS.sem || Date.now() - esS.semEm > 60000)) esCarregarSem();
 }
 function esCarregarSem(){
   esS.semEm = Date.now();
@@ -55,6 +60,7 @@ function esCarregarSem(){
 }
 function esMudarModo(k){
   var E = esEsc();
+  if (activeTab === 'agenda'){ agS.escopo = k === 'escritorio' ? 'escritorio' : 'minha'; try { localStorage.setItem('horus.agendaEscopo', agS.escopo); } catch (e) {} esBarra(); agRender(); return; }
   if (activeTab === 'publicacoes'){
     E.pub = k === 'todas' ? 'todas' : 'minhas'; try { localStorage.setItem('horus.escopoPub', E.pub); } catch (e) {}
     pbS.carregado = false; esBarra(); pbRender(); return;
@@ -65,28 +71,31 @@ window.addEventListener('horus-escopo', function(){ try { if (typeof prCarregar 
 /* ---------- seletor "Advogados responsáveis" ---------- */
 var ES_TITULO = { casos: 'Inicial', termosAcordo: 'Acordo', alvaras: 'Alvará', processos: 'Processo' };
 function esRespIniciar(chave, doc){
+  if (esS.sugerido) delete esS.sugerido[chave];
   esS.resp[chave] = (doc && Array.isArray(doc.advogados) ? doc.advogados : []).filter(function(a){ return a && a.oab; }).map(function(a){ return { oab: a.oab, nome: a.nome || '' }; });
   esS.abertoSel = '';
   esRespDesenhar(chave);
 }
+function esLista(chave){ return String(chave || '').indexOf('agenda') === 0 ? esS.equipeAg : esS.equipe; }
+function esNomeChave(k){ var q = esS.equipeAg.filter(function(x){ return x.oab === k; })[0]; return q ? q.nome.replace(/ \(estagiário\)$/, '') : (k.indexOf('u:') === 0 ? 'Usuário' : k); }
 function esRespNome(a){
-  var q = esS.equipe.filter(function(x){ return x.oab === a.oab; })[0];
+  var q = esS.equipeAg.filter(function(x){ return x.oab === a.oab; })[0] || esS.equipe.filter(function(x){ return x.oab === a.oab; })[0];
   return (q && q.nome) || a.nome || a.oab;
 }
 function esRespHtml(chave){
   var l = esS.resp[chave] || [], aberto = esS.abertoSel === chave;
-  var h = '<label class="field-label">Advogados responsáveis</label><div class="es-chips">' + (l.length ? l.map(function(a){
+  var ag = String(chave).indexOf('agenda') === 0, h = '<label class="field-label">' + (ag ? 'Responsáveis' + (esS.sugerido && esS.sugerido[chave] === 'proc' ? ' <span class="pb-tg ok" style="margin-left:4px">sugeridos pelo processo</span>' : '') : 'Advogados responsáveis') + '</label><div class="es-chips">' + (l.length ? l.map(function(a){
     return '<span class="es-chip" title="OAB ' + escapeHtml(a.oab) + '">' + escapeHtml(esRespNome(a).split(' ').slice(0, 2).join(' ')) + ' <button type="button" class="es-x" data-esr="tirar" data-c="' + chave + '" data-k="' + escapeHtml(a.oab) + '" aria-label="Tirar">✕</button></span>';
-  }).join('') : '<span class="es-chip es-vazio">sem advogado definido</span>') +
-    '<button type="button" class="es-lk" data-esr="abrir" data-c="' + chave + '">' + (aberto ? 'Fechar lista' : 'Adicionar advogado') + '</button></div>';
-  if (aberto) h += '<div class="es-lista">' + (esS.equipe.length ? esS.equipe.map(function(a){
+  }).join('') : '<span class="es-chip es-vazio">' + (ag ? 'ninguém escolhido' : 'sem advogado definido') + '</span>') +
+    '<button type="button" class="es-lk" data-esr="abrir" data-c="' + chave + '">' + (aberto ? 'Fechar lista' : (ag ? 'Adicionar responsável' : 'Adicionar advogado')) + '</button></div>';
+  if (aberto) h += '<div class="es-lista">' + (esLista(chave).length ? esLista(chave).map(function(a){
     var on = l.some(function(x){ return x.oab === a.oab; });
     return '<label class="ad-it" style="border:0;padding:4px 0"><input type="checkbox" data-esr="marcar" data-c="' + chave + '" data-k="' + escapeHtml(a.oab) + '"' + (on ? ' checked' : '') + '><span class="ad-t">' + escapeHtml(a.nome) + ' <span class="saldo-data">OAB ' + escapeHtml(a.oab) + '</span></span></label>';
   }).join('') : '<div class="saldo-data">Nenhum advogado cadastrado ainda (Configurações › Usuários e Publicações).</div>') + '</div>';
-  h += '<div class="saldo-data">Quem está marcado vê este registro no próprio app.</div>';
+  h += '<div class="saldo-data">' + (ag ? 'Quem é responsável vê este item na própria agenda.' : 'Quem está marcado vê este registro no próprio app.') + '</div>';
   return h;
 }
-function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); }
+function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); if (chave === 'agenda' && typeof agDicasConflito === 'function') agDicasConflito(); }
 function esRespLer(chave){ return esS.resp[chave] ? esS.resp[chave].map(function(a){ return { oab: a.oab, nome: esRespNome(a) }; }) : null; }
 /* aplica no registro antes de gravar; devolve false (e mostra o aviso) se quem não é proprietário não escolheu ninguém */
 function esRespAplicar(chave, dados, erroEl){
@@ -99,15 +108,25 @@ document.addEventListener('click', function(e){
   var b = e.target.closest ? e.target.closest('[data-esr]') : null; if (!b) return;
   var a = b.getAttribute('data-esr'), c = b.getAttribute('data-c'), k = b.getAttribute('data-k');
   if (a === 'abrir'){ esS.abertoSel = esS.abertoSel === c ? '' : c; esRespDesenhar(c); }
-  else if (a === 'tirar'){ esS.resp[c] = (esS.resp[c] || []).filter(function(x){ return x.oab !== k; }); esRespDesenhar(c); }
+  else if (a === 'tirar'){ esS.resp[c] = (esS.resp[c] || []).filter(function(x){ return x.oab !== k; }); if (esS.sugerido) delete esS.sugerido[c]; esRespDesenhar(c); }
 });
 document.addEventListener('change', function(e){
   var t = e.target; if (!t || !t.getAttribute || t.getAttribute('data-esr') !== 'marcar') return;
   var c = t.getAttribute('data-c'), k = t.getAttribute('data-k'), l = esS.resp[c] || (esS.resp[c] = []), i = l.map(function(x){ return x.oab; }).indexOf(k);
-  if (t.checked && i < 0){ var q = esS.equipe.filter(function(x){ return x.oab === k; })[0]; l.push({ oab: k, nome: q ? q.nome : '' }); }
+  if (t.checked && i < 0){ var q = esLista(c).filter(function(x){ return x.oab === k; })[0]; l.push({ oab: k, nome: q ? q.nome : '' }); }
   if (!t.checked && i >= 0) l.splice(i, 1);
+  if (esS.sugerido) delete esS.sugerido[c];
   esRespDesenhar(c);
 });
+/* ---------- responsáveis da Agenda (chaves: OAB do advogado ou u:<id>) ---------- */
+function esRespIniciarAg(chave, chaves, sugerido){
+  esS.resp[chave] = (chaves || []).map(function(k){ return { oab: k, nome: esNomeChave(k) }; });
+  esS.sugerido[chave] = sugerido || false; esS.abertoSel = '';
+  esRespDesenhar(chave);
+}
+function esRespChaves(chave){ return (esS.resp[chave] || []).map(function(a){ return a.oab; }); }
+function esMinhasChaves(){ return esS.eu ? (esS.eu.oabs || []).concat(esS.eu.id ? ['u:' + esS.eu.id] : []) : []; }
+
 /* ---------- revisão: registros sem advogado definido ---------- */
 function esAbrirRev(){
   var ov = sgMontar('overlayEsRev', 'Sem advogado definido');

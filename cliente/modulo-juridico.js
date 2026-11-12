@@ -103,7 +103,7 @@ function mjCarga(dias, por){
   return s + '</svg>';
 }
 function mjAgenda(){
-  var hoje = todayISO(), lim = somarDias(hoje, 7), todos = agItens(), abertos = todos.filter(function(i){ return !i.concluido; }).sort(agOrdem);
+  var hoje = todayISO(), lim = somarDias(hoje, 7), todos = agEscopoLista(agItens()), abertos = todos.filter(function(i){ return !i.concluido; }).sort(agOrdem);
   var deHoje = abertos.filter(function(i){ return i.data === hoje; }), em7 = abertos.filter(function(i){ return i.data >= hoje && i.data <= lim; });
   var pz = em7.filter(function(i){ return i.tipo === 'prazo'; }).length, au = em7.filter(function(i){ return i.tipo === 'audiencia'; }).length;
   var atr = abertos.filter(function(i){ return i.data < hoje && i.tipo !== 'audiencia'; }).length;
@@ -125,6 +125,7 @@ function mjAgenda(){
   }).join('') || '<div class="md-vazio">Nenhum compromisso em aberto.</div>';
   return '<div class="md-kpis">' + kp.map(mdKpi).join('') + '</div><div class="md-grid">' +
     mdCard('Carga dos próximos 7 dias', mjCarga(dias, por) + mdLeg([[MD_COR.verm, 'Prazos'], [MD_COR.azul, 'Audiências'], [MD_COR.ouro, 'Tarefas']]) + '<div class="md-foot">Toque num dia para abrir a semana nele.</div>', ['vista:semana', 'abrir a semana']) +
+    mdCard('Carga por pessoa · próximos 7 dias', '<div id="agCargaBox"><div class="saldo-data">Carregando…</div></div>') +
     mdCard('Por responsável', mjBarrasH(porResp, 'Nenhum compromisso com responsável nos próximos 30 dias.', 'Em aberto até 30 dias à frente. Toque para ver só os dessa pessoa.')) +
     mdCard('Próximos compromissos', '<div class="md-ats">' + prox + '</div>', ['lista:tudo', 'ver a lista']) + '</div>';
 }

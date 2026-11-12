@@ -7,7 +7,7 @@ import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } fr
 import { datajudRotas } from './datajud.js';
 import { loteRotas } from './lote.js';
 import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
-import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono } from './politica.js';
+import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono, carimbarAutor } from './politica.js';
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { usuariosRotas } from './usuarios.js';
@@ -464,6 +464,10 @@ async function api(request, env, partes, auth) {
   }
   if (id && metodo === 'PUT') {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
+    if (ehDono(auth) && auth && auth.usuario && (colecao === 'agenda' || colecao === 'clientes')) {   // proprietário: só o carimbo de autor
+      const at0 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+      carimbarAutor(colecao, at0 ? JSON.parse(at0.dados) : null, dados, auth);
+    }
     if (!ehDono(auth)) {   // quem não é proprietário: confere visão, vínculo e permissões contra o que já está gravado
       const at = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
       const neg = await autorizarGravacao(env, colecao, id, at ? JSON.parse(at.dados) : null, dados, auth); if (neg) return neg;

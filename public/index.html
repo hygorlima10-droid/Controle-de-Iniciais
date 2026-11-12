@@ -1662,6 +1662,14 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -17912,6 +17920,7 @@ function pbDesenharDetalhe(){
       '<div class="pb-dois"><div class="field"><label class="field-label" for="pbf_dias">Dias</label><input type="number" id="pbf_dias" min="1" max="365" inputmode="numeric" value="' + (usaPc ? pcSel.dias : (sug ? sug.dias : 15)) + '"></div><div class="field"><label class="field-label" for="pbf_tipo">Contagem</label><select id="pbf_tipo" class="filter-select"><option value="uteis"' + ((usaPc ? pcSel.contagem === 'uteis' : (!sug || sug.tipo === 'uteis')) ? ' selected' : '') + '>dias úteis</option><option value="corridos"' + ((usaPc ? pcSel.contagem === 'corridos' : (sug && sug.tipo === 'corridos')) ? ' selected' : '') + '>dias corridos</option></select></div></div>' +
       ((pc && pc.instancia === 'juizado') ? '' : '<div class="field"><label class="field-label" for="pbf_dobro">Prazo em dobro?</label><select id="pbf_dobro" class="filter-select" style="width:100%"><option value="">Não</option><option value="fazenda"' + (((typeof stp.dobro === 'string') ? stp.dobro : (pc ? pc.dobro : '')) === 'fazenda' ? ' selected' : '') + '>Sim: Fazenda Pública, Ministério Público ou Defensoria (CPC 180, 183 e 186)</option><option value="litis"' + (stp.dobro === 'litis' ? ' selected' : '') + '>Sim: litisconsortes com advogados de escritórios diferentes (CPC 229; não vale em processo eletrônico, §2º)</option></select></div>') +
       '<div class="pb-calc" id="pbCalc"></div><button type="button" class="btn-text" data-pbd="manual">Corrigir a data manualmente</button><div class="field" id="pbManualBox" style="display:none;"><label class="field-label" for="pbf_manual">Data do vencimento (substitui o cálculo)</label><input type="date" id="pbf_manual"></div>' +
+      '<div class="field" id="esResp_agendapub"></div>' +
       '<div class="pb-aviso">O app só sugere. Confira a contagem (data da publicação, feriados, suspensões e o tipo de prazo) antes de confirmar. Nada entra na Central de atenção sem o seu OK.</div><div class="form-error" id="pbErro"></div>' +
       '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="confirmar">Confirmar prazo</button>' + (!p.semPrazo ? '<button type="button" class="btn btn-ghost pb-b" data-pbd="naoe">Não é prazo</button>' : '') + '</div>';
   }
@@ -17923,6 +17932,7 @@ function pbDesenharDetalhe(){
       (naAg ? '<div class="saldo-data">✓ Esta audiência já está na Agenda.</div>' : '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pbd="aud">Criar audiência na Agenda</button></div><div class="pb-aviso">O app só sugere. Confira data, hora e local no texto antes de salvar.</div>') + '</div>';
   }
   c.innerHTML = h;
+  try{ if (qs('esResp_agendapub')){ if (esS.respPubId !== p.id){ var sg = agChavesProcesso(p.numero || p.processo), me = esMinhasChaves(); esRespIniciarAg('agendapub', sg.length ? sg : (me.length ? [me[0]] : []), sg.length ? 'proc' : 'eu'); esS.respPubId = p.id; } else esRespDesenhar('agendapub'); } }catch(e){ console.error('responsáveis do prazo', e); }
   var vp = qs('pbVerPrazo'); if (vp) vp.addEventListener('click', function(){ qs('overlayPb').classList.remove('show'); agAbrir('a:' + pz.id); });
   if (!pz) pbAtualizarCalculo();
 }
@@ -17944,7 +17954,7 @@ function pbSalvarPrazo(){
   var mult = pbMult(), r = pbCalcular(p.data, dias * mult, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '', psel = pbPecaSel(p), pcz = pbPecasDe(p);
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
   var pcMostrado = pbPecasDe(p);
-  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
     peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? (psel.rid === 'catalogo' ? 'escolhida' : 'sugerida') : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
     try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }
@@ -18055,7 +18065,8 @@ window.__horusTeste = { mudarStatusCaso: function(id, st){ return mudarStatusCas
    - cartão "Prazos processuais" no Início e avisos no celular (5, 2 e 1 dia antes e no dia, configurável por item)
    ============================================================ */
 var agDocs = [], agOk = false, agEditKey = null, agEditTipo = 'prazo';
-var agS = { vista: 'semana', quadro: 'urgencia', filtro: 'tudo', ref: '', mes: '', sel: '', feitos: false };
+var agS = { vista: 'semana', quadro: 'urgencia', filtro: 'tudo', ref: '', mes: '', sel: '', feitos: false, escopo: 'minha' };
+try{ if (localStorage.getItem('horus.agendaEscopo') === 'escritorio') agS.escopo = 'escritorio'; }catch(e){}
 var AG_PADRAO = [5, 2, 1, 0];
 var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
 var AG_MODAL = { presencial: 'Presencial', online: 'Online', hibrida: 'Híbrida' };
@@ -18123,6 +18134,34 @@ function agItens(op){
   });
   var arq = {}; try{ arq = prArquivadosSet(); }catch(e){}   /* processo arquivado: seus prazos saem da Agenda (voltam se reabrir) */
   return l.filter(function(i){ return /^\d{4}-\d{2}-\d{2}$/.test(i.data) && !(i.processo && arq[prNum(i.processo)]); });
+}
+/* ---------- responsáveis e escopo (Fase 5, etapa 5.5) ----------
+   `resp` do item guarda chaves de pessoas (OAB do advogado ou "u:<id>"). Item sem responsável gravado: vale o advogado do processo (o app sugere, e a revisão em lote grava). */
+function agRespChaves(i){
+  var d = i.doc || {};
+  if (Array.isArray(d.resp) && d.resp.length) return d.resp.slice();
+  var num = i.processo ? prNum(i.processo) : '', r = num ? prMapa().m[num] : null;
+  if (r){ var ks = lgUnirAdvogados(r.links.filter(function(l){ return !l.doc.arquivado; }), r.doc).map(function(a){ return a.oab; }); if (ks.length) return ks; }
+  if (!r && i.fonte === 'caso' && Array.isArray(d.advogados)) return d.advogados.map(function(a){ return a.oab; }).filter(Boolean);
+  return [];
+}
+function agTemRespGravado(i){ return !!(i.doc && Array.isArray(i.doc.resp) && i.doc.resp.length); }
+function agMinha(i){
+  var eu = esS.eu; if (!eu) return true;
+  var meus = esMinhasChaves(), d = i.doc || {}, rs = agRespChaves(i);
+  if (rs.some(function(k){ return meus.indexOf(k) >= 0; })) return true;
+  if (d.criadoPor && d.criadoPor === eu.id) return true;
+  if (!d.criadoPor && eu.papel === 'proprietario' && !rs.length) return true;   // item antigo sem responsável: fica com o proprietário até a revisão
+  if (!d.criadoPor && eu.papel === 'proprietario' && i.tipo === 'tarefa') return true;
+  return false;
+}
+/* "Escritório": prazos e audiências de todos; tarefas só se compartilhadas, com responsáveis ou minhas (a tarefa pessoal de outra pessoa não aparece) */
+function agEscritorioOk(i){ if (i.tipo !== 'tarefa') return true; var d = i.doc || {}; return d.compartilhada === true || agRespChaves(i).length > 0 || agMinha(i); }
+function agEscopoLista(l){ if (!esS.eu) return l; return l.filter(agS.escopo === 'minha' ? agMinha : agEscritorioOk); }
+function agRespAvatares(i, max){
+  var ks = agRespChaves(i).slice(0, max || 3), cores = ['#C98500', '#2A78D6', '#17895A', '#8B5CF6', '#D93B3B'], h = '';
+  ks.forEach(function(k, n){ var nm = esNomeChave(k); h += '<span class="agc-av" style="background:' + cores[n % cores.length] + ';color:#fff" title="' + escapeHtml(nm) + '">' + escapeHtml(agdSigla(nm)) + '</span>'; });
+  return h;
 }
 function agOrdem(a, b){ return (a.data + (a.hora || '00:00')).localeCompare(b.data + (b.hora || '00:00')) || (a.tipo || '').localeCompare(b.tipo || ''); }
 function agAbertos(){ return agItens().filter(function(i){ return !i.concluido; }).sort(agOrdem); }
@@ -18251,7 +18290,7 @@ function agRenderIn(){
   if (!agS.mdOk){ agS.mdOk = 1; if (agS.vista === 'semana') agS.vista = mdInicial('agenda', ['semana', 'mes', 'lista', 'quadro']); }
   var h = '<div id="agSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista'], ['quadro', 'Quadro']], agS.vista, function(k){ return 'data-ag="vista" data-v="' + k + '"'; }) + '</div>' +
     '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div>';
-  if (agS.vista === 'resumo'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; return; }
+  if (agS.vista === 'resumo'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; agCarregarCarga(); return; }
   if (agS.vista !== 'quadro' && agS.filtro === 'alvara') agS.filtro = 'tudo';
   h += '<input type="search" id="agBusca" class="ag-busca" placeholder="Buscar compromisso, processo ou cliente" autocomplete="off" value="' + escapeHtml(agS.busca || '') + '" style="margin-top:8px">';
   var nf = agdFiltrosAtivos();
@@ -18263,7 +18302,7 @@ function agRenderIn(){
 }
 function agCorpo(){
   if (agS.vista === 'resumo'){ try{ return mjPainel('agenda', mjAgenda()); }catch(e){ console.error('resumo da agenda', e); return '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; } }
-  var todos = agS.vista === 'quadro' ? agItens({ quadro: true }).filter(function(i){ return agS.filtro === 'tudo' || i.cat === agS.filtro; }).sort(agOrdem) : agFiltrados(agItens()).sort(agOrdem), h = '';
+  var todos = agS.vista === 'quadro' ? agEscopoLista(agItens({ quadro: true })).filter(function(i){ return agS.filtro === 'tudo' || i.cat === agS.filtro; }).sort(agOrdem) : agFiltrados(agEscopoLista(agItens())).sort(agOrdem), h = '';
   if (agS.vista === 'quadro') h += agVistaQuadro(todos);
   else if (agS.vista === 'semana') h += agVistaSemana(todos);
   else if (agS.vista === 'mes') h += agVistaMes(todos);
@@ -18273,12 +18312,19 @@ function agCorpo(){
 function agAbertosDoDia(l){ return (l || []).filter(function(i){ return !i.concluido; }); }
 function agCarga(l){ var n = agAbertosDoDia(l).length; return n >= 4 ? ' n3' : (n >= 2 ? ' n2' : (n === 1 ? ' n1' : '')); }
 function agBadge(l){ var n = agAbertosDoDia(l).length; return n ? '<em class="ag-n" title="' + n + (n === 1 ? ' compromisso' : ' compromissos') + '">' + n + '</em>' : ''; }
-/* duas audiências no mesmo dia com menos de 1 hora de diferença: avisa */
+/* avisos do dia: audiências a menos de 1 hora uma da outra (por pessoa responsável) e prazo + audiência do mesmo processo no mesmo dia */
 function agConflitoHtml(l){
-  var au = agAbertosDoDia(l).filter(function(i){ return i.tipo === 'audiencia' && /^\d{2}:\d{2}$/.test(i.hora || ''); }).sort(function(a, b){ return a.hora.localeCompare(b.hora); });
-  var min = function(h){ return Number(h.slice(0, 2)) * 60 + Number(h.slice(3)); }, par = null;
-  for (var x = 0; x + 1 < au.length && !par; x++) if (min(au[x + 1].hora) - min(au[x].hora) < 60) par = [au[x], au[x + 1]];
-  return par ? '<div class="ag-conf">⚠ <span>Duas audiências em horários próximos: ' + escapeHtml(par[0].hora) + ' e ' + escapeHtml(par[1].hora) + '. Confira se dá tempo de ir de uma à outra.</span></div>' : '';
+  var ab = agAbertosDoDia(l), msgs = [], min = function(h){ return Number(h.slice(0, 2)) * 60 + Number(h.slice(3)); };
+  var au = ab.filter(function(i){ return i.tipo === 'audiencia' && /^\d{2}:\d{2}$/.test(i.hora || ''); }).sort(function(a, b){ return a.hora.localeCompare(b.hora); }), generica = null;
+  for (var x = 0; x < au.length; x++) for (var y = x + 1; y < au.length; y++){
+    if (min(au[y].hora) - min(au[x].hora) >= 60) break;
+    var cx = agRespChaves(au[x]), comuns = agRespChaves(au[y]).filter(function(k){ return cx.indexOf(k) >= 0; });
+    if (comuns.length) msgs.push('<b>' + comuns.map(function(k){ return escapeHtml(esNomeChave(k)); }).join(' e ') + '</b> ' + (comuns.length > 1 ? 'têm' : 'tem') + ' duas audiências em horários próximos: ' + escapeHtml(au[x].hora) + ' e ' + escapeHtml(au[y].hora) + '. Confira se dá tempo de ir de uma à outra.');
+    else if (!generica) generica = 'Duas audiências em horários próximos: ' + escapeHtml(au[x].hora) + ' e ' + escapeHtml(au[y].hora) + '. Confira se dá tempo de ir de uma à outra.';
+  }
+  if (generica && !msgs.length) msgs.push(generica);
+  au.forEach(function(a){ if (!a.processo) return; var n = prNum(a.processo); var pz = ab.filter(function(p){ return p.tipo === 'prazo' && p.processo && prNum(p.processo) === n; })[0]; if (pz) msgs.push('O processo <b>' + escapeHtml(a.cliente || a.processo) + '</b> tem audiência (' + escapeHtml(a.hora) + ') e prazo (' + escapeHtml(pz.titulo) + ') no mesmo dia.'); });
+  return msgs.slice(0, 3).map(function(m){ return '<div class="ag-conf">⚠ <span>' + m + '</span></div>'; }).join('');
 }
 function agPorDia(l){ var m = {}; l.forEach(function(i){ (m[i.data] = m[i.data] || []).push(i); }); return m; }
 function agPontos(l){
@@ -18359,7 +18405,11 @@ function agCartaoBase(i, trabalho){
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
   if (i.fonte === 'caso') tags += '<span class="pb-tg">da inicial</span>';
   if (i.concluido && !i.cancelado && i.tipo === 'prazo' && i.protocoladoEm) tags += '<span class="pb-tg ok">Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + '</span>';
-  (Array.isArray(d.responsaveis) ? d.responsaveis : []).slice(0, 3).forEach(function(n){ tags += '<span class="agc-av" title="' + escapeHtml(n) + '">' + escapeHtml(agdSigla(n)) + '</span>'; });
+  if (i.tipo === 'tarefa' && !trabalho){ if (d.compartilhada === true) tags += '<span class="pb-tg nv">compartilhada</span>'; else if (!agRespChaves(i).length) tags += '<span class="pb-tg">só eu</span>'; }
+  if (esS.eu && !trabalho && i.tipo !== 'tarefa' && i.fonte !== 'alvara' && !agRespChaves(i).length) tags += '<span class="pb-tg">sem responsável</span>';
+  if (i.concluido && !i.cancelado && d.concluidoPor) tags += '<span class="pb-tg ok">por ' + escapeHtml(String(d.concluidoPor).split(' ')[0]) + '</span>';
+  if (esS.eu && !trabalho) tags += agRespAvatares(i, 3);
+  else (Array.isArray(d.responsaveis) ? d.responsaveis : []).slice(0, 3).forEach(function(n){ tags += '<span class="agc-av" title="' + escapeHtml(n) + '">' + escapeHtml(agdSigla(n)) + '</span>'; });
   var ok = i.fonte === 'alvara' ? '' : '<button type="button" class="agc-ok' + (i.concluido ? ' on' : '') + '" data-ag="' + (i.concluido ? 'reabrir' : 'concluir') + '" data-k="' + k + '" aria-label="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Marcar como realizada' : 'Concluir'))) + '" title="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : 'Concluir')) + '">✓</button>';
   return '<div class="agc ' + cls + '" data-ag="det" data-k="' + k + '"><div style="min-width:0"><div class="agc-top"><span>' + escapeHtml(trabalho ? 'Dia de trabalhar na peça' : (i.tipo === 'prazo' ? 'Prazo fatal ' + fmtData(i.data).slice(0, 5) : agTipoLinha(i))) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="agc-t">' + escapeHtml(i.titulo) + '</div>' +
     (trabalho ? '<div class="agc-s">Prazo fatal ' + escapeHtml(fmtData(i.data).slice(0, 5)) + '</div>' : '') + (i.cliente ? '<div class="agc-s">' + escapeHtml(i.cliente) + '</div>' : '') +
@@ -18493,7 +18543,7 @@ function agConcluir(key, feito, prot){
     persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { concluido: feito }, extra) });
     setTimeout(function(){ agDepois(); }, 400); toast(feito ? 'Prazo concluído.' : 'Prazo reaberto.'); return;
   }
-  var doc = Object.assign({}, i.doc, { concluido: feito, cancelado: false, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '' }, i.tipo === 'prazo' ? extra : {}); delete doc.id;
+  var doc = Object.assign({}, i.doc, { concluido: feito, cancelado: false, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '', concluidoPor: feito && esS.eu ? esS.eu.nome : '' }, i.tipo === 'prazo' ? extra : {}); delete doc.id;   /* um só "concluído" para todos os responsáveis; fica registrado quem concluiu */
   pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ Object.assign(i.doc, doc); agDepois(); toast(feito ? (i.tipo === 'prazo' ? 'Prazo marcado como protocolado.' : 'Concluído.') : 'Reaberto.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
 function agMontarEd(){
@@ -18507,11 +18557,17 @@ function agMontarEd(){
     var a = b.getAttribute('data-age');
     if (a === 'tipo'){ agEditTipo = b.getAttribute('data-v'); agAjustarCampos(); Array.prototype.forEach.call(d.querySelectorAll('[data-age="tipo"]'), function(x){ x.classList.toggle('active', x === b); }); }
     else if (a === 'salvar') agSalvarEd();
+    else if (a === 'dup-salvar'){ agEdDup = true; agSalvarEd(); }
+    else if (a === 'dup-abrir'){ d.classList.remove('show'); agdAbrir(b.getAttribute('data-k')); }
+    else if (a === 'sug'){ var inp = qs('age_proc'); inp.value = b.getAttribute('data-v'); inp.dispatchEvent(new Event('input', { bubbles: true })); var sg = qs('age_sug'); if (sg) sg.innerHTML = ''; }
     else if (a === 'excluir') agExcluirEd(b);
   });
   d.addEventListener('change', function(e){ if (e.target && e.target.id === 'age_sit') agAjustarCampos(); });
   d.addEventListener('input', function(e){
-    if (e.target && e.target.id === 'age_sit') agAjustarCampos();
+    setTimeout(agDicasConflito, 0);
+    if (e.target && (e.target.id === 'age_sit' || e.target.id === 'age_vis')) agAjustarCampos();
+    if (e.target && /^age_(tit|data|proc|hora)$/.test(e.target.id)){ agEdDup = false; var dd = qs('age_dup'); if (dd) dd.innerHTML = ''; }
+    if (e.target && e.target.id === 'age_proc'){ agProcSugestoes(e.target.value); agSugerirRespSeLivre(); }
     if (e.target && e.target.id === 'age_proc'){
       var v = pbVinculo(e.target.value), dica = qs('age_dica'); if (dica) dica.textContent = v ? '✓ ' + v.cadastro + ' · cliente: ' + v.cliente : '';
       if (v && !qs('age_cli').value.trim()) qs('age_cli').value = v.cliente;
@@ -18523,6 +18579,8 @@ function agAjustarCampos(){
   qs('age_tit_l').textContent = rot[t]; qs('age_data_l').textContent = t === 'prazo' ? 'Prazo fatal' : (t === 'audiencia' ? 'Data da audiência' : 'Fazer até');
   qs('age_hora_box').style.display = t === 'audiencia' ? '' : 'none'; qs('age_trab_box').style.display = t === 'prazo' ? '' : 'none';
   qs('age_sit_box').style.display = t === 'audiencia' ? 'none' : '';
+  var vis = qs('age_vis'), box = qs('age_vis_box'), er = qs('esResp_agenda');
+  if (box){ box.style.display = t === 'tarefa' && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso') ? '' : 'none'; if (er && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso')) er.style.display = (t !== 'tarefa' || (vis && vis.value !== 'so_eu')) ? '' : 'none'; }
   qs('age_aud_box').style.display = t === 'audiencia' ? '' : 'none';
   qs('age_prot_box').style.display = (t === 'prazo' && qs('age_sit').value === 'feito') ? '' : 'none';
   qs('age_data').closest('.pb-dois').style.gridTemplateColumns = t === 'audiencia' ? '1fr 1fr' : '1fr';
@@ -18538,9 +18596,12 @@ function agAbrir(key, pre){
   var h = '<div class="segmented" id="age_seg"' + (i ? ' style="display:none"' : '') + '>' + ['prazo', 'audiencia', 'tarefa'].map(function(t){ return '<button type="button" class="seg-btn' + (agEditTipo === t ? ' active' : '') + '" data-age="tipo" data-v="' + t + '">' + AG_TIPOS[t] + '</button>'; }).join('') + '</div>';
   if (caso) h += '<div class="parcela-sum">Este prazo é da inicial <b>' + escapeHtml(i.cliente) + '</b>. Aqui você muda a data e a situação; o texto se edita na própria ação.</div>';
   h += '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" id="age_tit_l" for="age_tit">Peça</label><input type="text" id="age_tit" maxlength="90" value="' + escapeHtml(V('titulo')) + '" placeholder="Ex.: Contestação"></div>' +
-    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(V('processo')) + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div></div>' +
+    '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_proc">Processo (opcional)</label><input type="text" id="age_proc" maxlength="40" value="' + escapeHtml(V('processo')) + '" placeholder="0000000-00.0000.0.00.0000"><div class="saldo-data" id="age_dica"></div><div id="age_sug"></div></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_cli">Cliente / partes</label><input type="text" id="age_cli" maxlength="90" value="' + escapeHtml(V('cliente')) + '"></div>' +
+    '<div class="field" id="age_vis_box"><label class="field-label" for="age_vis">Quem vê esta tarefa</label><select id="age_vis" class="filter-select" style="width:100%"><option value="so_eu">Só eu (tarefa pessoal)</option><option value="resp">Os responsáveis que eu escolher</option><option value="todos">Todo o escritório</option></select></div>' +
+    '<div class="field" id="esResp_agenda"' + (caso ? ' style="display:none"' : '') + '></div>' +
     '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(V('data')) + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(V('hora')) + '"></div></div>' +
+    '<div class="saldo-data" id="age_dica2" style="margin:-4px 0 8px"></div>' +
     '<div id="age_aud_box"><div class="pb-dois"><div class="field"><label class="field-label" for="age_audtipo">Tipo da audiência</label><select id="age_audtipo" class="filter-select" style="width:100%"><option value="">Não informado</option>' + AG_AUDS.map(function(t){ return '<option' + (V('audTipo') === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div><div class="field"><label class="field-label" for="age_mod">Modalidade</label><select id="age_mod" class="filter-select" style="width:100%"><option value="">Não informada</option>' + Object.keys(AG_MODAL).map(function(k){ return '<option value="' + k + '"' + (V('modalidade') === k ? ' selected' : '') + '>' + AG_MODAL[k] + '</option>'; }).join('') + '</select></div></div>' +
     '<div class="field"><label class="field-label" for="age_local">Local</label><input type="text" id="age_local" maxlength="140" value="' + escapeHtml(V('local')) + '" placeholder="Ex.: Fórum de Morrinhos, sala 2"></div>' +
     '<div class="field"><label class="field-label" for="age_link">Link da sala virtual (opcional)</label><input type="text" inputmode="url" autocapitalize="off" id="age_link" maxlength="300" value="' + escapeHtml(V('link')) + '" placeholder="https://…"></div></div>' +
@@ -18549,12 +18610,62 @@ function agAbrir(key, pre){
     '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + 'Em andamento</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
     '<div class="field" id="age_prot_box" style="display:none"><label class="field-label" for="age_protoc">Data do protocolo</label><input type="date" id="age_protoc" value="' + escapeHtml(V('protocoladoEm') || agHoje()) + '"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
-    '<div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
+    '<div id="age_dup"></div><div class="form-error" id="age_erro"></div><button type="button" class="btn btn-primary" data-age="salvar" style="width:100%;justify-content:center;">Salvar na agenda</button>' +
     (i && !caso ? '<button type="button" class="btn-text" data-age="excluir" style="color:var(--urgente)">Excluir este item</button>' : '');
   qs('agEdCorpo').innerHTML = h; qs('agEdTit').textContent = i ? (caso ? 'Prazo da inicial' : 'Editar item') : 'Novo item da agenda';
   adAbrirData(qs('age_data')); adAbrirData(qs('age_trab')); adAbrirData(qs('age_protoc'));
+  agEdInicializar(i, caso);
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
+  agDicasConflito();
   qs('overlayAg').classList.add('show');
+}
+var agEdDup = false;
+function agChavesProcesso(proc){
+  var num = proc ? prNum(proc) : '', r = num ? prMapa().m[num] : null;
+  return r ? lgUnirAdvogados(r.links.filter(function(l){ return !l.doc.arquivado; }), r.doc).map(function(a){ return a.oab; }) : [];
+}
+function agSugerirResp(proc){ return agChavesProcesso(proc); }
+/* o seletor de responsáveis começa com o que o processo sugere (advogados do cadastro); sem processo, com quem está cadastrando */
+function agEdInicializar(i, caso){
+  agEdDup = false;
+  var d = i ? (i.doc || {}) : {}, P = agEditPre || {}, proc = i ? i.processo : (P.processo || ''), vis = qs('age_vis');
+  if (vis) vis.value = i ? (d.compartilhada === true ? 'todos' : (Array.isArray(d.resp) && d.resp.length ? 'resp' : 'so_eu')) : (proc ? 'resp' : 'so_eu');
+  var ks = i ? (Array.isArray(d.resp) ? d.resp.slice() : []) : [], sug = false;
+  if (!i){ var s0 = agSugerirResp(proc); if (s0.length){ ks = s0; sug = 'proc'; } else { var me = esMinhasChaves(); if (me.length){ ks = [me[0]]; sug = 'eu'; } } }   // 'proc' = sugeridos pelo processo; 'eu' = quem cadastra (ambos trocam sozinhos quando se escolhe um processo)
+  esRespIniciarAg('agenda', ks, sug);
+}
+function agSugerirRespSeLivre(){
+  var l = esS.resp.agenda || []; if (l.length && !esS.sugerido.agenda) return;
+  var s0 = agSugerirResp(qs('age_proc').value); if (s0.length) esRespIniciarAg('agenda', s0, 'proc');
+}
+function agProcSugestoes(txt){
+  var el = qs('age_sug'); if (!el) return;
+  var dig = String(txt || '').replace(/\D/g, ''), q = normNome(txt || ''), mp = prMapa(), exato = dig.length >= 15 && mp.m[dig];
+  if (exato || (dig.length < 3 && q.length < 3)){ el.innerHTML = ''; return; }
+  var l = mp.ordem.map(function(n){ return mp.m[n]; }).filter(function(r){ return !prArquivado(r) && ((dig.length >= 3 && r.num.indexOf(dig) >= 0) || (q.length >= 3 && normNome(prTitulo(r)).indexOf(q) >= 0)); }).slice(0, 5);
+  el.innerHTML = l.length ? '<div class="es-lista" style="margin-top:4px">' + l.map(function(r){ return '<button type="button" class="es-lk" style="display:block;text-align:left;padding:5px 2px" data-age="sug" data-v="' + escapeHtml(r.numero) + '">' + escapeHtml(prTitulo(r)) + ' <span class="saldo-data">' + escapeHtml(r.numero) + '</span></button>'; }).join('') + '</div>' : '';
+}
+function agDuplicado(doc, i){
+  var proc = prNum(doc.processo); if (!proc) return null; var tn = normNome(doc.titulo);
+  return agItens().filter(function(x){ return x.key !== (i && i.key) && !x.cancelado && x.tipo === doc.tipo && x.data === doc.data && x.processo && prNum(x.processo) === proc; })
+    .filter(function(x){ var t = normNome(x.titulo); return !tn || !t || t === tn || t.indexOf(tn) >= 0 || tn.indexOf(t) >= 0; })[0] || null;
+}
+/* avisos (sem bloquear): audiência e prazo do mesmo processo no mesmo dia; audiências próximas de uma pessoa responsável */
+function agDicasConflito(){
+  var el = qs('age_dica2'); if (!el) return;
+  var t = agEditTipo, data = qs('age_data') ? qs('age_data').value : '', hora = qs('age_hora') ? qs('age_hora').value : '', proc = prNum(qs('age_proc') ? qs('age_proc').value : ''), out = [];
+  if (!data){ el.innerHTML = ''; return; }
+  var outros = agItens().filter(function(x){ return !x.concluido && !x.cancelado && x.key !== agEditKey && x.data === data; });
+  if (proc) outros.filter(function(x){ return x.processo && prNum(x.processo) === proc; }).forEach(function(x){
+    if (t === 'prazo' && x.tipo === 'audiencia') out.push('Este processo tem uma <b>audiência no mesmo dia</b>' + (x.hora ? ', às ' + escapeHtml(x.hora) : '') + '.');
+    else if (t === 'audiencia' && x.tipo === 'prazo') out.push('Este processo tem um <b>prazo no mesmo dia</b>: ' + escapeHtml(x.titulo) + '.');
+  });
+  if (t === 'audiencia' && /^\d{2}:\d{2}$/.test(hora)){
+    var ks = esRespChaves('agenda'); if (!ks.length) ks = agSugerirResp(qs('age_proc').value);
+    var min = function(h){ return Number(h.slice(0, 2)) * 60 + Number(h.slice(3)); };
+    ks.forEach(function(k){ outros.filter(function(x){ return x.tipo === 'audiencia' && /^\d{2}:\d{2}$/.test(x.hora || '') && Math.abs(min(x.hora) - min(hora)) < 60 && agRespChaves(x).indexOf(k) >= 0; }).forEach(function(x){ out.push('<b>' + escapeHtml(esNomeChave(k)) + '</b> já tem audiência às ' + escapeHtml(x.hora) + ' neste dia.'); }); });
+  }
+  el.innerHTML = out.map(function(x){ return '<div style="color:#8a5a00">⚠ ' + x + '</div>'; }).join('');
 }
 function agSalvarEd(){
   var t = agEditTipo, tit = qs('age_tit').value.trim(), data = qs('age_data').value, err = qs('age_erro');
@@ -18575,6 +18686,19 @@ function agSalvarEd(){
   var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av,
     obs: qs('age_obs') ? qs('age_obs').value.trim() : (base.obs || ''), audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
   if (t === 'prazo'){ if (sit === 'feito'){ doc.protocoladoEm = qs('age_protoc').value || agHoje(); if (!doc.concluidoEm) doc.concluidoEm = agHoje(); } else { doc.protocoladoEm = ''; doc.protocoloObs = ''; } }
+  /* responsáveis (quem vê e quem recebe os avisos) e visibilidade da tarefa */
+  var ks = esRespChaves('agenda'), vis = t === 'tarefa' && qs('age_vis') ? qs('age_vis').value : 'resp';
+  if (t === 'tarefa'){
+    if (vis === 'resp' && !ks.length){ err.textContent = 'Escolha ao menos um responsável (ou deixe “Só eu”).'; return; }
+    doc.compartilhada = vis === 'todos'; doc.resp = vis === 'so_eu' ? [] : ks;
+  } else doc.resp = ks;   // prazo e audiência: se ficar sem ninguém, vale o advogado do processo
+  if (!agEdDup){
+    var dup = agDuplicado(doc, i);
+    if (dup){
+      qs('age_dup').innerHTML = '<div class="pb-aviso" style="margin:8px 0;border:1px solid rgba(201,133,0,.4)"><b>Já existe ' + (doc.tipo === 'audiencia' ? 'uma audiência igual' : (doc.tipo === 'prazo' ? 'um prazo igual' : 'uma tarefa igual')) + ' neste processo</b><div class="saldo-data" style="margin:3px 0 6px">“' + escapeHtml(dup.titulo) + '” · ' + escapeHtml(fmtData(dup.data)) + (dup.hora ? ' às ' + escapeHtml(dup.hora) : '') + '</div><button type="button" class="es-lk" data-age="dup-abrir" data-k="' + escapeHtml(dup.key) + '">Abrir o existente</button> · <button type="button" class="es-lk" style="color:var(--ink-soft)" data-age="dup-salvar">Salvar mesmo assim</button></div>';
+      err.textContent = ''; return;
+    }
+  }
   var p = i ? pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ doc.id = i.id; agDocs = agDocs.map(function(x){ return x.id === i.id ? doc : x; }); }) : agCriar(doc);
   p.then(function(){ qs('overlayAg').classList.remove('show'); toast('Salvo na agenda.'); agDepois(); }).catch(function(e){ err.textContent = 'Não consegui salvar: ' + e.message; });
 }
@@ -18582,6 +18706,72 @@ function agExcluirEd(b){
   var i = agItens().filter(function(x){ return x.key === agEditKey; })[0]; if (!i) return;
   if (b.getAttribute('data-sure') !== '1'){ b.setAttribute('data-sure', '1'); b.textContent = 'Toque de novo para excluir'; return; }
   pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'DELETE').then(function(){ agDocs = agDocs.filter(function(x){ return x.id !== i.id; }); qs('overlayAg').classList.remove('show'); toast('Item excluído.'); agDepois(); }).catch(function(e){ qs('age_erro').textContent = e.message; });
+}
+
+/* ---------- carga por pessoa (Resumo): todos veem, só contagens ---------- */
+var agCarga2 = null;
+function agCarregarCarga(){
+  var box = qs('agCargaBox'); if (!box) return;
+  if (agCarga2) agDesenharCarga(agCarga2);
+  fetch('/api/agenda/carga?dias=7', { credentials: 'same-origin', cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ if (!j) return; agCarga2 = j; agDesenharCarga(j); }).catch(function(){});
+}
+function agDesenharCarga(j){
+  var box = qs('agCargaBox'); if (!box) return;
+  var DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], cabec = '', i;
+  for (i = 0; i < j.dias; i++) cabec += '<span style="flex:1;text-align:center">' + DIAS[new Date(Date.parse(j.inicio + 'T12:00:00Z') + i * 864e5).getUTCDay()] + '</span>';
+  var max = j.pessoas.reduce(function(m, p){ return Math.max(m, p.total); }, 0), cores = ['#C98500', '#2A78D6', '#17895A', '#8B5CF6', '#D93B3B'];
+  var cel = function(n){ return '<span style="flex:1;height:22px;border-radius:6px;background:' + (n === 0 ? 'var(--surface-2)' : n === 1 ? 'rgba(201,133,0,.28)' : n === 2 ? 'rgba(201,133,0,.55)' : '#C98500') + ';color:' + (n >= 2 ? '#fff' : 'var(--ink-soft)') + ';font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">' + (n || '') + '</span>'; };
+  var h = '<div style="display:grid;grid-template-columns:96px 1fr 30px;gap:8px;font-size:11px;color:var(--ink-soft);margin-bottom:2px"><span></span><span style="display:flex;gap:4px">' + cabec + '</span><span style="text-align:right">total</span></div>';
+  h += j.pessoas.filter(function(p){ return p.total > 0 || esMinhasChaves().indexOf(p.chave) >= 0 || j.pessoas.length <= 6; }).slice(0, 10).map(function(p, n){
+    var top = max > 0 && p.total === max;
+    return '<div style="display:grid;grid-template-columns:96px 1fr 30px;gap:8px;align-items:center;padding:4px ' + (top ? '8px' : '0') + ';' + (top ? 'background:rgba(201,133,0,.1);border-radius:10px;margin:0 -8px' : '') + '"><span style="display:flex;gap:6px;align-items:center;font-size:var(--t2);font-weight:700;min-width:0"><span class="agc-av" style="background:' + cores[n % cores.length] + ';color:#fff;flex:none">' + escapeHtml(agdSigla(p.nome)) + '</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(p.nome.split(' ')[0]) + '</span></span><span style="display:flex;gap:4px">' + p.dias.map(cel).join('') + '</span><b style="text-align:right">' + p.total + '</b></div>';
+  }).join('');
+  var topo = j.pessoas[0];
+  h += '<div class="md-foot">' + (topo && topo.total > 0 ? '<b>' + escapeHtml(topo.nome.split(' ')[0]) + '</b> é quem está mais carregado nos próximos ' + j.dias + ' dias: ' + topo.total + (topo.total === 1 ? ' item' : ' itens') + '. Prazos, audiências e tarefas em aberto; tarefa pessoal não entra.' : 'Nenhum compromisso em aberto com responsável nos próximos ' + j.dias + ' dias.') + '</div>';
+  box.innerHTML = h;
+}
+
+/* ---------- revisão em lote: prazos e audiências sem responsável ---------- */
+var agRevS = null;
+function agSemResp(){ return agItens().filter(function(i){ return i.fonte === 'agenda' && !i.concluido && !i.cancelado && (i.tipo === 'prazo' || i.tipo === 'audiencia') && !agTemRespGravado(i); }); }
+function agAbrirRevResp(){
+  var ov = sgMontar('overlayAgRev', 'Sem responsável');
+  if (!ov.getAttribute('data-ar')){
+    ov.setAttribute('data-ar', '1');
+    ov.addEventListener('click', function(e){ var b = e.target.closest ? e.target.closest('[data-arv]') : null; if (b) agRevClique(b.getAttribute('data-arv')); });
+    ov.addEventListener('change', function(e){ var t = e.target; if (!t || !t.getAttribute) return; var a = t.getAttribute('data-arv'), k = t.getAttribute('data-k');
+      if (a === 'item'){ if (t.checked) agRevS.sel[k] = 1; else delete agRevS.sel[k]; agRevDesenhar(); }
+      else if (a === 'pessoa'){ if (t.checked) agRevS.pess[k] = 1; else delete agRevS.pess[k]; agRevDesenhar(); } });
+  }
+  agRevS = { sel: {}, pess: {}, ocupado: false }; ov.classList.add('show'); agRevDesenhar();
+}
+function agRevDesenhar(){
+  var el = qs('overlayAgRevC'), R = agRevS; if (!el || !R) return;
+  var itens = agSemResp().sort(agOrdem), n = Object.keys(R.sel).length, np = Object.keys(R.pess).length;
+  var h = '<div class="pb-sec"><div class="pb-sec-t">' + itens.length + (itens.length === 1 ? ' prazo ou audiência sem responsável' : ' prazos e audiências sem responsável') + '</div><div class="pb-aviso">Enquanto não houver responsável, o item vale para os advogados do processo e para você. A sugestão vem do cadastro do processo. Marque os itens e aplique.</div></div>';
+  if (!itens.length) h += '<div class="saldo-data" style="padding:10px 4px">Todos os prazos e audiências têm responsável. 🎉</div>';
+  h += itens.map(function(i){
+    var sug = agChavesProcesso(i.processo), tag = sug.length ? '<span class="pb-tg ok" style="margin-left:6px">sugestão: ' + escapeHtml(sug.map(function(k){ return esNomeChave(k).split(' ')[0]; }).join(', ')) + '</span>' : '<span class="pb-tg nv" style="margin-left:6px">' + (i.processo ? 'processo sem advogado' : 'sem processo') + '</span>';
+    return '<label class="ad-it es-it"><input type="checkbox" data-arv="item" data-k="' + escapeHtml(i.key) + '"' + (R.sel[i.key] ? ' checked' : '') + '><span class="ad-t"><b>' + escapeHtml(i.titulo) + '</b>' + tag + '<br><span class="saldo-data">' + escapeHtml(AG_TIPOS[i.tipo] || i.tipo) + ' · ' + escapeHtml(fmtData(i.data)) + (i.hora ? ' às ' + escapeHtml(i.hora) : '') + (i.cliente ? ' · ' + escapeHtml(i.cliente) : '') + '</span></span></label>';
+  }).join('');
+  h += '<div class="es-aplicar"><div class="saldo-data" style="margin:0 0 6px"><b>' + n + (n === 1 ? ' selecionado' : ' selecionados') + '</b> · aplicar a sugestão do processo, ou escolher os responsáveis:</div>' +
+    esS.equipeAg.map(function(a){ return '<label class="ad-it" style="border:0;padding:3px 0"><input type="checkbox" data-arv="pessoa" data-k="' + escapeHtml(a.oab) + '"' + (R.pess[a.oab] ? ' checked' : '') + '><span class="ad-t">' + escapeHtml(a.nome) + '</span></label>'; }).join('') +
+    '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-arv="sugestoes">Marcar os que têm sugestão</button><button type="button" class="btn btn-primary pb-b" data-arv="aplicar"' + (R.ocupado || !n ? ' disabled' : '') + '>' + (np ? 'Aplicar os ' + np + ' escolhidos' : 'Aplicar a sugestão') + (n ? ' (' + n + ')' : '') + '</button></div></div>';
+  el.innerHTML = h;
+}
+function agRevClique(a){
+  var R = agRevS; if (!R) return;
+  if (a === 'sugestoes'){ agSemResp().forEach(function(i){ if (agChavesProcesso(i.processo).length) R.sel[i.key] = 1; }); agRevDesenhar(); return; }
+  if (a !== 'aplicar' || R.ocupado) return;
+  var manual = Object.keys(R.pess), lista = agSemResp().filter(function(i){ return R.sel[i.key]; }), pulou = 0;
+  R.ocupado = true; agRevDesenhar();
+  lista.reduce(function(p, i){ return p.then(function(){
+    var ks = manual.length ? manual : agChavesProcesso(i.processo); if (!ks.length){ pulou++; return null; }
+    var doc = Object.assign({}, i.doc, { resp: ks }); delete doc.id;
+    return pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ i.doc.resp = ks; });
+  }); }, Promise.resolve()).then(function(){
+    R.ocupado = false; R.sel = {}; toast((lista.length - pulou) + ' definidos' + (pulou ? ' · ' + pulou + ' sem sugestão (escolha os responsáveis)' : '') + '.'); agDepois(); agRevDesenhar(); try{ esBarra(); }catch(e){}
+  }).catch(function(e){ R.ocupado = false; agRevDesenhar(); toast('Não consegui salvar: ' + e.message); });
 }
 
 /* ---------- estilo e partida ---------- */
@@ -21148,7 +21338,7 @@ window.__horusTeste = Object.assign(window.__horusTeste || {}, { usAbrir: usAbri
    - aviso e revisão de registros sem advogado definido (só o proprietário), com sugestão quando outro registro do mesmo processo ou cliente já tem advogado.
    O filtro em si está em public/shim.js (window.__horusEscopo); o servidor já entrega a cada pessoa só o que ela pode ver.
    ============================================================ */
-var esS = { eu: null, equipe: [], sem: null, semEm: 0, resp: {}, abertoSel: '', rev: null, ocupado: false };
+var esS = { sugerido: {}, eu: null, equipe: [], equipeAg: [], sem: null, semEm: 0, resp: {}, abertoSel: '', rev: null, ocupado: false };
 var ES_TABS = { processos: 1, peticoes: 1, acordos: 1, alvaras: 1, clientes: 1, arquivados: 1 };
 function esEsc(){ return window.__horusEscopo || { modo: 'escritorio', pub: 'minhas', ativo: false, oabs: [] }; }
 function esJson(url, metodo, corpo){
@@ -21159,15 +21349,18 @@ function esIniciar(){
   if (!window.__SERVIDOR) return;
   Promise.all([esJson('/api/eu'), esJson('/api/equipe').catch(function(){ return { advogados: [] }; }), esJson('/api/djen/estado').catch(function(){ return { oabs: [] }; })]).then(function(r){
     esS.eu = r[0]; esS.equipe = r[1].advogados || [];
+    esS.equipeAg = esS.equipe.concat((r[1].estagiarios || []).map(function(e){ return { oab: 'u:' + e.id, nome: e.nome + ' (estagiário)' }; }));   // quem pode ser responsável na Agenda: advogados (chave = OAB) e estagiários (chave = u:id)
     var E = esEsc(), dono = r[0].papel === 'proprietario';
     var oabs = (r[0].oabs || []).slice();
     if (!oabs.length && dono) (r[2].oabs || []).forEach(function(o){ if (o.principal && o.numero) oabs.push(String(o.numero).replace(/\D/g, '').replace(/^0+/, '') + '/' + String(o.uf).toUpperCase()); });
     E.oabs = oabs; E.ativo = dono;
+    if (dono && !(r[0].oabs || []).length) esS.eu.oabs = oabs.slice();   // proprietário sem OAB indicada: vale a principal de Publicações (também na Agenda)
     if (dono && E.modo === 'meus' && typeof E.aplicar === 'function') E.aplicar();
     if (dono && E.pub === 'minhas' && typeof pbCarregar === 'function' && typeof pbS !== 'undefined' && pbS.carregado){   // proprietário abre em "Minhas" publicações: relê já com o filtro (o que carregou antes de saber quem é o usuário veio inteiro)
       pbCarregar(true).then(function(){ try{ if (activeTab === 'publicacoes') pbRender(); prDepois(); renderPainelAtencao(); }catch(e){} });
     }
     esBarra();
+    try{ if (activeTab === 'agenda') agRender(); }catch(e){}
   }).catch(function(){});
 }
 /* ---------- barra Meus | Escritório ---------- */
@@ -21181,16 +21374,18 @@ function esBarra(){
       var a = b.getAttribute('data-es'), k = b.getAttribute('data-k');
       if (a === 'modo') esMudarModo(k);
       else if (a === 'definir') esAbrirRev();
+      else if (a === 'agrev') agAbrirRevResp();
     });
   }
-  var pub = activeTab === 'publicacoes';
-  if (!E.ativo || !(ES_TABS[activeTab] || pub)){ barra.style.display = 'none'; return; }
-  var sel = pub ? E.pub : E.modo, ops = pub ? [['minhas', 'Minhas'], ['todas', 'Todas']] : [['meus', 'Meus'], ['escritorio', 'Escritório']];
+  var pub = activeTab === 'publicacoes', age = activeTab === 'agenda';
+  if (age ? !esS.eu : (!E.ativo || !(ES_TABS[activeTab] || pub))){ barra.style.display = 'none'; return; }   // a Agenda tem a barra para todas as pessoas; as demais listas, só para o proprietário
+  var sel = age ? agS.escopo : (pub ? E.pub : E.modo), ops = age ? [['minha', 'Minha agenda'], ['escritorio', 'Escritório']] : (pub ? [['minhas', 'Minhas'], ['todas', 'Todas']] : [['meus', 'Meus'], ['escritorio', 'Escritório']]);
   var h2 = '<div class="es-seg">' + ops.map(function(o){ return '<button type="button" class="es-b' + (sel === o[0] ? ' on' : '') + '" data-es="modo" data-k="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
   var n = esS.sem ? esS.sem.itens.length : 0;
-  if (!pub && n) h2 += '<span class="es-aviso"><b>' + n + (n === 1 ? ' registro' : ' registros') + '</b> sem advogado definido <button type="button" class="es-lk" data-es="definir">Definir</button></span>';
+  if (age && esS.eu.papel === 'proprietario'){ var ns = agSemResp().length; if (ns) h2 += '<span class="es-aviso"><b>' + ns + (ns === 1 ? ' prazo ou audiência' : ' prazos e audiências') + '</b> sem responsável <button type="button" class="es-lk" data-es="agrev">Definir</button></span>'; }
+  if (!pub && !age && n) h2 += '<span class="es-aviso"><b>' + n + (n === 1 ? ' registro' : ' registros') + '</b> sem advogado definido <button type="button" class="es-lk" data-es="definir">Definir</button></span>';
   barra.innerHTML = h2; barra.style.display = '';
-  if (!pub && (!esS.sem || Date.now() - esS.semEm > 60000)) esCarregarSem();
+  if (!pub && !age && (!esS.sem || Date.now() - esS.semEm > 60000)) esCarregarSem();
 }
 function esCarregarSem(){
   esS.semEm = Date.now();
@@ -21198,6 +21393,7 @@ function esCarregarSem(){
 }
 function esMudarModo(k){
   var E = esEsc();
+  if (activeTab === 'agenda'){ agS.escopo = k === 'escritorio' ? 'escritorio' : 'minha'; try { localStorage.setItem('horus.agendaEscopo', agS.escopo); } catch (e) {} esBarra(); agRender(); return; }
   if (activeTab === 'publicacoes'){
     E.pub = k === 'todas' ? 'todas' : 'minhas'; try { localStorage.setItem('horus.escopoPub', E.pub); } catch (e) {}
     pbS.carregado = false; esBarra(); pbRender(); return;
@@ -21208,28 +21404,31 @@ window.addEventListener('horus-escopo', function(){ try { if (typeof prCarregar 
 /* ---------- seletor "Advogados responsáveis" ---------- */
 var ES_TITULO = { casos: 'Inicial', termosAcordo: 'Acordo', alvaras: 'Alvará', processos: 'Processo' };
 function esRespIniciar(chave, doc){
+  if (esS.sugerido) delete esS.sugerido[chave];
   esS.resp[chave] = (doc && Array.isArray(doc.advogados) ? doc.advogados : []).filter(function(a){ return a && a.oab; }).map(function(a){ return { oab: a.oab, nome: a.nome || '' }; });
   esS.abertoSel = '';
   esRespDesenhar(chave);
 }
+function esLista(chave){ return String(chave || '').indexOf('agenda') === 0 ? esS.equipeAg : esS.equipe; }
+function esNomeChave(k){ var q = esS.equipeAg.filter(function(x){ return x.oab === k; })[0]; return q ? q.nome.replace(/ \(estagiário\)$/, '') : (k.indexOf('u:') === 0 ? 'Usuário' : k); }
 function esRespNome(a){
-  var q = esS.equipe.filter(function(x){ return x.oab === a.oab; })[0];
+  var q = esS.equipeAg.filter(function(x){ return x.oab === a.oab; })[0] || esS.equipe.filter(function(x){ return x.oab === a.oab; })[0];
   return (q && q.nome) || a.nome || a.oab;
 }
 function esRespHtml(chave){
   var l = esS.resp[chave] || [], aberto = esS.abertoSel === chave;
-  var h = '<label class="field-label">Advogados responsáveis</label><div class="es-chips">' + (l.length ? l.map(function(a){
+  var ag = String(chave).indexOf('agenda') === 0, h = '<label class="field-label">' + (ag ? 'Responsáveis' + (esS.sugerido && esS.sugerido[chave] === 'proc' ? ' <span class="pb-tg ok" style="margin-left:4px">sugeridos pelo processo</span>' : '') : 'Advogados responsáveis') + '</label><div class="es-chips">' + (l.length ? l.map(function(a){
     return '<span class="es-chip" title="OAB ' + escapeHtml(a.oab) + '">' + escapeHtml(esRespNome(a).split(' ').slice(0, 2).join(' ')) + ' <button type="button" class="es-x" data-esr="tirar" data-c="' + chave + '" data-k="' + escapeHtml(a.oab) + '" aria-label="Tirar">✕</button></span>';
-  }).join('') : '<span class="es-chip es-vazio">sem advogado definido</span>') +
-    '<button type="button" class="es-lk" data-esr="abrir" data-c="' + chave + '">' + (aberto ? 'Fechar lista' : 'Adicionar advogado') + '</button></div>';
-  if (aberto) h += '<div class="es-lista">' + (esS.equipe.length ? esS.equipe.map(function(a){
+  }).join('') : '<span class="es-chip es-vazio">' + (ag ? 'ninguém escolhido' : 'sem advogado definido') + '</span>') +
+    '<button type="button" class="es-lk" data-esr="abrir" data-c="' + chave + '">' + (aberto ? 'Fechar lista' : (ag ? 'Adicionar responsável' : 'Adicionar advogado')) + '</button></div>';
+  if (aberto) h += '<div class="es-lista">' + (esLista(chave).length ? esLista(chave).map(function(a){
     var on = l.some(function(x){ return x.oab === a.oab; });
     return '<label class="ad-it" style="border:0;padding:4px 0"><input type="checkbox" data-esr="marcar" data-c="' + chave + '" data-k="' + escapeHtml(a.oab) + '"' + (on ? ' checked' : '') + '><span class="ad-t">' + escapeHtml(a.nome) + ' <span class="saldo-data">OAB ' + escapeHtml(a.oab) + '</span></span></label>';
   }).join('') : '<div class="saldo-data">Nenhum advogado cadastrado ainda (Configurações › Usuários e Publicações).</div>') + '</div>';
-  h += '<div class="saldo-data">Quem está marcado vê este registro no próprio app.</div>';
+  h += '<div class="saldo-data">' + (ag ? 'Quem é responsável vê este item na própria agenda.' : 'Quem está marcado vê este registro no próprio app.') + '</div>';
   return h;
 }
-function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); }
+function esRespDesenhar(chave){ var el = qs('esResp_' + chave); if (el) el.innerHTML = esRespHtml(chave); if (chave === 'agenda' && typeof agDicasConflito === 'function') agDicasConflito(); }
 function esRespLer(chave){ return esS.resp[chave] ? esS.resp[chave].map(function(a){ return { oab: a.oab, nome: esRespNome(a) }; }) : null; }
 /* aplica no registro antes de gravar; devolve false (e mostra o aviso) se quem não é proprietário não escolheu ninguém */
 function esRespAplicar(chave, dados, erroEl){
@@ -21242,15 +21441,25 @@ document.addEventListener('click', function(e){
   var b = e.target.closest ? e.target.closest('[data-esr]') : null; if (!b) return;
   var a = b.getAttribute('data-esr'), c = b.getAttribute('data-c'), k = b.getAttribute('data-k');
   if (a === 'abrir'){ esS.abertoSel = esS.abertoSel === c ? '' : c; esRespDesenhar(c); }
-  else if (a === 'tirar'){ esS.resp[c] = (esS.resp[c] || []).filter(function(x){ return x.oab !== k; }); esRespDesenhar(c); }
+  else if (a === 'tirar'){ esS.resp[c] = (esS.resp[c] || []).filter(function(x){ return x.oab !== k; }); if (esS.sugerido) delete esS.sugerido[c]; esRespDesenhar(c); }
 });
 document.addEventListener('change', function(e){
   var t = e.target; if (!t || !t.getAttribute || t.getAttribute('data-esr') !== 'marcar') return;
   var c = t.getAttribute('data-c'), k = t.getAttribute('data-k'), l = esS.resp[c] || (esS.resp[c] = []), i = l.map(function(x){ return x.oab; }).indexOf(k);
-  if (t.checked && i < 0){ var q = esS.equipe.filter(function(x){ return x.oab === k; })[0]; l.push({ oab: k, nome: q ? q.nome : '' }); }
+  if (t.checked && i < 0){ var q = esLista(c).filter(function(x){ return x.oab === k; })[0]; l.push({ oab: k, nome: q ? q.nome : '' }); }
   if (!t.checked && i >= 0) l.splice(i, 1);
+  if (esS.sugerido) delete esS.sugerido[c];
   esRespDesenhar(c);
 });
+/* ---------- responsáveis da Agenda (chaves: OAB do advogado ou u:<id>) ---------- */
+function esRespIniciarAg(chave, chaves, sugerido){
+  esS.resp[chave] = (chaves || []).map(function(k){ return { oab: k, nome: esNomeChave(k) }; });
+  esS.sugerido[chave] = sugerido || false; esS.abertoSel = '';
+  esRespDesenhar(chave);
+}
+function esRespChaves(chave){ return (esS.resp[chave] || []).map(function(a){ return a.oab; }); }
+function esMinhasChaves(){ return esS.eu ? (esS.eu.oabs || []).concat(esS.eu.id ? ['u:' + esS.eu.id] : []) : []; }
+
 /* ---------- revisão: registros sem advogado definido ---------- */
 function esAbrirRev(){
   var ov = sgMontar('overlayEsRev', 'Sem advogado definido');
@@ -22705,7 +22914,7 @@ function mjCarga(dias, por){
   return s + '</svg>';
 }
 function mjAgenda(){
-  var hoje = todayISO(), lim = somarDias(hoje, 7), todos = agItens(), abertos = todos.filter(function(i){ return !i.concluido; }).sort(agOrdem);
+  var hoje = todayISO(), lim = somarDias(hoje, 7), todos = agEscopoLista(agItens()), abertos = todos.filter(function(i){ return !i.concluido; }).sort(agOrdem);
   var deHoje = abertos.filter(function(i){ return i.data === hoje; }), em7 = abertos.filter(function(i){ return i.data >= hoje && i.data <= lim; });
   var pz = em7.filter(function(i){ return i.tipo === 'prazo'; }).length, au = em7.filter(function(i){ return i.tipo === 'audiencia'; }).length;
   var atr = abertos.filter(function(i){ return i.data < hoje && i.tipo !== 'audiencia'; }).length;
@@ -22727,6 +22936,7 @@ function mjAgenda(){
   }).join('') || '<div class="md-vazio">Nenhum compromisso em aberto.</div>';
   return '<div class="md-kpis">' + kp.map(mdKpi).join('') + '</div><div class="md-grid">' +
     mdCard('Carga dos próximos 7 dias', mjCarga(dias, por) + mdLeg([[MD_COR.verm, 'Prazos'], [MD_COR.azul, 'Audiências'], [MD_COR.ouro, 'Tarefas']]) + '<div class="md-foot">Toque num dia para abrir a semana nele.</div>', ['vista:semana', 'abrir a semana']) +
+    mdCard('Carga por pessoa · próximos 7 dias', '<div id="agCargaBox"><div class="saldo-data">Carregando…</div></div>') +
     mdCard('Por responsável', mjBarrasH(porResp, 'Nenhum compromisso com responsável nos próximos 30 dias.', 'Em aberto até 30 dias à frente. Toque para ver só os dessa pessoa.')) +
     mdCard('Próximos compromissos', '<div class="md-ats">' + prox + '</div>', ['lista:tudo', 'ver a lista']) + '</div>';
 }
