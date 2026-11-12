@@ -3,18 +3,18 @@
    - A API imita o "banco" que o app já usava dentro do Claude. */
 
 import { gerarChavesVapid, enviarPush } from './push.js';
-import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, marcarAvisadas } from './djen.js';
+import { djenRotas, lerDjen, relerSePreciso, pubsParaAvisar, pubsDaPessoa, marcarAvisadas } from './djen.js';
 import { datajudRotas } from './datajud.js';
 import { loteRotas } from './lote.js';
 import { checarColecao, resolverColecao, ehProprietario } from './colecoes.js';
-import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono, carimbarAutor } from './politica.js';
+import { checarRotaDjen, checarAcessoColecao, linhasVisiveis, autorizarGravacao, autorizarExclusao, normalizarUsuario, ehDono, carimbarAutor, escopoDoAdvogado } from './politica.js';
 import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { usuariosRotas } from './usuarios.js';
-import { avisarRepasse } from './repasses.js';
+import { avisarAtividade, avisarRepasseA, prefsDe, equipeDe, limparPrefs, PREFS_PADRAO, EQUIPE_PADRAO, textoSemanal, usuariosAtivos } from './avisos.js';
 import { equipeRotas, semAdvogadoRotas, agendaRotas } from './responsaveis.js';
-import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario } from './acesso.js';
-import { auditoriaRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas } from './auditoria.js';
+import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario, proprietario } from './acesso.js';
+import { auditoriaRotas, historicoRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas, autorDe } from './auditoria.js';
 
 const NOME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;   // nomes que começam com _ são reservados ao sistema
 const MAX_DOC = 900 * 1024;        // bytes por registro
@@ -295,9 +295,13 @@ async function vapid(env) {
   if (!v) { v = await gerarChavesVapid(); await gravarReservado(env, 'vapid', v); }
   return v;
 }
-async function inscricoes(env) {
+/* aparelhos inscritos: `uid` vazio = o proprietário (as inscrições antigas, sem dono declarado, também são dele); senão, só os aparelhos daquela pessoa */
+async function donoId(env) { const d = await proprietario(env); return d ? d.id : null; }
+const sfx = (uid, dono) => (dono || !uid ? '' : '-' + uid);   // sufixo das chaves reservadas (config, resumo, enviados) de quem não é o proprietário
+async function inscricoes(env, uid) {
   const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = '_notif' AND id LIKE 'sub-%'").all();
-  return results.map((r) => ({ id: r.id, ...JSON.parse(r.dados) }));
+  const dId = await donoId(env), dono = !uid || uid === dId;
+  return results.map((r) => ({ id: r.id, ...JSON.parse(r.dados) })).filter((s) => (dono ? !s.usuario || s.usuario === dId : s.usuario === uid));
 }
 const hashCurto = async (s) => b64u(await sha256('sub:' + s)).slice(0, 24);
 const moeda = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -306,25 +310,25 @@ const diasEntre = (de, ate) => Math.round((Date.parse(ate + 'T12:00:00Z') - Date
 export function prazosDoDia(prazos, hoje) {
   return (Array.isArray(prazos) ? prazos : []).map((p) => ({ ...p, dif: diasEntre(hoje, p.d) })).filter((p) => p.dif >= 0 && (Array.isArray(p.a) ? p.a : [5, 2, 1, 0]).includes(p.dif)).sort((x, y) => x.d.localeCompare(y.d) || (x.h || '').localeCompare(y.h || ''));
 }
-export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = []) {
+export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = [], prefs = PREFS_PADRAO) {
   { const vistos = new Set(); pubs = pubs.filter((p, i) => { const k = p.processo ? [p.processo, p.data, p.tipo || '', p.orgao || ''].join('|') : 'sem-' + i; if (vistos.has(k)) return false; vistos.add(k); return true; }); }   // várias publicações idênticas (um autor cada) contam uma vez
   const lista = [];
   const esconder = !!config.esconder;
   const itens = (resumo.itens || []).filter((i) => i.d === hoje);
-  if (itens.length) {
+  if (itens.length && prefs.resumo !== false) {
     const linhas = itens.slice(0, MAX_NOTIF_ITENS).map((i) => `${i.n}${i.l ? ' · ' + i.l : ''}${i.v != null ? ' · ' + moeda(i.v) : ''}`);
     if (itens.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${itens.length - MAX_NOTIF_ITENS}`);
     lista.push({ tag: 'hoje-' + hoje, titulo: itens.length === 1 ? '1 item vence hoje' : `${itens.length} itens vencem hoje`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
   }
   const prazos = prazosDoDia(resumo.prazos, hoje);
-  if (prazos.length) {
+  if (prazos.length && prefs.prazos !== false) {
     const nHoje = prazos.filter((p) => p.dif === 0).length, nBreve = prazos.length - nHoje;
     const partes = []; if (nHoje) partes.push(`${nHoje} ${nHoje === 1 ? 'vence' : 'vencem'} hoje`); if (nBreve) partes.push(`${nBreve} nos próximos dias`);
     const linhas = prazos.slice(0, MAX_NOTIF_ITENS).map((p) => `${p.l}${p.n ? ' · ' + p.n : ''}${p.h ? ' · ' + p.h : ''} (${p.dif === 0 ? 'HOJE' : p.dif === 1 ? 'amanhã' : 'em ' + p.dif + ' dias'})`);
     if (prazos.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${prazos.length - MAX_NOTIF_ITENS}`);
     lista.push({ tag: 'prazos-' + hoje, titulo: 'Prazos: ' + partes.join(', '), corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
   }
-  if (pubs.length) {
+  if (pubs.length && prefs.publicacoes !== false) {
     const linhas = pubs.slice(0, MAX_NOTIF_ITENS).map((p) => `${p.tribunal ? p.tribunal + ' · ' : ''}${p.tipo || 'Publicação'}${p.numero ? ' · ' + p.numero : ''}`);
     if (pubs.length > MAX_NOTIF_ITENS) linhas.push(`e mais ${pubs.length - MAX_NOTIF_ITENS}`);
     lista.push({ tag: 'pub-' + hoje, titulo: pubs.length === 1 ? '1 nova publicação no Diário Oficial' : `${pubs.length} novas publicações no Diário Oficial`, corpo: esconder ? 'Abra o app para ver.' : linhas.join('\n'), url: '/' });
@@ -337,67 +341,87 @@ export function montarNotificacoes(resumo, config, enviados, hoje, mes, pubs = [
   }
   return lista;
 }
+/* O resumo das 10h vai para cada pessoa que ligou os avisos: o proprietário (como sempre) e, uma a uma, as demais, cada uma com o resumo do que ELA vê
+   (o app de cada pessoa manda o seu resumo; o servidor guarda separado) e só as publicações das OABs dela. opcoes: { forcar, teste, uid (só esta pessoa), soDono } */
 export async function enviarResumoDiario(env, opcoes = {}) {
-  const resumo = await lerReservado(env, 'resumo', { itens: [], alertas: [] }), config = await lerReservado(env, 'config', {});
-  const enviados = await lerReservado(env, 'enviados', { alertas: {} }), hoje = hojeBR(), mes = mesBR();
-  enviados.alertas = enviados.alertas || {};
-  if (!opcoes.forcar && enviados.dia === hoje) return { enviadas: 0, motivo: 'já enviado hoje' };
-  const subs = await inscricoes(env);
-  if (!subs.length) return { enviadas: 0, motivo: 'sem aparelhos inscritos' };
-  const pubs = opcoes.teste ? [] : await pubsParaAvisar(env).catch(() => []);
-  const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Horus estão funcionando.', url: '/' }] : montarNotificacoes(resumo, config, enviados, hoje, mes, pubs);
-  const v = await vapid(env);
-  const origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
-  const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
-  let subUsado = config.subOk || null;
-  let enviadas = 0; const falhas = [];
-  for (const n of lista) {
-    for (const s of subs) {
-      let r = null;
-      for (const a of assuntos) {
-        r = await enviarPush(v, a, s, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
-        if (r.ok) { subUsado = a; break; }
-        if (!(r.status === 403 && /BadJwtToken/i.test(r.motivo || ''))) break;   // só insiste com outro contato quando a recusa é do token
-      }
-      if (r.ok) enviadas++;
-      else falhas.push({ status: r.status, motivo: r.motivo || r.erro || '' });
-      if (!r.ok && r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
+  const dId = await donoId(env), hoje = hojeBR(), mes = mesBR(), cfgDono = await lerReservado(env, 'config', {});
+  let pessoas = [{ uid: null, dono: true }];
+  if (opcoes.uid && opcoes.uid !== dId) pessoas = [{ uid: opcoes.uid, dono: false }];
+  else if (!opcoes.soDono && !opcoes.uid) for (const u of await usuariosAtivos(env)) if (u.id !== dId) pessoas.push({ uid: u.id, dono: false, u });
+  const todasPubs = opcoes.teste ? [] : await pubsParaAvisar(env).catch(() => []);
+  const v = await vapid(env), origem = cfgDono.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
+  const assuntos = [...new Set([env.PUSH_ASSUNTO, cfgDono.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
+  let subUsado = cfgDono.subOk || null, enviadas = 0, notificacoes = 0, algumAparelho = false, ultimoMotivo = ''; const falhas = [];
+  for (const p of pessoas) {
+    const s = sfx(p.uid, p.dono), config = await lerReservado(env, 'config' + s, {}), enviados = await lerReservado(env, 'enviados' + s, { alertas: {} });
+    enviados.alertas = enviados.alertas || {};
+    if (!opcoes.forcar && enviados.dia === hoje) { ultimoMotivo = 'já enviado hoje'; continue; }
+    const subs = await inscricoes(env, p.uid); if (!subs.length) { ultimoMotivo = 'sem aparelhos inscritos'; continue; }
+    algumAparelho = true;
+    const resumo = await lerReservado(env, 'resumo' + s, { itens: [], alertas: [] });
+    let pubs = [];
+    if (!opcoes.teste) {
+      if (p.dono) pubs = todasPubs;
+      else { const u = p.u || (await usuariosAtivos(env)).find((x) => x.id === p.uid); pubs = u ? await pubsDaPessoa(env, todasPubs, u.norm.oabs, u.norm.papel === 'estagiario' && u.norm.permissoes.verPublicacoes) : []; }
     }
-    if (n.chaveAlerta && !opcoes.teste) enviados.alertas[n.chaveAlerta] = mes;
+    const lista = opcoes.teste ? [{ tag: 'teste', titulo: 'Notificação de teste', corpo: 'Se você está lendo isto, as notificações do Horus estão funcionando.', url: '/' }] : montarNotificacoes(resumo, { ...cfgDono, ...config, esconder: config.esconder }, enviados, hoje, mes, pubs, prefsDe(config));
+    notificacoes += lista.length;
+    for (const n of lista) {
+      for (const sub of subs) {
+        let r = null;
+        for (const a of assuntos) {
+          r = await enviarPush(v, a, sub, { titulo: n.titulo, corpo: n.corpo, tag: n.tag, url: n.url });
+          if (r.ok) { subUsado = a; break; }
+          if (!(r.status === 403 && /BadJwtToken/i.test(r.motivo || ''))) break;   // só insiste com outro contato quando a recusa é do token
+        }
+        if (r.ok) enviadas++;
+        else falhas.push({ status: r.status, motivo: r.motivo || r.erro || '' });
+        if (!r.ok && r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(sub.id).run();
+      }
+      if (n.chaveAlerta && !opcoes.teste) enviados.alertas[n.chaveAlerta] = mes;
+    }
+    if (!opcoes.teste) {
+      Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
+      enviados.dia = hoje; await gravarReservado(env, 'enviados' + s, enviados);
+    }
   }
-  if (subUsado && subUsado !== config.subOk && enviadas) await gravarReservado(env, 'config', { ...config, subOk: subUsado });
-  if (!opcoes.teste) {
-    Object.keys(enviados.alertas).forEach((k) => { if (enviados.alertas[k] < mes) delete enviados.alertas[k]; });   // guarda só o mês atual
-    enviados.dia = hoje; await gravarReservado(env, 'enviados', enviados);
-    if (pubs.length) await marcarAvisadas(env, pubs.map((p) => p.id)).catch((e) => console.error(e));
-  }
-  return { enviadas, notificacoes: lista.length, falhas: falhas.slice(0, 3) };
+  if (subUsado && subUsado !== cfgDono.subOk && enviadas) await gravarReservado(env, 'config', { ...cfgDono, subOk: subUsado });
+  if (!algumAparelho) return { enviadas: 0, motivo: ultimoMotivo || 'sem aparelhos inscritos' };
+  if (!opcoes.teste && todasPubs.length) await marcarAvisadas(env, todasPubs.map((p) => p.id)).catch((e) => console.error(e));
+  return { enviadas, notificacoes, falhas: falhas.slice(0, 3) };
 }
-async function notif(request, env, partes) {
-  const acao = partes[1], m = request.method;
-  { const c0 = await lerReservado(env, 'config', { alertas: true, esconder: false }), o = new URL(request.url).origin;
+/* Notificações: cada pessoa cuida dos próprios aparelhos e avisos. O proprietário usa as chaves de sempre (config, resumo, enviados); as demais pessoas usam as mesmas com "-<id>" no fim. */
+async function notif(request, env, partes, auth) {
+  const acao = partes[1], m = request.method, dono = ehDono(auth), uid = auth && auth.usuario ? auth.usuario.id : '', s = sfx(uid, dono);
+  if (dono) { const c0 = await lerReservado(env, 'config', { alertas: true, esconder: false }), o = new URL(request.url).origin;
     if (c0.origem !== o && acao !== 'config') await gravarReservado(env, 'config', { ...c0, origem: o }); }
   if (acao === 'chave' && m === 'GET') return json({ publica: (await vapid(env)).publica });
   if (acao === 'estado' && m === 'GET') {
-    const config = await lerReservado(env, 'config', { alertas: true, esconder: false }), subs = await inscricoes(env), resumo = await lerReservado(env, 'resumo', null);
-    return json({ aparelhos: subs.length, config: { alertas: config.alertas !== false, esconder: !!config.esconder }, resumoEm: resumo ? resumo.geradoEm : null, hora: '10:00' });
+    const config = await lerReservado(env, 'config' + s, { alertas: true, esconder: false }), subs = await inscricoes(env, dono ? null : uid), resumo = await lerReservado(env, 'resumo' + s, null);
+    return json({ aparelhos: subs.length, config: { alertas: config.alertas !== false, esconder: !!config.esconder }, avisos: prefsDe(config), ...(dono ? { equipe: equipeDe(config) } : {}), papel: dono ? 'proprietario' : auth.usuario.papel, resumoEm: resumo ? resumo.geradoEm : null, hora: '10:00' });
   }
   if (acao === 'inscrever' && m === 'POST') {
-    const s = await request.json().catch(() => null);
-    if (!s || !s.endpoint || !s.keys || !s.keys.p256dh || !s.keys.auth || !/^https:\/\//.test(s.endpoint) && !/^http:\/\/127\.0\.0\.1/.test(s.endpoint)) return erro(400, 'invalid', 'Inscrição inválida.');
-    await gravarReservado(env, 'sub-' + (await hashCurto(s.endpoint)), { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth }, em: new Date().toISOString() });
+    const sub = await request.json().catch(() => null);
+    if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth || !/^https:\/\//.test(sub.endpoint) && !/^http:\/\/127\.0\.0\.1/.test(sub.endpoint)) return erro(400, 'invalid', 'Inscrição inválida.');
+    await gravarReservado(env, 'sub-' + (await hashCurto(sub.endpoint)), { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth }, em: new Date().toISOString(), ...(dono ? {} : { usuario: uid }) });
     return json({ ok: true });
   }
   if (acao === 'inscrever' && m === 'DELETE') {
-    const s = await request.json().catch(() => null);
-    if (s && s.endpoint) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind('sub-' + (await hashCurto(s.endpoint))).run();
+    const sub = await request.json().catch(() => null);
+    if (sub && sub.endpoint) {
+      const id = 'sub-' + (await hashCurto(sub.endpoint)), r = await env.DB.prepare("SELECT dados FROM docs WHERE colecao = '_notif' AND id = ?").bind(id).first(), d = r ? JSON.parse(r.dados) : null, dId = await donoId(env);
+      if (d && (dono ? (!d.usuario || d.usuario === dId) : d.usuario === uid)) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(id).run();   // cada um só tira os próprios aparelhos
+    }
     return json({ ok: true });
   }
   if (acao === 'config' && m === 'PUT') {
     const c = await request.json().catch(() => null);
     if (!c || typeof c !== 'object') return erro(400, 'invalid', 'Configuração inválida.');
-    const antigo = await lerReservado(env, 'config', {});
-    await gravarReservado(env, 'config', { ...antigo, alertas: c.alertas !== false, esconder: !!c.esconder });
+    const antigo = await lerReservado(env, 'config' + s, {}), novo = { ...antigo };
+    if (dono) { novo.alertas = c.alertas !== false; novo.esconder = !!c.esconder; if (c.equipe) novo.equipe = { ...equipeDe(antigo), ...limparPrefs(c.equipe, EQUIPE_PADRAO) }; }
+    else if (typeof c.esconder === 'boolean') novo.esconder = c.esconder;
+    if (c.avisos) novo.avisos = { ...prefsDe(antigo), ...limparPrefs(c.avisos, PREFS_PADRAO) };
+    await gravarReservado(env, 'config' + s, novo);
     return json({ ok: true });
   }
   if (acao === 'resumo' && m === 'PUT') {
@@ -408,11 +432,11 @@ async function notif(request, env, partes) {
     const itens = (Array.isArray(r.itens) ? r.itens : []).slice(0, 300).filter((i) => i && /^\d{4}-\d{2}-\d{2}$/.test(i.d || '')).map((i) => ({ d: i.d, t: limpa(i.t), n: limpa(i.n), l: limpa(i.l), v: i.v == null ? null : Number(i.v) || 0 }));
     const alertas = (Array.isArray(r.alertas) ? r.alertas : []).slice(0, 10).filter((a) => a && a.chave).map((a) => ({ chave: limpa(a.chave), titulo: limpa(a.titulo), detalhe: limpa(a.detalhe) }));
     const prazos = (Array.isArray(r.prazos) ? r.prazos : []).slice(0, 200).filter((p) => p && /^\d{4}-\d{2}-\d{2}$/.test(p.d || '')).map((p) => ({ d: p.d, h: /^\d{2}:\d{2}$/.test(p.h || '') ? p.h : '', n: limpa(p.n), l: limpa(p.l), t: ['prazo', 'audiencia', 'tarefa'].includes(p.t) ? p.t : 'prazo', a: (Array.isArray(p.a) ? p.a : [5, 2, 1, 0]).map(Number).filter((x) => Number.isInteger(x) && x >= 0 && x <= 30).slice(0, 8) }));
-    await gravarReservado(env, 'resumo', { geradoEm: new Date().toISOString(), itens, alertas, prazos });
+    await gravarReservado(env, 'resumo' + s, { geradoEm: new Date().toISOString(), itens, alertas, prazos });
     return json({ ok: true, itens: itens.length, alertas: alertas.length, prazos: prazos.length });
   }
-  if (acao === 'teste' && m === 'POST') return json(await enviarResumoDiario(env, { teste: true, forcar: true }));
-  if (acao === 'agora' && m === 'POST') return json(await enviarResumoDiario(env, { forcar: !!new URL(request.url).searchParams.get('forcar') }));
+  if (acao === 'teste' && m === 'POST') return json(await enviarResumoDiario(env, { teste: true, forcar: true, ...(dono ? { soDono: true } : { uid }) }));
+  if (acao === 'agora' && m === 'POST' && dono) return json(await enviarResumoDiario(env, { forcar: !!new URL(request.url).searchParams.get('forcar'), soDono: true }));
   return erro(404, 'not_found', 'Não encontrado.');
 }
 
@@ -459,9 +483,10 @@ async function api(request, env, partes, auth) {
     const dados = await lerDoc(request); if (dados instanceof Response) return dados;
     const novo = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
     const negPost = await autorizarGravacao(env, colecao, novo, null, dados, auth); if (negPost) return negPost;
-    if (colecao === 'repasses') await avisarRepasse(env, enviarAviso, novo, null, dados);
-    if (registraColecao(colecao)) await env.DB.batch([stmtGravar(env, colecao, novo, dados), stmtRegistro(env, { op: 'criou', colecao, id: novo, titulo: tituloDe(colecao, dados) })]);
+    if (colecao === 'repasses') await avisarRepasseA(env, enviarAviso, novo, null, dados);
+    if (registraColecao(colecao)) await env.DB.batch([stmtGravar(env, colecao, novo, dados), stmtRegistro(env, { op: 'criou', colecao, id: novo, titulo: tituloDe(colecao, dados), dados, ...autorDe(auth) })]);
     else await gravar(env, colecao, novo, dados);
+    if (registraColecao(colecao)) await avisarAtividade(env, enviarAviso, { colecao, id: novo, antes: null, depois: dados, acao: 'criou', auth });
     return json({ id: novo });
   }
   if (id && metodo === 'PUT') {
@@ -474,12 +499,12 @@ async function api(request, env, partes, auth) {
       const at = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
       const neg = await autorizarGravacao(env, colecao, id, at ? JSON.parse(at.dados) : null, dados, auth); if (neg) return neg;
     }
-    if (colecao === 'repasses') { const at1 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first(); await avisarRepasse(env, enviarAviso, id, at1 ? JSON.parse(at1.dados) : null, dados); }
+    if (colecao === 'repasses') { const at1 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first(); await avisarRepasseA(env, enviarAviso, id, at1 ? JSON.parse(at1.dados) : null, dados); }
     if (new URL(request.url).searchParams.get('soNovo') === '1') {
       /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
       const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
       const criado = !!(r && r.meta && r.meta.changes > 0);
-      if (criado && registraColecao(colecao)) await stmtRegistro(env, { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) }).run();
+      if (criado && registraColecao(colecao)) { await stmtRegistro(env, { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados), dados, ...autorDe(auth) }).run(); await avisarAtividade(env, enviarAviso, { colecao, id, antes: null, depois: dados, acao: 'criou', auth }); }
       return json({ ok: true, criado });
     }
     /* conflito de edição: o app manda `base` = a versão (carimbo de tempo) que ele tinha lido. Se o registro mudou no servidor depois disso e o conteúdo é diferente,
@@ -494,7 +519,8 @@ async function api(request, env, partes, auth) {
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
     const antesObj = antes ? JSON.parse(antes.dados) : null, mud = antesObj ? mudancas(antesObj, dados) : [];
     if (antesObj && !mud.length) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts }); }   // nada mudou de verdade (só campos de controle): grava, mas não há o que registrar
-    await env.DB.batch([stmtGravar(env, colecao, id, dados, ts), stmtRegistro(env, antesObj ? { op: 'alterou', colecao, id, titulo: tituloDe(colecao, dados), mud } : { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados) })]);
+    await env.DB.batch([stmtGravar(env, colecao, id, dados, ts), stmtRegistro(env, antesObj ? { op: 'alterou', colecao, id, titulo: tituloDe(colecao, dados), mud, dados, ...autorDe(auth) } : { op: 'criou', colecao, id, titulo: tituloDe(colecao, dados), dados, ...autorDe(auth) })]);
+    await avisarAtividade(env, enviarAviso, { colecao, id, antes: antesObj, depois: dados, acao: antesObj ? 'alterou' : 'criou', auth });
     return json({ ok: true, v: ts });
   }
   if (id && metodo === 'DELETE') {
@@ -502,8 +528,9 @@ async function api(request, env, partes, auth) {
     if (!ehDono(auth)) { const neg = await autorizarExclusao(env, colecao, id, antes ? JSON.parse(antes.dados) : null, auth); if (neg) return neg; }
     const cmds = [env.DB.prepare('DELETE FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id)];
     if (antes && vaiParaLixeira(colecao)) cmds.push(stmtLixeira(env, colecao, id, antes.dados));   // a exclusão vira cópia na lixeira (30 dias) na mesma operação
-    if (antes && registraColecao(colecao)) cmds.push(stmtRegistro(env, { op: 'excluiu', colecao, id, titulo: tituloDe(colecao, JSON.parse(antes.dados)) }));
+    if (antes && registraColecao(colecao)) cmds.push(stmtRegistro(env, { op: 'excluiu', colecao, id, titulo: tituloDe(colecao, JSON.parse(antes.dados)), dados: JSON.parse(antes.dados), ...autorDe(auth) }));
     await env.DB.batch(cmds);
+    if (antes && registraColecao(colecao)) await avisarAtividade(env, enviarAviso, { colecao, id, antes: JSON.parse(antes.dados), depois: null, acao: 'excluiu', auth });
     return json({ ok: true });
   }
   return erro(405, 'method', 'Método não permitido.');
@@ -519,9 +546,13 @@ const stmtGravar = (env, colecao, id, dados, ts) =>
   env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?) ON CONFLICT(colecao,id) DO UPDATE SET dados=excluded.dados, atualizado=excluded.atualizado').bind(colecao, id, JSON.stringify(dados), ts || Date.now());
 const gravar = (env, colecao, id, dados) => stmtGravar(env, colecao, id, dados).run();
 
+/* segunda-feira de manhã: o que a equipe fez nos últimos 7 dias (só se o proprietário ligou "Resumo semanal da equipe") */
+async function enviarSemanal(env) {
+  await enviarAviso(env, { tag: 'semanal-' + hojeBR(), titulo: 'Resumo da semana da equipe', corpo: await textoSemanal(env), url: '/', equipe: 'semanal' });
+}
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : fazerBackup(env)));
+    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : (async () => { try { await fazerBackup(env); } catch (e) { console.error('backup', e); } try { await enviarSemanal(env); } catch (e) { console.error('resumo semanal', e); } })()));
   },
   async fetch(request, env, ctx) {
     return comSeguranca(await tratar(request, env, ctx));
@@ -533,27 +564,33 @@ const ICONES = new Set(['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png
    Raiz que não está aqui é recusada; /api/enviar é a única pública (tem token próprio). */
 const ROTAS = {
   ler: ['proprietario', (r, e, p) => ler(r, e, p)], recebidos: ['proprietario', (r, e, p) => recebidos(r, e, p)], anexos: ['proprietario', (r, e, p) => anexos(r, e, p)],
-  notif: ['proprietario', (r, e, p) => notif(r, e, p)], djen: ['sessao', (r, e, p, au) => checarRotaDjen(p, r.method, au) || djenRotas(r, e, p, au)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
+  notif: ['sessao', (r, e, p, a) => notif(r, e, p, a)], djen: ['sessao', (r, e, p, au) => checarRotaDjen(p, r.method, au) || djenRotas(r, e, p, au)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
   db: ['sessao', (r, e, p, au) => api(r, e, p, au)],
-  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao })],
+  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao, atividade: (env2, f) => avisarAtividade(env2, enviarAviso, f) })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
-  lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
+  lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], historico: ['sessao', async (r, e, p, a) => historicoRotas(r, e, p, a, a && a.usuario && a.usuario.papel === 'advogado' ? await escopoDoAdvogado(e, a) : null)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['sessao', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
   equipe: ['sessao', (r, e) => equipeRotas(r, e)], agenda: ['sessao', (r, e, p, a) => agendaRotas(r, e, p, a)], 'sem-advogado': ['proprietario', (r, e, p, a) => semAdvogadoRotas(r, e, p, a)],
   eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ id, papel, nome, oabs, permissoes }) => ({ id, papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);
 
-/* aviso curto no iPhone (entrada em aparelho novo, senha errada repetida…): usa as inscrições de notificação já cadastradas */
-async function enviarAviso(env, aviso) {
-  const subs = await inscricoes(env); if (!subs.length) return;
-  const v = await vapid(env), config = await lerReservado(env, 'config', {}), origem = config.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
-  const assuntos = [...new Set([env.PUSH_ASSUNTO, config.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
-  for (const s of subs) {
+/* aviso curto no celular (entrada em aparelho novo, senha errada, indicado como responsável, repasse…). `uid` vazio = proprietário.
+   `pref` = a opção da pessoa que precisa estar ligada ("indicado", "repasses"…); `aviso.equipe` = a chave de equipe do proprietário ("exclusao", "desfeito"…). */
+async function enviarAviso(env, aviso, uid, pref) {
+  const dId = await donoId(env), dono = !uid || uid === dId, s = sfx(uid, dono);
+  const config = await lerReservado(env, 'config' + s, {}), cfgDono = dono ? config : await lerReservado(env, 'config', {});
+  if (pref && prefsDe(config)[pref] === false) return;
+  const { equipe, ...carga } = aviso;
+  if (equipe && (!dono || equipeDe(config)[equipe] === false)) return;
+  const subs = await inscricoes(env, dono ? null : uid); if (!subs.length) return;
+  const v = await vapid(env), origem = cfgDono.origem || env.APP_ORIGEM || 'https://controle-juridico.hygorlima10.workers.dev';
+  const assuntos = [...new Set([env.PUSH_ASSUNTO, cfgDono.subOk, origem, 'mailto:contato@' + new URL(origem).hostname].filter(Boolean))];
+  for (const sub of subs) {
     for (const a of assuntos) {
-      const r = await enviarPush(v, a, s, aviso);
+      const r = await enviarPush(v, a, sub, carga);
       if (r.ok) break;
-      if (r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(s.id).run();
+      if (r.remover) await env.DB.prepare("DELETE FROM docs WHERE colecao = '_notif' AND id = ?").bind(sub.id).run();
       if (!(r.status === 403 && /BadJwtToken/i.test(r.motivo || ''))) break;
     }
   }

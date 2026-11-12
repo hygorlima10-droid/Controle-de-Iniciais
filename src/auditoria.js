@@ -38,9 +38,15 @@ export function mudancas(antes, depois) {
   }
   return out;
 }
-/* comando (sem executar) que grava uma linha do registro; "ev": { op, colecao, id, titulo, mud, por, modulo } */
+/* quem fez: o nome da pessoa logada (no acesso antigo, de uma pessoa só, continua "Você") */
+export const autorDe = (auth) => (auth && auth.usuario ? { por: auth.usuario.nome || 'Você', uid: auth.usuario.id } : { por: 'Você' });
+/* número do processo (só dígitos) a que o registro pertence: é o que liga o histórico de um processo a tudo que foi feito nele */
+export const procDe = (colecao, d) => { const n = String((d && (d.numeroProcesso || d.numero || d.processo)) || '').replace(/\D/g, ''); return n.length >= 15 ? n : ''; };
+/* comando (sem executar) que grava uma linha do registro; "ev": { op, colecao, id, titulo, mud, por, uid, dados (o registro, para achar o processo), modulo } */
 export function stmtRegistro(env, ev) {
   const dados = { em: new Date().toISOString(), por: ev.por || 'Você', op: ev.op, colecao: ev.colecao || '', rotulo: ev.rotulo || ROTULOS[ev.colecao] || ev.modulo || '', id: ev.id || '', titulo: ev.titulo || '' };
+  if (ev.uid) dados.uid = ev.uid;
+  const proc = ev.proc || (ev.dados ? procDe(ev.colecao, ev.dados) : ''); if (proc) dados.proc = proc;
   if (ev.mud && ev.mud.length) dados.mud = ev.mud;
   return env.DB.prepare('INSERT INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(COL_AUD, agoraId() + '-' + aleat(), JSON.stringify(dados), Date.now());
 }
@@ -66,12 +72,30 @@ export async function limparSeguranca(env) {
 export async function auditoriaRotas(request, env) {
   if (request.method !== 'GET') return erro(405, 'method', 'Método não permitido.');
   const u = new URL(request.url), antes = (u.searchParams.get('antes') || '').slice(0, 40), lim = Math.min(Math.max(parseInt(u.searchParams.get('limite') || '60', 10) || 60, 1), 200), col = u.searchParams.get('colecao') || '';
+  const por = (u.searchParams.get('por') || '').slice(0, 80), de = (u.searchParams.get('de') || '').replace(/\D/g, '').slice(0, 8), ate = (u.searchParams.get('ate') || '').replace(/\D/g, '').slice(0, 8);
   const filtros = ['colecao = ?'], bind = [COL_AUD];
   if (antes) { filtros.push('id < ?'); bind.push(antes); }
-  if (col) { filtros.push("json_extract(dados, '$.colecao') = ?"); bind.push(col); }
+  if (col === 'acesso') filtros.push("json_extract(dados, '$.rotulo') = 'Acesso'");
+  else if (col) { filtros.push("json_extract(dados, '$.colecao') = ?"); bind.push(col); }
+  if (por) { filtros.push("json_extract(dados, '$.por') = ?"); bind.push(por); }
+  if (de.length === 8) { filtros.push('id >= ?'); bind.push(de); }                       // o código do registro começa por AAAAMMDDhhmmss…
+  if (ate.length === 8) { filtros.push('id < ?'); bind.push(String(Number(ate) + 1)); }   // até o fim do dia (AAAAMMDD+1 é o dia seguinte; comparação textual funciona para datas válidas)
   const { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE ' + filtros.join(' AND ') + ' ORDER BY id DESC LIMIT ?').bind(...bind, lim + 1).all();
   const itens = results.slice(0, lim).map((r) => ({ chave: r.id, ...JSON.parse(r.dados) }));
-  return json({ itens, mais: results.length > lim ? itens[itens.length - 1].chave : null });
+  const { results: pes } = await env.DB.prepare("SELECT DISTINCT json_extract(dados, '$.por') AS p FROM docs WHERE colecao = ? AND id >= ? LIMIT 50").bind(COL_AUD, new Date(Date.now() - 90 * 864e5).toISOString().replace(/\D/g, '').slice(0, 8)).all();
+  return json({ itens, mais: results.length > lim ? itens[itens.length - 1].chave : null, pessoas: pes.map((r) => r.p).filter((x) => x && x !== 'desconhecido').sort() });
+}
+
+/* Histórico de um processo (GET /api/historico/<número>): o que foi feito nos registros daquele número, por quem e quando.
+   Quem pode: o proprietário e o estagiário (que vê todo o jurídico) sempre; o advogado, se participa do processo. Só aparece o que foi gravado depois da 5.8. */
+export async function historicoRotas(request, env, partes, auth, esc) {
+  if (request.method !== 'GET') return erro(405, 'method', 'Método não permitido.');
+  const num = String(partes[1] || '').replace(/\D/g, '');
+  if (num.length < 15) return erro(400, 'invalid', 'Número de processo inválido.');
+  if (auth && auth.usuario && auth.usuario.papel === 'advogado' && !(esc && esc.processos && esc.processos.has(num))) return erro(403, 'forbidden', 'Você não participa deste processo.');
+  const lim = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get('limite') || '100', 10) || 100, 1), 300);
+  const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.proc') = ? ORDER BY id DESC LIMIT ?").bind(COL_AUD, num, lim).all();
+  return json({ itens: results.map((r) => { const d = JSON.parse(r.dados); return { chave: r.id, em: d.em, por: d.por, op: d.op, rotulo: d.rotulo, titulo: d.titulo, mud: d.mud || [] }; }) });
 }
 
 export async function lixeiraRotas(request, env, partes) {

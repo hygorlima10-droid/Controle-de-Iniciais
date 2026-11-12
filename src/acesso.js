@@ -134,7 +134,7 @@ export async function paginasDeAcesso(request, env, deps) {
       await limparTent(env, chave);
       const token = await criarSessaoBanco(env, request, u.id);
       await stmtRegistro(env, { op: 'entrou', rotulo: 'Acesso', titulo: ctx.rotulo + (ctx.lugar ? ' · ' + ctx.lugar : '') }).run();
-      if (novoAparelho && lembrete.length) avisoSeAtivo(deps, env, u, { tag: 'acesso-novo', titulo: 'Novo acesso ao Horus', corpo: ctx.rotulo + (ctx.lugar ? ' · ' + ctx.lugar : '') + '. Se não foi você, troque a senha em Configurações › Segurança.', url: '/' });
+      if (novoAparelho && lembrete.length) avisoSeAtivo(deps, env, u, { tag: 'acesso-novo', equipe: 'aparelho', titulo: u.papel === 'proprietario' ? 'Novo acesso ao Horus' : 'Novo acesso de ' + String(u.nome || '').split(' ')[0], corpo: ctx.rotulo + (ctx.lugar ? ' · ' + ctx.lugar : '') + '. Se não foi você, troque a senha em Configurações › Segurança.', url: '/' });
       return redirecionar('/', cookieSessao(token));
     }
     const novo = contaFalha(t); await gravarTent(env, chave, novo);
@@ -255,6 +255,6 @@ async function conviteRotas(request, env, deps, token) {
   await limparTent(env, chave);
   const sessao = await criarSessaoBanco(env, request, uid);
   await env.DB.batch([stmtRegistro(env, { op: 'criou', por: c.nome, rotulo: 'Acesso', titulo: 'Convite aceito: ' + c.nome + ' (' + (PAPEL_ROTULO[c.papel] || c.papel) + ')' }), stmtRegistro(env, { op: 'entrou', por: c.nome, rotulo: 'Acesso', titulo: ctx.rotulo + (ctx.lugar ? ' · ' + ctx.lugar : '') })]);
-  avisoSeAtivo(deps, env, await proprietario(env), { tag: 'convite-aceito', titulo: 'Convite aceito no Horus', corpo: c.nome + ' criou o acesso como ' + (PAPEL_ROTULO[c.papel] || c.papel) + '.', url: '/' });
+  avisoSeAtivo(deps, env, await proprietario(env), { tag: 'convite-aceito', equipe: 'convite', titulo: 'Convite aceito no Horus', corpo: c.nome + ' criou o acesso como ' + (PAPEL_ROTULO[c.papel] || c.papel) + '.', url: '/' });
   return redirecionar('/', cookieSessao(sessao));
 }

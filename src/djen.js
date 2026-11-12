@@ -282,6 +282,12 @@ export async function pubsParaAvisar(env) {
   const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.notificada') = 0 LIMIT 200").bind(COL_PUB).all();
   return results.map((r) => ({ id: r.id, ...JSON.parse(r.dados) }));
 }
+/* das publicações a avisar, as que interessam a uma pessoa: as das OABs dela (todas, se `todas`) */
+export async function pubsDaPessoa(env, pubs, oabs, todas) {
+  if (todas) return pubs;
+  const cfg = await lerCfg(env), porId = new Map(cfg.oabs.map((o) => [o.id, chaveOab(o.numero, o.uf)])), meus = new Set(oabs || []);
+  return pubs.filter((d) => [...chavesDaPub(d, porId)].some((k) => meus.has(k)));
+}
 export async function marcarAvisadas(env, ids) {
   const cmds = [];
   for (const id of ids) { const r = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(COL_PUB, id).first(); if (r) { const d = JSON.parse(r.dados); d.notificada = true; cmds.push(gravar(env, COL_PUB, id, d)); } }
