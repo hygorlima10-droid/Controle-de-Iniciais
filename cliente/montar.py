@@ -197,7 +197,7 @@ rep("    else if (tab === 'publicacoes') pbRender();\n", "    else if (tab === '
 rep("obra:'Construção', publicacoes:'Publicações',", "obra:'Construção', publicacoes:'Publicações', agenda:'Agenda',")
 rep("    else if (activeTab === 'publicacoes') qs('subtitle').textContent = 'Diário Oficial (DJEN) · leitura automática todo dia às 10:00';", "    else if (activeTab === 'publicacoes') qs('subtitle').textContent = 'Diário Oficial (DJEN) · leitura automática todo dia às 10:00';\n    else if (activeTab === 'agenda') qs('subtitle').textContent = 'Prazos, audiências e tarefas · feriados do TJGO';")
 # cartão de prazos no Início (nova área do grid)
-rep('      <div class="ini-atencao">\n  <section class="upcoming"', '      <div class="ini-prazos" id="inicioPrazos"></div>\n      <div class="ini-atencao">\n  <section class="upcoming"')
+repm('id="inicioPrazos"', '      <div class="ini-atencao">\n  <section class="upcoming"', '      <div class="ini-prazos" id="inicioPrazos"></div>\n      <div class="ini-atencao">\n  <section class="upcoming"')
 rep('.ini-grid.sem-extr{grid-template-areas:"busca" "acoes" "hero" "kpi" "atencao" "divisao";}', '.ini-grid.sem-extr{grid-template-areas:"busca" "acoes" "hero" "kpi" "prazos" "atencao" "divisao";}')
 rep('.ini-grid.sem-extr{grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "divisao atencao";grid-template-rows:auto auto auto auto minmax(0,1fr);}', '.ini-grid.sem-extr{grid-template-areas:"busca busca" "acoes acoes" "hero atencao" "kpi atencao" "prazos atencao" "divisao atencao";grid-template-rows:auto auto auto auto auto minmax(0,1fr);}')
 rep('grid-template-areas:"busca" "acoes" "hero" "kpi" "atencao" "extratos" "divisao";padding-top:12px;}', 'grid-template-areas:"busca" "acoes" "hero" "kpi" "prazos" "atencao" "extratos" "divisao";padding-top:12px;}')
@@ -401,18 +401,18 @@ for _id in ('ic-proc', 'ic-gear'):
     for _m in reversed(_ms[1:]): s = s[:_m.start()] + s[_m.end():]
 
 
-rep('<div class="form-error" id="formError"></div>', '<div class="field" id="esResp_casos"></div>\n      <div class="form-error" id="formError"></div>')
-rep('<div class="form-error" id="formErrorAcordo"></div>', '<div class="field" id="esResp_termosAcordo"></div>\n      <div class="form-error" id="formErrorAcordo"></div>')
-rep('<div class="form-error" id="formErrorAlvara"></div>', '<div class="field" id="esResp_alvaras"></div>\n      <div class="form-error" id="formErrorAlvara"></div>')
+repm('id="esResp_casos"', '<div class="form-error" id="formError"></div>', '<div class="field" id="esResp_casos"></div>\n      <div class="form-error" id="formError"></div>')
+repm('id="esResp_termosAcordo"', '<div class="form-error" id="formErrorAcordo"></div>', '<div class="field" id="esResp_termosAcordo"></div>\n      <div class="form-error" id="formErrorAcordo"></div>')
+repm('id="esResp_alvaras"', '<div class="form-error" id="formErrorAlvara"></div>', '<div class="field" id="esResp_alvaras"></div>\n      <div class="form-error" id="formErrorAlvara"></div>')
 rep("    qs('modalTitle').textContent = 'Nova inicial';\n", "    qs('modalTitle').textContent = 'Nova inicial';\n    esRespIniciar('casos', null);\n")
 rep("    qs('modalTitle').textContent = 'Editar inicial';\n", "    qs('modalTitle').textContent = 'Editar inicial';\n    esRespIniciar('casos', c);\n")
 rep("    qs('modalAcordoTitle').textContent = 'Novo termo de acordo';\n", "    qs('modalAcordoTitle').textContent = 'Novo termo de acordo';\n    esRespIniciar('termosAcordo', null);\n")
 rep("    qs('modalAcordoTitle').textContent = 'Editar termo de acordo';\n", "    qs('modalAcordoTitle').textContent = 'Editar termo de acordo';\n    esRespIniciar('termosAcordo', a);\n")
 rep("    qs('modalAlvaraTitle').textContent = 'Novo alvará';\n", "    qs('modalAlvaraTitle').textContent = 'Novo alvará';\n    esRespIniciar('alvaras', null);\n")
 rep("    qs('modalAlvaraTitle').textContent = 'Editar alvará';\n", "    qs('modalAlvaraTitle').textContent = 'Editar alvará';\n    esRespIniciar('alvaras', a);\n")
-rep("    qs('saveBtn').disabled = true;\n    var casoAntAt =", "    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n    qs('saveBtn').disabled = true;\n    var casoAntAt =")
-rep("    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)")
-rep("    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)")
+repm("esRespAplicar('casos'", "    qs('saveBtn').disabled = true;\n    var casoAntAt =", "    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n    qs('saveBtn').disabled = true;\n    var casoAntAt =")
+repm("esRespAplicar('termosAcordo'", "    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    qs('saveBtnAcordo').disabled = true;\n    if (acordoAnterior && acordoAnterior.atipica)")
+repm("esRespAplicar('alvaras'", "    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    qs('saveBtnAlvara').disabled = true;\n    if (alvaraAnterior && alvaraAnterior.atipica)")
 rep("    try{ window.scrollTo(0, 0); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ window.scrollTo(0, 0); }catch(e){}\n    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
 
 rep("    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });", "    if (!c || statusDe(c) === status || STATUS_ORDEM.indexOf(status) < 0) return;\n    if (lgPedeNumero(c, status)) return;   /* protocolar pede o número do processo */\n    persistPatch(c, { status: status, statusDesde: new Date().toISOString() });")
@@ -429,7 +429,7 @@ rep("    if (!esRespAplicar('casos', dados, qs('formError'))) return;\n", "    i
 rep("    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n", "    if (!esRespAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n    if (!rcDivAplicar('termosAcordo', dados, qs('formErrorAcordo'))) return;\n")
 rep("    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n", "    if (!esRespAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n    if (!rcDivAplicar('alvaras', dados, qs('formErrorAlvara'))) return;\n")
 rep("    try{ esBarra(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();", "    try{ esBarra(); }catch(e){}\n    try{ rcDesenharInicio(); }catch(e){}\n    if (tab === 'inicio'){ renderResumoGeral();")
-repm('id="rcInicio"', '      <div class="ini-atencao">\n', '      <div id="rcInicio"></div>\n      <div class="ini-atencao">\n')
+repm('id="rcInicio"', '      <div class="ini-atencao">\n', '      <div class="ini-atencao">\n  <div id="rcInicio"></div>\n')
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

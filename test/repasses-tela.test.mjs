@@ -95,4 +95,7 @@ check(u1.pago && u1.outro && u1.fator === 0 && u1.meu === 0 && !u1.repasse, 'rec
 check(u2.pago && !u2.outro && Math.abs(u2.fator - 0.7) < 1e-9 && u2.repasse && u2.parceiro === 'Ana Advogada' && u2.meu === 350, 'recebimento na conta do proprietário: entra só a parte dele (70% = R$ 350,00) e o resto fica como repasse a pagar à Ana');
 check(!u3.pago && Math.abs(u3.fator - 0.7) < 1e-9 && u3.meu === 350, 'o que ainda não foi recebido projeta a parte dele pela divisão (70%)');
 for (const p of [pa, po]) { const e = p.errs.filter((x) => !/Só o proprietário pode abrir isto/.test(x)); check(e.length === 0, 'sem erros de JavaScript' + (e.length ? ': ' + e.join(' | ') : '')); }   // (o app do advogado ainda tenta abrir as finanças do proprietário: isso é a etapa 5.7)
+// limpa o que este teste criou, para não contaminar os testes seguintes (o banco é compartilhado)
+for (const col of ['repasses', 'receitasManuais', 'despesas']) for (const d of (await dono('GET', '/api/db/' + col)).j.docs) await dono('DELETE', '/api/db/' + col + '/' + d.id);
+for (const id of ['rp0', 'rp1']) await dono('DELETE', '/api/db/casos/' + id);
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
