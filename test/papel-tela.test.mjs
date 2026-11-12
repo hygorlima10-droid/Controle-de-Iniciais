@@ -71,5 +71,18 @@ console.log('\n— proprietário não muda');
   check(await p.locator('#bodyFinanceiro').isVisible(), 'o proprietário abre as Finanças');
   await p.context().close();
 }
+console.log('\n— Início: botão + redondo');
+for (const q of ['dono', 'ana']) {
+  const p = await abrir(q); await p.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await p.waitForTimeout(600);
+  const fab = await p.locator('#fabNew').isVisible(), box = await p.locator('#fabNew').boundingBox(), vp = p.viewportSize();
+  check(fab && box && box.x > vp.width - 120 && box.y > vp.height - 120, (q === 'dono' ? 'proprietário' : 'advogada') + ': o "+" redondo aparece no canto inferior direito do Início');
+  check((await p.locator('#inicioNovo').count()) === 0, 'sem o botão preto "+ Novo" no alto');
+  check((await p.locator('#inicioAcoes').isVisible()) === (q === 'dono'), q === 'dono' ? 'os atalhos (Recebi R$…) continuam para o proprietário' : 'sem a fileira de atalhos para a advogada');
+  await p.click('#fabNew'); await p.waitForTimeout(500);
+  const novo = await p.locator('#novoGrid').innerText();
+  check(/Inicial/.test(novo) && /Prazo/.test(novo) && (/Recebi R\$|Despesa|Extratos/.test(novo) === (q === 'dono')), 'a folha "Novo": ' + novo.replace(/\n/g, ' · '));
+  if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT + 'inicio-' + q + '.png' });
+  await p.context().close();
+}
 for (const id of ['pt1', 'pt2']) await api('dono', 'DELETE', '/api/db/casos/' + id);
 await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

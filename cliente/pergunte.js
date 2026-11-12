@@ -327,7 +327,7 @@ function paIrExtra(tipo, id){
   else if (tipo === 'extrato') setActiveTab('extratos');
 }
 (function(){
-  var inp = qs('buscaGlobalInput'); if (inp) inp.placeholder = 'Buscar em tudo: clientes, processos, despesas, obra, valores…';
+  var inp = qs('buscaGlobalInput'); if (inp) inp.placeholder = (window.__papel && window.__papel !== 'proprietario') ? 'Buscar em tudo: clientes, processos, publicações…' : 'Buscar em tudo: clientes, processos, despesas, obra, valores…';
 })();
 
 /* ---------- folha "Novo" (cadastros e ações), ordenada pelo que você mais usa ---------- */
@@ -335,22 +335,22 @@ var PA_USO_KEY = 'controle.atalhos.uso.v1';
 function paUsoLer(){ try{ return JSON.parse(localStorage.getItem(PA_USO_KEY) || '{}') || {}; }catch(e){ return {}; } }
 function paUsar(k){ var u = paUsoLer(); u[k] = (u[k] || 0) + 1; try{ localStorage.setItem(PA_USO_KEY, JSON.stringify(u)); }catch(e){} }
 var PA_NOVO = [
-  { k: 'recebi', t: 'Recebi R$', i: 'ic-coin', f: function(){ abrirRecebi(); } },
+  { k: 'recebi', t: 'Recebi R$', i: 'ic-coin', f: function(){ abrirRecebi(); }, dono: true },
   { k: 'peticao', t: 'Inicial', i: 'ic-file', f: function(){ abrirNovo(); } },
   { k: 'acordo', t: 'Acordo', i: 'ic-clip', f: function(){ abrirNovoAcordo(); } },
   { k: 'alvara', t: 'Alvará', i: 'ic-stamp', f: function(){ abrirNovoAlvara(); } },
   { k: 'processo', t: 'Processo', i: 'ic-proc', f: function(){ prAbrirNovo(null); } },
   { k: 'prazo', t: 'Prazo', i: 'ic-agenda', f: function(){ agAbrir(null); } },
-  { k: 'despesa', t: 'Despesa', i: 'ic-receipt', f: function(){ abrirNovaDespesa('pj'); } },
+  { k: 'despesa', t: 'Despesa', i: 'ic-receipt', f: function(){ abrirNovaDespesa('pj'); }, dono: true },
   { k: 'cliente', t: 'Cliente', i: 'ic-users', f: function(){ abrirClienteEdit({}); } },
   { k: 'foto', t: 'Foto ou PDF', i: 'ic-cam', f: function(){ ldAbrir(); }, ia: true },
-  { k: 'extratos', t: 'Extratos', i: 'ic-bank', f: function(){ setActiveTab('extratos'); } },
+  { k: 'extratos', t: 'Extratos', i: 'ic-bank', f: function(){ setActiveTab('extratos'); }, dono: true },
   { k: 'pergunte', t: 'Pergunte', i: 'ic-ask', f: function(){ paAbrir(''); }, ia: true }
 ];
 function paNovoHtml(){
   var uso = paUsoLer(), tab = (typeof activeTab !== 'undefined') ? activeTab : '';
   var primeiro = { peticoes: 'peticao', acordos: 'acordo', alvaras: 'alvara', clientes: 'cliente' }[tab] || '';
-  var itens = PA_NOVO.filter(function(x){ return !x.ia || paTemSample(); }).map(function(x, i){ return { x: x, i: i, n: x.k === primeiro ? 1e9 : (uso[x.k] || 0) }; });
+  var itens = PA_NOVO.filter(function(x){ return (!x.ia || paTemSample()) && (!x.dono || ppDono()); }).map(function(x, i){ return { x: x, i: i, n: x.k === primeiro ? 1e9 : (uso[x.k] || 0) }; });
   itens.sort(function(a, b){ return b.n - a.n || a.i - b.i; });
   return itens.map(function(o, i){ return '<button type="button" class="novo-it' + (i === 0 ? ' novo-1' : '') + '" data-novo-k="' + o.x.k + '"><svg><use href="#' + o.x.i + '"/></svg><span>' + escapeHtml(o.x.t) + '</span></button>'; }).join('');
 }
@@ -377,15 +377,7 @@ document.addEventListener('click', function(ev){
   else if (t.id === 'acRecebi'){ paUsar('recebi'); abrirRecebi(); }
   else if (t.id === 'inicioLerDoc') paUsar('foto');
 });
-/* botão + pequeno: no Início só aparece depois que a faixa de ações sai da tela */
-(function(){
-  function ajustar(){
-    var fab = qs('fabNew'), ac = qs('inicioAcoes'); if (!fab || !ac || activeTab !== 'inicio') return;
-    fab.style.display = (ac.getBoundingClientRect().bottom < 4) ? '' : 'none';
-  }
-  window.addEventListener('scroll', ajustar, { passive: true });
-  setInterval(ajustar, 700);
-})();
+/* o botão + redondo (canto inferior direito) fica sempre visível no Início, como nas outras telas */
 
 /* ---------- desfazer a última ação ---------- */
 function paDesfazerBotao(){
