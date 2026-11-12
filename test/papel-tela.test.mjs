@@ -95,6 +95,26 @@ console.log('\n— totais e honorários por papel');
   check(abasD.some((x) => /Resumo/.test(x)) && /R\$/.test(await d.locator('#subtitle').innerText()), 'proprietário: Resumo e totais como sempre');
   await d.context().close();
 }
+console.log('\n— Clientes por papel');
+{
+  const abasDe = (p) => p.evaluate(() => [...document.querySelectorAll('#mdAbas-clientes button')].map((b) => b.textContent.trim()));
+  const c = await abrir('caio'); await c.evaluate(() => document.querySelector('#drawer [data-tab="clientes"]').click()); await c.waitForTimeout(1200);
+  const abC = await abasDe(c), subC = await c.locator('#subtitle').innerText(), temCobrar = await c.evaluate(() => [...document.querySelectorAll('[data-cli-cobrar]')].some((e) => e.offsetParent !== null));
+  const opts = await c.evaluate(() => [...document.querySelectorAll('#filtroClienteTipo option')].map((o) => o.value));
+  check(abC.join('|') === 'Lista|Sem processos', 'estagiário: Clientes só com "Lista" e "Sem processos" (sem Resumo, A cobrar, Em atraso): ' + abC.join('|'));
+  check(!/R\$|a receber/.test(subC), 'estagiário: o subtítulo não mostra o total a receber: "' + subC + '"');
+  check(!temCobrar && !opts.includes('receber') && !opts.includes('atraso'), 'estagiário: sem botão "Cobrar" nem filtros de cobrança');
+  check(/R\$/.test(await c.locator('#listClientes').innerText()), 'estagiário: continua vendo o valor de cada cliente');
+  await c.context().close();
+  const a = await abrir('ana'); await a.evaluate(() => document.querySelector('#drawer [data-tab="clientes"]').click()); await a.waitForTimeout(1200);
+  const abA = await abasDe(a);
+  check(abA.some((x) => /Resumo/.test(x)) && abA.some((x) => /A cobrar/.test(x)) && abA.some((x) => /Em atraso/.test(x)), 'advogada: Clientes continua com Resumo e abas de cobrança: ' + abA.join('|'));
+  check(/a receber/.test(await a.locator('#subtitle').innerText()), 'advogada (Ver totais): o subtítulo mostra o total dos clientes dela');
+  await a.context().close();
+  const d = await abrir('dono'); await d.evaluate(() => document.querySelector('#drawer [data-tab="clientes"]').click()); await d.waitForTimeout(1200);
+  check((await abasDe(d)).length === 5 && /a receber/.test(await d.locator('#subtitle').innerText()), 'proprietário: Clientes como sempre (5 abas e total no subtítulo)');
+  await d.context().close();
+}
 console.log('\n— Início: botão + redondo');
 for (const q of ['dono', 'ana']) {
   const p = await abrir(q); await p.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await p.waitForTimeout(600);

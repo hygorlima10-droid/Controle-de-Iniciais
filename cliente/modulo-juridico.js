@@ -133,11 +133,18 @@ function mjAgenda(){
 /* ---------------- CLIENTES ---------------- */
 var MJ_CLI_ABAS = [['resumo', 'Resumo'], ['lista', 'Lista'], ['cobrar', 'A cobrar'], ['atraso', 'Em atraso'], ['sem', 'Sem processos']];
 var MJ_CLI_TIPO = { lista: 'ativos', cobrar: 'receber', atraso: 'atraso', sem: 'sem' };
+/* sub-abas de Clientes por papel: sem "Ver totais" (ou estagiário) não há Resumo (totais, maiores valores, para cobrar); estagiário também não tem "A cobrar" nem "Em atraso" (não cobra) */
+function mjCliAbas(){
+  var est = (typeof ppPapel === 'function') && ppPapel() === 'estagiario', sem = (typeof ppVerTotais === 'function') && !ppVerTotais();
+  return MJ_CLI_ABAS.filter(function(a){ return !((sem || est) && a[0] === 'resumo') && !(est && (a[0] === 'cobrar' || a[0] === 'atraso')); });
+}
+function mjCliTem(k){ return mjCliAbas().some(function(a){ return a[0] === k; }); }
 function mjCliChave(){
   if (mjS.cli === 'resumo') return 'resumo';
   var t = clientesFiltro.tipo; return t === 'receber' ? 'cobrar' : (t === 'atraso' ? 'atraso' : (t === 'sem' ? 'sem' : 'lista'));
 }
 function mjCliIr(k, lembrar){
+  if (!mjCliTem(k)) k = 'lista';
   if (lembrar) mdLembrar('clientes', k);
   if (k === 'resumo') mjS.cli = 'resumo';
   else { mjS.cli = 'lista'; clientesFiltro.tipo = MJ_CLI_TIPO[k] || 'ativos'; var sel = qs('filtroClienteTipo'); if (sel) sel.value = clientesFiltro.tipo; }
@@ -149,8 +156,11 @@ function mjClientes(D){
   mdCss();
   if (mjS.cli == null){
     var s0 = mdInicial('clientes', ['lista', 'cobrar', 'atraso', 'sem']);
+    if (!mjCliTem(s0)) s0 = 'lista';
     if (s0 === 'resumo') mjS.cli = 'resumo'; else { mjS.cli = 'lista'; clientesFiltro.tipo = MJ_CLI_TIPO[s0]; var sel = qs('filtroClienteTipo'); if (sel) sel.value = clientesFiltro.tipo; }
   }
+  if (mjS.cli === 'resumo' && !mjCliTem('resumo')) mjS.cli = 'lista';
+  if (!mjCliTem(mjCliChave())){ mjS.cli = 'lista'; clientesFiltro.tipo = 'ativos'; }
   var chave = mjCliChave(), sub = chave === 'resumo' ? 'resumo' : 'lista';
   head.setAttribute('data-md', sub); body.setAttribute('data-md', sub);
   var bar = document.getElementById('mdAbas-clientes');
@@ -159,7 +169,7 @@ function mjClientes(D){
     bar.addEventListener('click', function(ev){ var b = ev.target.closest ? ev.target.closest('[data-mj-cli]') : null; if (b) mjCliIr(b.getAttribute('data-mj-cli'), true); });
   }
   var nAtr = D.lista.filter(function(x){ return !x.c.arquivado && x.r.atrasado > 0.004; }).length;
-  bar.innerHTML = mdBarraHtml(MJ_CLI_ABAS.map(function(a){ return a[0] === 'atraso' && nAtr ? [a[0], a[1], nAtr] : a; }), chave, function(k){ return 'data-mj-cli="' + k + '"'; });
+  bar.innerHTML = mdBarraHtml(mjCliAbas().map(function(a){ return a[0] === 'atraso' && nAtr ? [a[0], a[1], nAtr] : a; }), chave, function(k){ return 'data-mj-cli="' + k + '"'; });
   var p = document.getElementById('mdPainel-clientes');
   if (!p){ p = document.createElement('div'); p.id = 'mdPainel-clientes'; p.className = 'md-painel'; p.setAttribute('data-mj', 'clientes'); body.insertBefore(p, body.firstChild); }
   if (sub !== 'resumo' || activeTab !== 'clientes'){ p.innerHTML = ''; return; }

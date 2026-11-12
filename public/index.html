@@ -1712,6 +1712,8 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -11501,12 +11503,12 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
           '<div class="cli-vals"><div><span class="l">A receber</span><span class="v">' + fmtMoeda(r.receber) + '</span></div>' +
           (r.atrasado > 0.004 ? '<div class="atr"><span class="l">Em atraso</span><span class="v">' + fmtMoeda(r.atrasado) + '</span></div>' : '') + '</div>' +
           '<div class="cli-foot"><div style="display:flex;gap:10px;flex-wrap:wrap;">' + foot.join('') + '</div>' +
-          (r.receber > 0.004 && !c.arquivado ? '<button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:var(--t3);" data-cli-cobrar="' + escapeHtml(c.id) + '">Cobrar</button>' : '') + '</div>' +
+          (r.receber > 0.004 && !c.arquivado && ppPodeCobrar() ? '<button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:var(--t3);" data-cli-cobrar="' + escapeHtml(c.id) + '">Cobrar</button>' : '') + '</div>' +
           '</div>';
       }).join('');
     }
     if (activeTab === 'clientes'){
-      qs('subtitle').textContent = ativos.length + (ativos.length === 1 ? ' cliente' : ' clientes') + ' · ' + fmtMoeda(tot.receber) + ' a receber';
+      qs('subtitle').textContent = ativos.length + (ativos.length === 1 ? ' cliente' : ' clientes') + (ppVerTotais() ? ' · ' + fmtMoeda(tot.receber) + ' a receber' : '');
     }
   }
   qs('listClientes').addEventListener('click', function(ev){
@@ -11564,7 +11566,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       (c.obs ? '<div class="cli-obs">' + escapeHtml(c.obs) + '</div>' : '') + '</div>';
 
     h += '<div class="cli-acoes"><button type="button" class="btn btn-ghost" data-pf="editar">Editar</button>' +
-      '<button type="button" class="btn btn-ghost" data-pf="cobrar">' + (c.pagador === 'murilo' ? 'Relatório do Murilo' : 'Cobrar') + '</button>' +
+      (ppPodeCobrar() ? '<button type="button" class="btn btn-ghost" data-pf="cobrar">' + (c.pagador === 'murilo' ? 'Relatório do Murilo' : 'Cobrar') + '</button>' : '') +
       '<button type="button" class="btn btn-primary" data-pf="baixa"' + (r.receber > 0.004 ? '' : ' disabled') + '>Registrar pagamento</button></div>';
 
     h += '<div class="cli-resumo">' +
@@ -22089,6 +22091,8 @@ var PP_TELAS_DONO = { financeiro: 1, analises: 1, obra: 1, extratos: 1 };
 function ppPapel(){ return window.__papel || 'proprietario'; }
 function ppDono(){ return ppPapel() === 'proprietario'; }
 function ppVerTotais(){ if (ppDono()) return true; var e = window.__horusEu; return !!(e && e.permissoes && e.permissoes.verTotais); }
+/* cobrar clientes: o proprietário e o advogado (só os clientes dos processos dele, que são os que o servidor entrega); o estagiário não cobra */
+function ppPodeCobrar(){ var p = ppPapel(); return p === 'proprietario' || p === 'advogado'; }
 function ppTelaPermitida(tab){ return ppDono() || !PP_TELAS_DONO[tab]; }
 /* a aba de quem pediu: devolve uma aba que a pessoa pode abrir (usada ao trocar de aba) */
 /* espera o servidor dizer quem é a pessoa; resolve true só para o proprietário (quem não é nunca pede o que é do proprietário) */
@@ -22143,7 +22147,7 @@ function ppPor(n){
   var st = document.createElement('style');
   var fin = ['[data-tab="financeiro"]', '[data-tab="analises"]', '[data-tab="obra"]', '[data-tab="extratos"]', '#drGrpFin', '#abrirRecebiBtn', '#abrirFechamentoBtn', '#abrirRelMuriloBtn', '#abrirRelMuriloBtn2', '#backupBtn', '#exportBtn', '#abrirLerDocBtn', '#avisoSistema', '#finFabMenu', '#bodyFinanceiro', '#bodyAnalises', '#bodyExtratos', '#bodyObra', '#inicioAbrirDivisao', '#inicioAbrirExtratos', '#relModoSeg'];
   st.textContent = fin.map(function(s){ return '.so-central ' + s; }).join(',') + '{display:none!important}' +
-    '.papel-estagiario #abrirCobrancaMenuBtn,.papel-estagiario #abrirCobrancaProprioBtn{display:none!important}' +
+    '.papel-estagiario #abrirCobrancaMenuBtn,.papel-estagiario #abrirCobrancaProprioBtn,.papel-estagiario [data-cli-cobrar],.papel-estagiario [data-pf="cobrar"]{display:none!important}' +
     '.sem-totais .ini-hero,.sem-totais .ini-kpi,.sem-totais #rsPainel,.sem-totais .rs-wrap,.sem-totais #stats{display:none!important}' +
     '#inicioAcoes{display:flex;flex-wrap:wrap;gap:8px;max-width:none}#inicioAcoes .acao{flex:0 0 auto;min-width:104px;padding:9px 16px}' +
     '.so-central .ini-grid{row-gap:0}.so-central .ini-grid>*{margin-bottom:12px}.so-central #inicioAcoes{display:none!important}.bt-so{display:none!important}.so-central .bt-so{display:flex!important}';
@@ -22156,12 +22160,13 @@ function ppPor(n){
     try{ if (typeof TITULOS_TELA !== 'undefined') TITULOS_TELA.configuracoes = 'Minha conta'; if (typeof atualizarTituloTela === 'function') atualizarTituloTela(); }catch(e){}
     try{ if (typeof renderPainelAtencao === 'function') renderPainelAtencao(); }catch(e){}
     try{ if (typeof MD_DEF !== 'undefined' && MD_DEF[activeTab]) mdRedesenhar(activeTab); }catch(e){}
+    if (ppPapel() === 'estagiario'){ try{ var ft = document.getElementById('filtroClienteTipo'); if (ft) Array.prototype.slice.call(ft.options).forEach(function(o){ if (o.value === 'receber' || o.value === 'atraso') ft.removeChild(o); }); }catch(e){} }
     try{ var bg = document.getElementById('buscaGlobalInput'); if (bg) bg.placeholder = 'Buscar em tudo: clientes, processos, publicações…'; }catch(e){}
     try{ var m = document.getElementById('relModoSeg'); if (m && typeof relModo !== 'undefined') relModo = 'proprio'; }catch(e){}
   }
   window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
 
 /*PP-FIM*/
@@ -23413,11 +23418,18 @@ function mjAgenda(){
 /* ---------------- CLIENTES ---------------- */
 var MJ_CLI_ABAS = [['resumo', 'Resumo'], ['lista', 'Lista'], ['cobrar', 'A cobrar'], ['atraso', 'Em atraso'], ['sem', 'Sem processos']];
 var MJ_CLI_TIPO = { lista: 'ativos', cobrar: 'receber', atraso: 'atraso', sem: 'sem' };
+/* sub-abas de Clientes por papel: sem "Ver totais" (ou estagiário) não há Resumo (totais, maiores valores, para cobrar); estagiário também não tem "A cobrar" nem "Em atraso" (não cobra) */
+function mjCliAbas(){
+  var est = (typeof ppPapel === 'function') && ppPapel() === 'estagiario', sem = (typeof ppVerTotais === 'function') && !ppVerTotais();
+  return MJ_CLI_ABAS.filter(function(a){ return !((sem || est) && a[0] === 'resumo') && !(est && (a[0] === 'cobrar' || a[0] === 'atraso')); });
+}
+function mjCliTem(k){ return mjCliAbas().some(function(a){ return a[0] === k; }); }
 function mjCliChave(){
   if (mjS.cli === 'resumo') return 'resumo';
   var t = clientesFiltro.tipo; return t === 'receber' ? 'cobrar' : (t === 'atraso' ? 'atraso' : (t === 'sem' ? 'sem' : 'lista'));
 }
 function mjCliIr(k, lembrar){
+  if (!mjCliTem(k)) k = 'lista';
   if (lembrar) mdLembrar('clientes', k);
   if (k === 'resumo') mjS.cli = 'resumo';
   else { mjS.cli = 'lista'; clientesFiltro.tipo = MJ_CLI_TIPO[k] || 'ativos'; var sel = qs('filtroClienteTipo'); if (sel) sel.value = clientesFiltro.tipo; }
@@ -23429,8 +23441,11 @@ function mjClientes(D){
   mdCss();
   if (mjS.cli == null){
     var s0 = mdInicial('clientes', ['lista', 'cobrar', 'atraso', 'sem']);
+    if (!mjCliTem(s0)) s0 = 'lista';
     if (s0 === 'resumo') mjS.cli = 'resumo'; else { mjS.cli = 'lista'; clientesFiltro.tipo = MJ_CLI_TIPO[s0]; var sel = qs('filtroClienteTipo'); if (sel) sel.value = clientesFiltro.tipo; }
   }
+  if (mjS.cli === 'resumo' && !mjCliTem('resumo')) mjS.cli = 'lista';
+  if (!mjCliTem(mjCliChave())){ mjS.cli = 'lista'; clientesFiltro.tipo = 'ativos'; }
   var chave = mjCliChave(), sub = chave === 'resumo' ? 'resumo' : 'lista';
   head.setAttribute('data-md', sub); body.setAttribute('data-md', sub);
   var bar = document.getElementById('mdAbas-clientes');
@@ -23439,7 +23454,7 @@ function mjClientes(D){
     bar.addEventListener('click', function(ev){ var b = ev.target.closest ? ev.target.closest('[data-mj-cli]') : null; if (b) mjCliIr(b.getAttribute('data-mj-cli'), true); });
   }
   var nAtr = D.lista.filter(function(x){ return !x.c.arquivado && x.r.atrasado > 0.004; }).length;
-  bar.innerHTML = mdBarraHtml(MJ_CLI_ABAS.map(function(a){ return a[0] === 'atraso' && nAtr ? [a[0], a[1], nAtr] : a; }), chave, function(k){ return 'data-mj-cli="' + k + '"'; });
+  bar.innerHTML = mdBarraHtml(mjCliAbas().map(function(a){ return a[0] === 'atraso' && nAtr ? [a[0], a[1], nAtr] : a; }), chave, function(k){ return 'data-mj-cli="' + k + '"'; });
   var p = document.getElementById('mdPainel-clientes');
   if (!p){ p = document.createElement('div'); p.id = 'mdPainel-clientes'; p.className = 'md-painel'; p.setAttribute('data-mj', 'clientes'); body.insertBefore(p, body.firstChild); }
   if (sub !== 'resumo' || activeTab !== 'clientes'){ p.innerHTML = ''; return; }
