@@ -54,8 +54,7 @@ function mdCss(){
     '.md-abas{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;padding-bottom:1px;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border);margin:0 0 12px}.md-abas::-webkit-scrollbar{display:none}' +
     '.md-abas button{flex:none;appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px 9px;font:inherit;font-size:var(--t3);font-weight:700;color:var(--ink-soft);white-space:nowrap;cursor:pointer;margin-bottom:-1px;border-radius:8px 8px 0 0}' +
     '.md-abas button:hover{color:var(--ink)}.md-abas button.on{color:var(--ink);border-bottom-color:#C98500}' +
-    /* celular: a barra de sub-abas fica parada (não rola nem balança): se não cabe numa linha, quebra em duas */
-    '@media (max-width:600px){.md-abas{flex-wrap:wrap;overflow:visible;gap:0 2px;padding-bottom:0}.md-abas button{padding:9px 12px 8px;margin-bottom:-1px}}.md-abas button:focus-visible{outline:2px solid var(--accent-2);outline-offset:-2px}' +
+    '.md-abas button:focus-visible{outline:2px solid var(--accent-2);outline-offset:-2px}' +
     '.md-abas .md-n{display:inline-block;min-width:18px;padding:1px 6px;border-radius:99px;background:rgba(217,59,59,.14);color:var(--urgente,#D93B3B);font-size:11px;font-weight:800;text-align:center;margin-left:2px}' +
     '.ini-acoes.md-um{display:flex!important;justify-content:flex-end;margin:0 0 10px;gap:8px}.ini-acoes.md-um .acao{flex:none;flex-direction:row;align-items:center;gap:8px;padding:9px 16px;min-height:0;height:auto;width:auto;border-radius:12px;font-size:var(--t3)}.ini-acoes.md-um .acao svg{width:18px;height:18px;margin:0}' +
     '#segPeticaoView,#segAlvaraView{display:none!important}' +
@@ -350,3 +349,20 @@ function mdClique(mod, ev){
   }
 }
 (function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { mdS: mdS, mdIrSub: mdIrSub, mdSubAtual: mdSubAtual, mdListas: mdListas, mdSeries: mdSeries, mdMeses: mdMeses }); })();
+
+/* sub-abas: quando a barra rola na horizontal (celular), a sub-aba ativa fica à vista: a barra é refeita a cada tela e voltaria ao começo */
+(function(){
+  var agendado = false;
+  function ajustar(){
+    agendado = false;
+    Array.prototype.forEach.call(document.querySelectorAll('.md-abas:not([data-mdaj])'), function(b){
+      if (!b.getClientRects().length) return;   // escondida (outra aba): tenta de novo quando aparecer
+      b.setAttribute('data-mdaj', '1');
+      var on = b.querySelector('button.on'); if (!on || b.scrollWidth <= b.clientWidth + 1) return;
+      b.scrollLeft = Math.max(0, on.offsetLeft - Math.round((b.clientWidth - on.offsetWidth) / 2));
+    });
+  }
+  function pedir(){ if (!agendado){ agendado = true; (window.requestAnimationFrame || setTimeout)(ajustar); } }
+  try{ new MutationObserver(pedir).observe(document.body, { childList: true, subtree: true }); }catch(e){}
+  pedir();
+})();
