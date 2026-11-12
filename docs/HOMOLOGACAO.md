@@ -18,3 +18,10 @@ Objetivo: deixar a versão de uma pessoa só redonda antes de abrir o app a outr
 
 ## Fora de escopo (decidido)
 Relatório mensal em PDF, metas com data futura, backup completo com anexos e leitura do Diário, alertas de orçamento no resumo das 10h, "Folga da PJ" no Simulador.
+
+## Fase 5, etapa 5.9: homologação por papel e por pessoa (12/11/2026)
+- **Varredura automática por papel** (`test/homologacao-papeis.test.mjs`: advogada e estagiário; `test/homologacao-papeis-dono.test.mjs`: proprietário no acesso individual; grupo `permissoes`): cada papel abre todas as abas e sub-abas que enxerga, no computador (1280 px) e no celular (390 px), com dados de verdade (processo dividido, parcela paga por outro advogado, acordo, alvará, agenda com responsável, repasse). Procura: erro de script, **pedido recusado pelo servidor**, texto "undefined/NaN/null", rolagem para o lado e **vazamento** (finanças, backup, relatório do Murilo, cobrança e botões de pagamento onde o papel não pode). Resultado: tudo limpo.
+- **Achado e corrigido:** registro sem prioridade/origem/tipo mostrava "undefined" na lista de Iniciais (só acontece com dado incompleto; agora aparece "—" e prioridade normal).
+- **Roteiro humano** (`docs/roteiro-teste-por-papel.html`, também em PDF): Fase A (proprietário com os dois usuários de teste: o que cada papel deve e não deve ver/fazer, avisos no iPhone, repasses), Fase B (pessoa de confiança por 3 a 7 dias, critérios para abrir), Fase C (abrir um papel por vez) e plano B (desativar pessoa, Lixeira, convite, aparelho, backup).
+- **Usuários de teste em produção:** dois convites foram criados no banco (advogado com OAB fictícia 99901/GO e estagiário; e-mails `@horus-teste.example`); depois da homologação eles e seus acessos são removidos do banco.
+- **Antes de publicar:** levar também `wrangler.jsonc` (cron semanal 08:00 de Brasília: backup + resumo da equipe).
