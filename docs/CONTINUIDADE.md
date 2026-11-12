@@ -186,3 +186,6 @@ Feita (servidor). Detalhes em `docs/DECISOES.md`. Próxima: **5.4** ("Meus | Esc
 
 ## Fase 5, etapa 5.4 (12/11/2026): Meus | Escritório, advogados responsáveis, sem advogado
 Feita (servidor + tela + testes), detalhes em `docs/DECISOES.md`. **Próxima: 5.5** (Agenda: "Minha agenda | Escritório", responsáveis em tarefa/prazo/audiência sugeridos pelo cadastro do processo, tarefas compartilhadas; o proprietário abre em "Minha agenda"). Tem tela: precisa de esboço em imagem e OK antes.
+
+## Correções da análise de interligação (12/11/2026)
+Feitas antes da 5.5 (pontos 1, 2, 3, 4 e 6); o ponto 5 (Agenda) entra na **5.5**. Detalhes em `docs/DECISOES.md`. Próxima: **5.5** (esboço em imagem e OK antes), já contando com: seletor de processo no formulário da Agenda, aviso de duplicidade, conflito prazo×audiência do mesmo processo e por pessoa, responsáveis sugeridos pelo processo, "Minha agenda | Escritório" (o proprietário abre em "Minha agenda"), tarefas compartilhadas.

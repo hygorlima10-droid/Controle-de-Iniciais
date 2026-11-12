@@ -57,3 +57,113 @@ function lgCriarProcesso(numero, ato, extra){
   if (Array.isArray(ato.advogados) && ato.advogados.length) d.advogados = ato.advogados.slice();
   return pbApi('/api/db/processos', 'POST', d).then(function(j){ d.id = j.id; prDocs.push(d); try{ prDepois(); }catch(e){} return d; });
 }
+
+/* ---------- revisão de ligações (Processos): sem processo cadastrado · sem cliente · divergências ---------- */
+var LG_PR = { caso: 'Inicial', acordo: 'Acordo', alvara: 'Alvará' };
+function lgUnirAdvogados(links, doc){
+  var vistos = {}, out = [];
+  (doc ? [doc] : []).concat(links.map(function(l){ return l.doc; })).forEach(function(d){ (Array.isArray(d.advogados) ? d.advogados : []).forEach(function(a){ if (a && a.oab && !vistos[a.oab]){ vistos[a.oab] = 1; out.push({ oab: a.oab, nome: a.nome || '' }); } }); });
+  return out;
+}
+function lgRevCalcular(){
+  var mp = prMapa(), sem = [], semCli = [], dif = [], nums = {};
+  mp.ordem.forEach(function(n){
+    var r = mp.m[n]; nums[n] = 1;
+    var abertos = r.links.filter(function(l){ return !l.doc.arquivado; });
+    if (!r.doc && abertos.length) sem.push({ num: n, numero: r.numero, titulo: prTitulo(r), atos: abertos.map(function(l){ return LG_PR[l.tipo]; }).filter(function(x, i, a){ return a.indexOf(x) === i; }).join(', '), origem: 'ato' });
+    if (r.doc && !r.doc.arquivado){
+      var meus = idsValidos(r.doc.clienteIds);
+      if (!meus.length){
+        var ids = []; r.links.forEach(function(l){ idsValidos(l.doc.clienteIds).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); }); });
+        var sug = null, motivo = '';
+        if (ids.length){ sug = ids; motivo = 'cliente dos atos deste processo'; }
+        else { var dv = prDividePartes(r.doc.partes), nomes = dv ? [dv.autor, dv.reu] : [r.doc.partes || '']; var pv = cliProvaveis(nomes.filter(Boolean)); if (pv.length){ sug = [pv[0].id]; motivo = 'nome parecido com as partes'; } }
+        semCli.push({ num: n, id: r.doc.id, numero: r.numero, titulo: prTitulo(r), sug: sug, motivo: motivo });
+      } else {
+        r.links.forEach(function(l){
+          var dos = idsValidos(l.doc.clienteIds);
+          if (dos.length && !dos.some(function(i){ return meus.indexOf(i) >= 0; }) && !l.doc.arquivado) dif.push({ num: n, numero: r.numero, tipo: l.tipo, id: l.id, doc: l.doc, proc: r.doc, titulo: l.doc.cliente || l.doc.partes || 'Sem nome', doAto: dos.map(nomeCliente).join(', '), doProc: meus.map(nomeCliente).join(', ') });
+        });
+      }
+    }
+  });
+  try{ agItens().forEach(function(i){   /* números que só aparecem na Agenda */
+    var n = i.processo ? prNum(i.processo) : ''; if (!n || nums[n] || i.concluido || n.length < 15) return;
+    nums[n] = 1; sem.push({ num: n, numero: i.processo, titulo: i.cliente || 'Sem nome', atos: 'Agenda', origem: 'agenda' });
+  }); }catch(e){}
+  return { sem: sem, semCli: semCli, dif: dif };
+}
+function lgBannerHtml(){
+  try{
+    var papel = esS && esS.eu ? esS.eu.papel : '';
+    if (papel === 'advogado') return '';
+    var r = lgRevCalcular(), n = r.sem.length + r.semCli.length + r.dif.length; if (!n) return '';
+    var p = []; if (r.sem.length) p.push('<b>' + r.sem.length + '</b> sem processo cadastrado'); if (r.semCli.length) p.push('<b>' + r.semCli.length + '</b> sem cliente'); if (r.dif.length) p.push('<b>' + r.dif.length + '</b> com cliente diferente');
+    return '<div class="saldo-data" style="margin:0 0 8px">Ligações a revisar: ' + p.join(' · ') + '. <button type="button" class="es-lk" data-lgr="abrir">Revisar</button></div>';
+  }catch(e){ console.error('ligações', e); return ''; }
+}
+function lgAbrirRev(aba){
+  var ov = sgMontar('overlayLgRev', 'Revisão de ligações');
+  if (!ov.getAttribute('data-lg')){
+    ov.setAttribute('data-lg', '1');
+    ov.addEventListener('click', function(e){ var b = e.target.closest ? e.target.closest('[data-lgr]') : null; if (b) lgRevClique(b.getAttribute('data-lgr'), b.getAttribute('data-k'), b); });
+    ov.addEventListener('change', function(e){ var t = e.target; if (t && t.getAttribute && t.getAttribute('data-lgr') === 'marca'){ var k = t.getAttribute('data-k'); if (t.checked) lgS.rev.sel[k] = 1; else delete lgS.rev.sel[k]; lgRevDesenhar(); } });
+  }
+  lgS.rev = { aba: aba || 'sem', sel: {}, ocupado: false };
+  ov.classList.add('show'); lgRevDesenhar();
+}
+function lgRevDesenhar(){
+  var el = qs('overlayLgRevC'), R = lgS.rev; if (!el || !R) return;
+  var d = lgRevCalcular(), abas = [['sem', 'Sem processo', d.sem.length], ['semcli', 'Sem cliente', d.semCli.length], ['dif', 'Cliente diferente', d.dif.length]];
+  var h = '<div class="es-abas">' + abas.map(function(a){ return '<button type="button" class="es-aba' + (R.aba === a[0] ? ' on' : '') + '" data-lgr="aba" data-k="' + a[0] + '">' + a[1] + ' ' + a[2] + '</button>'; }).join('') + '</div>';
+  var n = Object.keys(R.sel).length;
+  if (R.aba === 'sem'){
+    h += '<div class="pb-aviso">Estes números aparecem em Iniciais, Acordos, Alvarás ou na Agenda, mas o processo não está cadastrado. Cadastrar leva o cliente, as partes e os advogados dos atos.</div>';
+    h += d.sem.length ? d.sem.map(function(x){ return '<label class="ad-it es-it"><input type="checkbox" data-lgr="marca" data-k="' + escapeHtml(x.num) + '"' + (R.sel[x.num] ? ' checked' : '') + '><span class="ad-t"><b>' + escapeHtml(x.titulo) + '</b><br><span class="saldo-data">' + escapeHtml(x.numero) + ' · em: ' + escapeHtml(x.atos) + '</span></span></label>'; }).join('') : '<div class="saldo-data" style="padding:10px 4px">Todos os números têm processo cadastrado. 🎉</div>';
+    if (d.sem.length) h += '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-lgr="todos">Marcar todos</button><button type="button" class="btn btn-primary pb-b" data-lgr="cadastrar"' + (R.ocupado || !n ? ' disabled' : '') + '>Cadastrar' + (n ? ' ' + n + (n === 1 ? ' processo' : ' processos') : '') + '</button></div>';
+  } else if (R.aba === 'semcli'){
+    h += '<div class="pb-aviso">Processos sem cliente não aparecem no perfil de ninguém. A sugestão vem dos atos do mesmo número ou do nome das partes; sem sugestão, abra o processo e escolha o cliente.</div>';
+    h += d.semCli.length ? d.semCli.map(function(x){
+      var sug = x.sug ? '<span class="pb-tg ok" style="margin-left:6px">sugestão: ' + escapeHtml(x.sug.map(nomeCliente).join(', ')) + '</span>' : '';
+      return '<label class="ad-it es-it"><input type="checkbox" data-lgr="marca" data-k="' + escapeHtml(x.num) + '"' + (R.sel[x.num] ? ' checked' : '') + (x.sug ? '' : ' disabled') + '><span class="ad-t"><b>' + escapeHtml(x.titulo) + '</b>' + sug + '<br><span class="saldo-data">' + escapeHtml(x.numero) + (x.motivo ? ' · ' + escapeHtml(x.motivo) : '') + '</span></span><button type="button" class="es-lk" data-lgr="abrir-proc" data-k="' + escapeHtml(x.num) + '">Abrir</button></label>';
+    }).join('') : '<div class="saldo-data" style="padding:10px 4px">Todos os processos têm cliente. 🎉</div>';
+    if (d.semCli.some(function(x){ return x.sug; })) h += '<div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-lgr="todos">Marcar os que têm sugestão</button><button type="button" class="btn btn-primary pb-b" data-lgr="vincular"' + (R.ocupado || !n ? ' disabled' : '') + '>Vincular o cliente sugerido' + (n ? ' (' + n + ')' : '') + '</button></div>';
+  } else {
+    h += '<div class="pb-aviso">O cliente do ato é diferente do cliente do processo de mesmo número. Confira qual está certo.</div>';
+    h += d.dif.length ? d.dif.map(function(x, i){ return '<div class="pb-card" style="--pb-bar:#C98500;margin:6px 0"><div class="pb-l1"><span><b>' + escapeHtml(x.titulo) + '</b></span><span class="pb-tg">' + LG_PR[x.tipo] + '</span></div><div class="pb-proc">' + escapeHtml(x.numero) + '</div><div class="pb-proc">Cliente no ' + LG_PR[x.tipo].toLowerCase() + ': <b>' + escapeHtml(x.doAto) + '</b><br>Cliente no processo: <b>' + escapeHtml(x.doProc) + '</b></div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-lgr="ajusta-ato" data-k="' + i + '">Usar o do processo no ' + LG_PR[x.tipo].toLowerCase() + '</button><button type="button" class="btn btn-ghost pb-b" data-lgr="ajusta-proc" data-k="' + i + '">Usar o do ' + LG_PR[x.tipo].toLowerCase() + ' no processo</button></div></div>'; }).join('') : '<div class="saldo-data" style="padding:10px 4px">Nenhuma divergência. 🎉</div>';
+  }
+  el.innerHTML = h;
+}
+function lgRevFim(msg){ lgS.rev.ocupado = false; lgS.rev.sel = {}; if (msg) toast(msg); try{ prDepois(); }catch(e){} lgRevDesenhar(); }
+function lgRevClique(a, k){
+  var R = lgS.rev; if (!R && a !== 'abrir') return;
+  if (a === 'abrir'){ lgAbrirRev('sem'); return; }
+  if (a === 'aba'){ R.aba = k; R.sel = {}; lgRevDesenhar(); return; }
+  var d = lgRevCalcular();
+  if (a === 'todos'){ (R.aba === 'sem' ? d.sem : d.semCli.filter(function(x){ return x.sug; })).forEach(function(x){ R.sel[x.num] = 1; }); lgRevDesenhar(); return; }
+  if (a === 'abrir-proc'){ qs('overlayLgRev').classList.remove('show'); prAbrir(k); return; }
+  if (R.ocupado) return;
+  if (a === 'cadastrar'){
+    var mp = prMapa(), lista = d.sem.filter(function(x){ return R.sel[x.num]; }); R.ocupado = true; lgRevDesenhar();
+    lista.reduce(function(p, x){ return p.then(function(){
+      var r = mp.m[x.num];
+      if (r){ var atos = r.links.filter(function(l){ return !l.doc.arquivado; }); return lgCriarProcesso(r.numero, { partes: prPartes(r), cliente: prPartes(r), clienteIds: prClienteIds(r), advogados: lgUnirAdvogados(atos, null) }); }
+      return lgCriarProcesso(x.numero, { partes: x.titulo, clienteIds: [] });
+    }); }, Promise.resolve()).then(function(){ lgRevFim(lista.length + (lista.length === 1 ? ' processo cadastrado.' : ' processos cadastrados.')); }).catch(function(e){ lgRevFim(); toast('Não consegui cadastrar: ' + e.message); });
+  } else if (a === 'vincular'){
+    var lst = d.semCli.filter(function(x){ return R.sel[x.num] && x.sug; }); R.ocupado = true; lgRevDesenhar();
+    lst.reduce(function(p, x){ return p.then(function(){
+      var doc = prDocs.filter(function(y){ return y.id === x.id; })[0]; if (!doc) return null;
+      var novo = Object.assign({}, doc, { clienteIds: x.sug.slice() }); delete novo.id;
+      return pbApi('/api/db/processos/' + encodeURIComponent(doc.id), 'PUT', novo).then(function(){ doc.clienteIds = x.sug.slice(); });
+    }); }, Promise.resolve()).then(function(){ lgRevFim(lst.length + (lst.length === 1 ? ' processo vinculado a um cliente.' : ' processos vinculados a clientes.')); }).catch(function(e){ lgRevFim(); toast('Não consegui vincular: ' + e.message); });
+  } else if (a === 'ajusta-ato' || a === 'ajusta-proc'){
+    var x = d.dif[Number(k)]; if (!x) return; R.ocupado = true;
+    var p;
+    if (a === 'ajusta-ato') p = Promise.resolve(persistPatchDoc(x.tipo, x.doc, { clienteIds: idsValidos(x.proc.clienteIds).slice() }));
+    else { var novo = Object.assign({}, x.proc, { clienteIds: idsValidos(x.doc.clienteIds).slice() }); delete novo.id; p = pbApi('/api/db/processos/' + encodeURIComponent(x.proc.id), 'PUT', novo).then(function(){ x.proc.clienteIds = novo.clienteIds; }); }
+    p.then(function(){ lgRevFim('Ajustado.'); }).catch(function(e){ lgRevFim(); toast('Não consegui ajustar: ' + e.message); });
+  }
+}
+document.addEventListener('click', function(e){ var b = e.target.closest ? e.target.closest('[data-lgr="abrir"]') : null; if (b && !(e.target.closest('#overlayLgRev'))) lgAbrirRev('sem'); });
+setTimeout(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { lgRevCalcular: lgRevCalcular, lgBannerHtml: lgBannerHtml, lgPedeNumero: lgPedeNumero }); }, 0);

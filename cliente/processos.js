@@ -182,7 +182,7 @@ function prRender(){
   var an = prS.sub === 'analises', res = prS.sub === 'resumo';
   qs('prAnalises').style.display = an ? '' : 'none'; qs('prListaBloco').style.display = (an || res) ? 'none' : ''; qs('prMdResumo').style.display = res ? '' : 'none'; var bn = w.querySelector('.ini-acoes'); if (bn) bn.style.display = an ? 'none' : '';
   if (an){ panRender(); return; }
-  if (res){ try{ qs('prMdResumo').innerHTML = mjPainel('processos', mjProcessos()); }catch(e){ console.error('resumo de processos', e); qs('prMdResumo').innerHTML = '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; } return; }
+  if (res){ try{ qs('prMdResumo').innerHTML = (typeof lgBannerHtml === 'function' ? lgBannerHtml() : '') + mjPainel('processos', mjProcessos()); }catch(e){ console.error('resumo de processos', e); qs('prMdResumo').innerHTML = '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; } return; }
   var mp = prMapa(), pm = pendentesPorDoc(), linhas = mp.ordem.map(function(n){ return mp.m[n]; });
   var ativos = linhas.filter(function(r){ return !prArquivado(r); });
   var comPrazo = ativos.filter(function(r){ return prPrazosAbertos(r).length > 0; }).length, parados = ativos.filter(function(r){ return prParado(r, pm); }).length;
@@ -795,7 +795,7 @@ function prAvisoVinc(){
   var n = prIniciaisPend(false).length, nr = impContaRev(), rev = '';
   if (nr && prS.filtro === 'revisar') rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Revisão dos importados</div><div class="pb-aviso">Mostrando só os <b>' + nr + '</b> ' + (nr === 1 ? 'processo' : 'processos') + ' que faltam vincular a um cliente: vincule, escolha outro cliente, cadastre um novo ou exclua o que não quiser no sistema.</div><div class="pb-acts"><button type="button" class="btn btn-ghost pb-b" data-pr="filtro" data-v="andamento">Voltar à lista completa</button></div></div>';
   else if (nr) rev = '<div class="pb-sec" style="margin:0 0 8px"><div class="pb-sec-t">Importados do Diário Oficial</div><div class="pb-aviso"><b>' + nr + '</b> ' + (nr === 1 ? 'processo espera' : 'processos esperam') + ' a revisão do cliente.</div><div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-pr="rev-ir">Revisar agora</button></div></div>';
-  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial ainda não está ligada a um processo cadastrado' : ' Iniciais ainda não estão ligadas a um processo cadastrado') + '. Ao cadastrar o processo, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '');
+  el.innerHTML = rev + (n ? '<div class="saldo-data" style="margin:0 0 8px">' + n + (n === 1 ? ' Inicial ainda não está ligada a um processo cadastrado' : ' Iniciais ainda não estão ligadas a um processo cadastrado') + '. Ao cadastrar o processo, escolha “Vincular a uma Inicial cadastrada”. Se uma Inicial não tem processo, marque isso no cadastro dela.</div>' : '') + (typeof lgBannerHtml === 'function' ? lgBannerHtml() : '');
 }
 function prVincNivel(c){
   var pre = (prEd && prEd.pre) || {}, nomes = (pre.nomes || []).concat([pre.autor, pre.reu]).filter(Boolean);

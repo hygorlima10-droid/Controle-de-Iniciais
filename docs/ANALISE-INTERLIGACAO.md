@@ -1,5 +1,7 @@
 # Análise: como as abas do jurídico se interligam (12/11/2026)
 
+> **Situação em 12/11/2026:** os pontos 1, 2, 3, 4 e 6 da seção 4 foram corrigidos (ver `docs/DECISOES.md`, "Correções da análise de interligação"); o ponto 5 (Agenda) entra na etapa 5.5.
+
 Análise feita à parte da Fase 5, a pedido do proprietário. **Nada foi alterado no app.** Base: leitura do código e contagens (sem nomes) nos dados reais de produção.
 
 ## 1. Como funciona hoje
