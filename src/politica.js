@@ -147,9 +147,12 @@ export async function autorizarExclusao(env, colecao, id, antes, auth, esc) {
   return null;
 }
 
-/* publicações (Diário Oficial): o estagiário só lê, e só se a permissão estiver ligada; para advogado vem na etapa 5.3 (filtro por OAB) */
+/* publicações (Diário Oficial): estagiário (com a permissão) e advogado só leem e marcam como lida/sem prazo; buscar, importar, OABs e
+   completar advogados são do proprietário. O filtro por OAB está em djen.js (cada pessoa vê as publicações das próprias OABs). */
 export function checarRotaDjen(partes, metodo, auth) {
   if (ehDono(auth)) return null;
-  const u = usu(auth), leitura = metodo === 'GET' && ['estado', 'lista', 'processo', 'texto'].includes(partes[1]);
-  return u.papel === 'estagiario' && u.permissoes.verPublicacoes && leitura ? null : NEGADO('Você não tem acesso às publicações.');
+  const u = usu(auth), a = partes[1], leitura = metodo === 'GET' && ['estado', 'lista', 'processo', 'texto'].includes(a), marcar = metodo === 'POST' && a === 'marcar';
+  if (u.papel === 'estagiario' && u.permissoes.verPublicacoes && (leitura || marcar)) return null;
+  if (u.papel === 'advogado' && (leitura || marcar)) return null;
+  return NEGADO('Você não tem acesso às publicações.');
 }

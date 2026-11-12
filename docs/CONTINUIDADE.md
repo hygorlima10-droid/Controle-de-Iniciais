@@ -180,3 +180,6 @@ Feita: `src/politica.js` ligado em `/api/db` e `/api/lote`; teste `permissoes`. 
 
 ## Fase 5, etapa 5.2 (12/11/2026): usuários e convites por link
 Feita (servidor + tela + testes). Detalhes em `docs/DECISOES.md`. **Antes de publicar:** é a primeira vez que existem outros usuários em produção; testar com uma pessoa de confiança (etapa 5.9). Enquanto as etapas 5.3 a 5.7 não saem, advogado e estagiário convidados já entram, mas o app deles ainda é o mesmo (as telas só aparecem filtradas pelo servidor; Diário/DataJud/notificações dão 403 para advogado). **Recomendação: não convide ninguém em produção até a 5.7.** Próxima: 5.3 (visibilidade por participação e Publicações por OAB).
+
+## Fase 5, etapa 5.3 (12/11/2026): publicações por OAB
+Feita (servidor). Detalhes em `docs/DECISOES.md`. Próxima: **5.4** ("Meus | Escritório" nas listas do proprietário, campo "Advogados responsáveis" e a revisão de processos sem advogado definido, com a indicação das OABs do proprietário) — tem tela, então vem com esboço em imagem.

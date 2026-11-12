@@ -4,7 +4,8 @@
    - guarda só o trecho; o texto completo é buscado quando você abre a publicação
    - sugere o prazo ("prazo de 15 dias") a partir do texto; quem confirma é você
    ============================================================ */
-import { completarAdvogados } from './advogados.js';
+import { completarAdvogados, chaveOab } from './advogados.js';
+import { ehDono, normalizarUsuario, escopoDoAdvogado } from './politica.js';
 import { sugerirPecas } from './pecas.js';
 import { registrar } from './auditoria.js';
 export const DJEN = 'https://comunicaapi.pje.jus.br/api/v1/comunicacao';
@@ -322,12 +323,38 @@ async function djenTeste(request) {
   const cru = async () => { const r = await umaConsulta(BASE + '?' + base(3).toString()); return { status: r.status, ms: r.ms, erro: r.erro, resposta_do_djen: r.trecho, servidor: r.server, cf_ray: r.cfRay }; };
   return json({ ok: true, executado_em: new Date().toISOString(), oab: oab + '/' + uf, tres_dias_tam5: await medir(base(3)), tres_dias_tam100: await medir(grande), trinta_dias: await medir(base(30)), detalhe_de_uma_tentativa: await cru(), servidor_consulta_de: await ondeRoda() });
 }
-export async function djenRotas(request, env, partes) {
+/* ---------- quem vê quais publicações ----------
+   Cada pessoa vê as publicações das próprias OABs (o proprietário também, com a opção ?escopo=meus; sem ela, vê todas); o estagiário vê todas
+   (se a permissão estiver ligada). O "lida" de quem não é proprietário é guardado por pessoa (lidaPor), para uma publicação de dois advogados
+   não sumir da lista de um quando o outro lê. */
+const chavesDaPub = (d, porId) => {
+  const s = new Set();
+  for (const id of d.oabs || []) { const k = porId.get(id); if (k) s.add(k); }
+  for (const a of d.advs || []) { const [n, uf] = String(a && a.o || '').split('/'), k = chaveOab(n, uf); if (k.length > 3) s.add(k); }
+  return s;
+};
+async function visaoDePubs(env, auth, cfg, escopo) {
+  const dono = ehDono(auth), u = normalizarUsuario(auth && auth.usuario), porId = new Map(cfg.oabs.map((o) => [o.id, chaveOab(o.numero, o.uf)]));
+  let todas = dono || u.papel === 'estagiario', meus = new Set(u.oabs);
+  if (dono && escopo === 'meus') { todas = false; if (!meus.size) for (const o of cfg.oabs) if (o.principal) meus.add(chaveOab(o.numero, o.uf)); }   // proprietário sem OAB indicada: a principal
+  const pessoal = !dono, uid = u.id;
+  return {
+    todas, meus, pessoal, uid, porId,
+    ve: (d) => todas || [...chavesDaPub(d, porId)].some((k) => meus.has(k)),
+    como: (d) => (pessoal ? { ...d, lida: !!(d.lidaPor && d.lidaPor[uid]) } : d),
+  };
+}
+export async function djenRotas(request, env, partes, auth) {
   usar(env);
   const acao = partes[1], m = request.method, u = new URL(request.url);
   if (acao === 'teste' && m === 'GET') return djenTeste(request);
   if (acao === 'estado' && m === 'GET') {
     const cfg = await lerCfg(env);
+    if (!ehDono(auth)) {   // advogado/estagiário: contagens só do que a pessoa vê; advogado só vê as próprias OABs na lista
+      const v = await visaoDePubs(env, auth, cfg, ''), { results } = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ?').bind(COL_PUB).all();
+      const vis = results.map((r) => JSON.parse(r.dados)).filter(v.ve), meus = v.todas ? cfg.oabs : cfg.oabs.filter((o) => v.meus.has(chaveOab(o.numero, o.uf)));
+      return json({ oabs: meus.map((o) => ({ id: o.id, nome: o.nome, numero: o.numero, uf: o.uf, ativo: o.ativo, escopo: o.escopo, avisar: false, principal: false })), ultimaLeitura: cfg.ultimaLeitura || null, total: vis.length, naoLidas: vis.filter((d) => !(d.lidaPor && d.lidaPor[v.uid])).length, aAvisar: 0, hora: '10:00', importarAuto: !(env && env.IMPORTAR_AUTO === '0') });
+    }
     const t = await env.DB.prepare("SELECT COUNT(*) AS n, SUM(CASE WHEN json_extract(dados, '$.lida') = 0 THEN 1 ELSE 0 END) AS nl FROM docs WHERE colecao = ?").bind(COL_PUB).first();
     const av = await env.DB.prepare("SELECT COUNT(*) AS n FROM docs WHERE colecao = ? AND json_extract(dados, '$.notificada') = 0").bind(COL_PUB).first();
     return json({ oabs: cfg.oabs, ultimaLeitura: cfg.ultimaLeitura || null, total: t.n || 0, naoLidas: t.nl || 0, aAvisar: av.n || 0, hora: '10:00', importarAuto: !(env && env.IMPORTAR_AUTO === '0') });
@@ -348,8 +375,11 @@ export async function djenRotas(request, env, partes) {
   }
   if (acao === 'lista' && m === 'GET') {
     const dias = Math.min(Math.max(parseInt(u.searchParams.get('dias') || '60', 10) || 60, 1), MAX_DIAS_LISTA);
-    const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.data') >= ? ORDER BY json_extract(dados, '$.data') DESC, id DESC LIMIT 1500").bind(COL_PUB, somarDiasISO(hojeBR(), -dias)).all();
-    return json({ pubs: results.map((r) => JSON.parse(r.dados)) });
+    const escopo = u.searchParams.get('escopo') === 'meus' ? 'meus' : '';
+    const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.data') >= ? ORDER BY json_extract(dados, '$.data') DESC, id DESC LIMIT " + (ehDono(auth) && !escopo ? 1500 : 8000)).bind(COL_PUB, somarDiasISO(hojeBR(), -dias)).all();
+    if (ehDono(auth) && !escopo) return json({ pubs: results.map((r) => JSON.parse(r.dados)) });
+    const v = await visaoDePubs(env, auth, await lerCfg(env), escopo);
+    return json({ pubs: results.map((r) => JSON.parse(r.dados)).filter(v.ve).slice(0, 1500).map(v.como) });
   }
   if (acao === 'buscar' && m === 'POST') {
     const b = await request.json().catch(() => ({}));
@@ -376,10 +406,15 @@ export async function djenRotas(request, env, partes) {
   if (acao === 'marcar' && m === 'POST') {
     const b = await request.json().catch(() => null);
     if (!b || !Array.isArray(b.ids) || b.ids.length > 300) return erro(400, 'invalid', 'Pedido inválido.');
-    const ids = b.ids.map(String).filter((id) => /^\d{1,20}$/.test(id)), cmds = [];
+    const ids = b.ids.map(String).filter((id) => /^\d{1,20}$/.test(id)), cmds = [], dono = ehDono(auth), v = dono ? null : await visaoDePubs(env, auth, await lerCfg(env), ''), podeSemPrazo = dono || normalizarUsuario(auth.usuario).papel === 'advogado';
     for (const lote of em100(ids)) {
       const { results } = await env.DB.prepare('SELECT id, dados FROM docs WHERE colecao = ? AND id IN (' + lote.map(() => '?').join(',') + ')').bind(COL_PUB, ...lote).all();
-      for (const r of results) { const d = JSON.parse(r.dados); if (typeof b.lida === 'boolean') d.lida = b.lida; if (typeof b.semPrazo === 'boolean') d.semPrazo = b.semPrazo; cmds.push(gravar(env, COL_PUB, r.id, d)); }
+      for (const r of results) {
+        const d = JSON.parse(r.dados); if (v && !v.ve(d)) continue;   // só o que a pessoa vê
+        if (typeof b.lida === 'boolean') { if (dono) d.lida = b.lida; else { d.lidaPor = { ...(d.lidaPor || {}), [v.uid]: b.lida }; } }   // quem não é proprietário marca só para si
+        if (typeof b.semPrazo === 'boolean' && podeSemPrazo) d.semPrazo = b.semPrazo;
+        cmds.push(gravar(env, COL_PUB, r.id, d));
+      }
     }
     for (let k = 0; k < cmds.length; k += 50) await env.DB.batch(cmds.slice(k, k + 50));
     return json({ ok: true, alteradas: cmds.length });
@@ -388,6 +423,7 @@ export async function djenRotas(request, env, partes) {
   if (acao === 'processo' && m === 'GET') {
     const n = (u.searchParams.get('numero') || '').replace(/\D/g, '');
     if (n.length < 15 || n.length > 25) return erro(400, 'invalid', 'Número de processo inválido.');
+    if (!ehDono(auth) && normalizarUsuario(auth.usuario).papel === 'advogado' && !(await escopoDoAdvogado(env, auth)).processos.has(n)) return erro(403, 'forbidden', 'Você só consulta processos em que está cadastrado.');
     const res = await consultarFlex(new URLSearchParams({ numeroProcesso: n, pagina: '1' }));
     if (res.status !== 200 || !res.json) return json({ ok: false, motivo: res.erro || ('O Diário Oficial respondeu ' + res.status) });
     const itens = (Array.isArray(res.json.items) ? res.json.items : []).slice().sort((a, b) => String(b.data_disponibilizacao).localeCompare(String(a.data_disponibilizacao)));
@@ -402,6 +438,7 @@ export async function djenRotas(request, env, partes) {
     const r = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(COL_PUB, id).first();
     if (!r) return erro(404, 'not_found', 'Publicação não encontrada.');
     const d = JSON.parse(r.dados);
+    if (!ehDono(auth) && !(await visaoDePubs(env, auth, await lerCfg(env), '')).ve(d)) return erro(404, 'not_found', 'Publicação não encontrada.');
     const p = new URLSearchParams({ dataDisponibilizacaoInicio: d.data, dataDisponibilizacaoFim: d.data, itensPorPagina: '100', pagina: '1' });
     if (d.processo) p.set('numeroProcesso', d.processo);
     else { const cfg = await lerCfg(env), o = cfg.oabs.find((x) => d.oabs.includes(x.id)) || cfg.oabs[0]; p.set('numeroOab', o.numero); p.set('ufOab', o.uf); }

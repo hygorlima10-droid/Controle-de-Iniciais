@@ -80,7 +80,7 @@ export async function usuariosRotas(request, env, partes, auth) {
   /* uma pessoa */
   if (a && /^[A-Za-z0-9_-]{1,40}$/.test(a)) {
     const doc = await lerDoc(env, COL_USU, a); if (!doc) return erro(404, 'not_found', 'Pessoa não encontrada.');
-    if (doc.papel === 'proprietario') return erro(403, 'forbidden', 'O proprietário não é alterado por aqui.');
+    if (doc.papel === 'proprietario' && !(m === 'PUT' && !b2)) return erro(403, 'forbidden', 'O proprietário não é alterado por aqui.');
     if (b2 === 'sessoes') {
       const { results } = await env.DB.prepare("SELECT id, dados FROM docs WHERE colecao = ? AND json_extract(dados, '$.usuario') = ?").bind(COL_SES, a).all();
       const vivas = results.map((r) => ({ id: idCurto(r.id), ...JSON.parse(r.dados) })).filter((s) => s.expira > Date.now()).sort((x, y) => y.ultimo - x.ultimo);
@@ -96,6 +96,7 @@ export async function usuariosRotas(request, env, partes, auth) {
     if (m === 'GET' && !b2) return json(SEM_SEGREDOS(a, doc));
     if (m === 'PUT' && !b2) {
       const b = await request.json().catch(() => null) || {}, novo = { ...doc }, mud = [];
+      if (doc.papel === 'proprietario' && Object.keys(b).some((k) => k !== 'oabs')) return erro(403, 'forbidden', 'Do proprietário só se indicam as OABs (para filtrar as publicações dele).');
       if (b.papel !== undefined) { if (!PAPEIS_CONVIDADO.includes(b.papel)) return erro(400, 'invalid', 'Papel inválido.'); if (b.papel !== doc.papel) { novo.papel = b.papel; mud.push('papel: ' + ROTULO[b.papel]); } }
       if (b.oabs !== undefined) { const o = lerOabs(b.oabs); if (o === null) return erro(400, 'invalid', 'Alguma OAB está em formato inválido.'); novo.oabs = o; mud.push('OABs'); }
       if (novo.papel === 'advogado' && !(novo.oabs || []).length) return erro(400, 'invalid', 'Para advogado, indique ao menos uma OAB.');

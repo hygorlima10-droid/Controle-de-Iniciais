@@ -54,8 +54,8 @@ check((await ana('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'casos'
 console.log('\n— estagiário: publicações e agendas de todo o escritório (com opção de desligar)');
 check((await caio('GET', '/api/eu')).j.permissoes.verPublicacoes === true && (await caio('GET', '/api/eu')).j.permissoes.verAgendas === true, 'estagiário já vem com publicações e agendas ligadas');
 check((await caio('GET', '/api/djen/lista')).s === 200 && (await caio('GET', '/api/djen/estado')).s === 200, 'estagiário lê as publicações');
-check((await caio('POST', '/api/djen/buscar', {})).s === 403 && (await caio('PUT', '/api/djen/oabs', {})).s === 403 && (await caio('POST', '/api/djen/marcar', {})).s === 403, 'mas não altera nada nelas');
-check((await ana('GET', '/api/djen/lista')).s === 403, 'advogado ainda não (vem na 5.3, filtrado por OAB)');
+check((await caio('POST', '/api/djen/buscar', {})).s === 403 && (await caio('PUT', '/api/djen/oabs', {})).s === 403 && (await caio('POST', '/api/djen/advogados', {})).s === 403 && (await caio('POST', '/api/djen/importar', {})).s === 403, 'mas não busca, não importa nem altera as OABs');
+check((await ana('GET', '/api/djen/lista')).s === 200 && (await ana('POST', '/api/djen/buscar', {})).s === 403 && (await ana('PUT', '/api/djen/oabs', {})).s === 403, 'advogado lê as publicações (filtradas por OAB, ver teste publicacoes-acesso) mas não busca nem altera OABs');
 check((await edu('GET', '/api/djen/lista')).s === 403, 'com a permissão desligada, o estagiário não abre as publicações');
 check(ids(await edu('GET', '/api/db/agenda')) === 'g2,g3' && ids(await edu('GET', '/api/db/casos')).includes('c4') && ids(await edu('GET', '/api/db/casos')).includes('c2'), 'com a de agendas desligada ele vê só a própria, as compartilhadas e as de processos (g1 do dono e g4 da Ana, particulares, somem), mas o resto do escritório continua');
 console.log('\n— estagiário');

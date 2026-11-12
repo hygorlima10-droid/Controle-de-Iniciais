@@ -87,3 +87,12 @@ Um único aplicativo e um único banco; cada pessoa vê "o seu aplicativo".
 - **Segurança por pessoa:** a tela Segurança do proprietário agora lista, encerra e troca senha **só das sessões dele** (antes mexia nas de todos).
 - **Tela:** Configurações › Usuários (`cliente/usuarios.js`): lista, Convidar pessoa, link (copiar e WhatsApp), ficha com interruptores que gravam na hora. Padrão do app (sem botões com "+").
 - Testes: `usuarios` (servidor) e `usuarios-tela` (tela), no grupo `permissoes` (porta 8816).
+
+### Etapa 5.3 (feita em 12/11/2026): visibilidade por participação e Publicações por OAB
+- A filtragem das coleções por participação (Iniciais, Acordos, Alvarás, processos, clientes, agenda) já valia desde a 5.1; a 5.3 acrescenta as **publicações do Diário** (`src/djen.js`).
+- **Quem vê o quê:** cada advogado vê as publicações das **próprias OABs** (as que o Diário associou a elas, pelos advogados intimados ou pelas OABs monitoradas); o **proprietário vê todas** e pode pedir `?escopo=meus` (só as dele; sem OAB indicada vale a OAB principal); o **estagiário vê todas** (permissão `verPublicacoes`, ligada por padrão, que o proprietário desliga por pessoa).
+- **"Lida" é de cada pessoa** para advogado e estagiário (`lidaPor`), para uma publicação de duas OABs não sumir da lista de um quando o outro lê; a do proprietário continua o campo `lida` de sempre. "Sem prazo" é global e só o proprietário e o advogado (nas publicações dele) mexem.
+- **Contagens e OABs do estado** (`/api/djen/estado`) são só do que a pessoa vê; o advogado vê só a própria OAB na lista. Texto da publicação e consulta de processo exigem que a pessoa possa ver a publicação/participe do processo.
+- Continuam **só do proprietário:** buscar no Diário, importar, cadastrar OABs, completar advogados, teste do Diário e notificações do iPhone (as notificações por pessoa vêm na 5.8). A consulta ao DataJud (dado público do tribunal) foi liberada para todos.
+- O proprietário passa a poder **indicar as próprias OABs** (`PUT /api/usuarios/u1 { oabs }`; papel e situação seguem intocáveis); a tela dessa indicação vem na 5.4, com o "Meus | Escritório".
+- Teste: `publicacoes-acesso` (grupo `permissoes`, semente com 5 publicações e 3 OABs).
