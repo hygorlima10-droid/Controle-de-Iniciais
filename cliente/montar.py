@@ -469,6 +469,8 @@ rep("'<button type=\"button\" class=\"btn btn-ghost\" data-pf=\"cobrar\">' + (c.
 rep("  function abrirBaixa(opts){\n", "  function abrirBaixa(opts){\n    if (!ppPodeReceber()) return;   /* o estagiário não registra recebimento */\n")
 rep("""<span class="badge origem-'+c.origem+'">'+ORIGEM_LABEL[c.origem]+'</span><span class="badge">'+TIPO_LABEL[c.tipo]+'</span>'""", """<span class="badge origem-'+(c.origem||'murilo')+'">'+(ORIGEM_LABEL[c.origem]||'—')+'</span><span class="badge">'+(TIPO_LABEL[c.tipo]||'—')+'</span>'""")
 rep("""<div class="prio-tag"><span class="prio-dot p-'+c.prioridade+'"></span>'+PRIO_LABEL[c.prioridade]+'</div>'""", """<div class="prio-tag"><span class="prio-dot p-'+(c.prioridade||'normal')+'"></span>'+(PRIO_LABEL[c.prioridade]||PRIO_LABEL.normal||'')+'</div>'""")
+rep("  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('obra').set(dados));", "  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('obra').set(patch, { mesclar: true }));   /* só o que mudou: o servidor junta ao que está gravado (F-05) */")
+rep("  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('extratos').set(dados));", "  if (storageMode === 'db' && configRef) return Promise.resolve(configRef.doc('extratos').set(patch, { mesclar: true }));   /* só o que mudou (F-05) */")
 open(R + 'public/index.html', 'w', encoding='utf-8').write(s)
 print('montado')
 

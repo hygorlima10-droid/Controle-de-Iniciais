@@ -7,7 +7,7 @@ const MAX_OPS = 25;
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const erro = (status, code, message) => json({ error: { code, message } }, status);
 
-export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao, autorizarGravacao, autorizarExclusao, atividade }) {
+export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, MAX_DOC, checarColecao, resolverColecao, autorizarGravacao, autorizarExclusao, atividade, CONFLITO }) {
   if (request.method !== 'POST') return erro(405, 'method', 'Use POST.');
   const txt = await request.text();
   if (txt.length > MAX_DOC * 4) return erro(413, 'quota_exceeded', 'Lote grande demais.');
@@ -27,7 +27,10 @@ export async function loteRotas(request, env, partes, auth, { stmtGravar, NOME, 
   }
   const cmds = [], feitos = [];
   for (const o of ops) {
-    const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(o.colecao, o.id).first(), antesObj = antes ? JSON.parse(antes.dados) : null;
+    const antes = await env.DB.prepare('SELECT dados, atualizado FROM docs WHERE colecao = ? AND id = ?').bind(o.colecao, o.id).first(), antesObj = antes ? JSON.parse(antes.dados) : null;
+    /* versão esperada (auditoria F-06): o app manda a versão que leu (`base`); se o registro mudou depois e o conteúdo é diferente, o lote inteiro é recusado e nada é gravado nem apagado */
+    const base = parseInt(o.base, 10);
+    if (CONFLITO && CONFLITO.has(o.colecao) && base > 0 && antes && antes.atualizado > base && (o.acao === 'excluir' || antes.dados !== JSON.stringify(o.dados))) return new Response(JSON.stringify({ error: { code: 'conflict', message: 'Um dos registros foi alterado em outro aparelho. Atualize a tela e tente de novo.' }, colecao: o.colecao, id: o.id }), { status: 409, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
     const dono = !auth || !auth.usuario || auth.usuario.papel === 'proprietario';
     if (dono && o.acao === 'gravar' && auth && auth.usuario && (o.colecao === 'agenda' || o.colecao === 'clientes')) { if (!antesObj) { if (!o.dados.criadoPor) o.dados.criadoPor = auth.usuario.id; } else if (antesObj.criadoPor) o.dados.criadoPor = antesObj.criadoPor; }
     if (!dono) { const neg = o.acao === 'gravar' ? await autorizarGravacao(env, o.colecao, o.id, antesObj, o.dados, auth) : await autorizarExclusao(env, o.colecao, o.id, antesObj, auth); if (neg) return neg; }

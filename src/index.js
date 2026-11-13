@@ -491,7 +491,7 @@ async function api(request, env, partes, auth) {
     return json({ id: novo });
   }
   if (id && metodo === 'PUT') {
-    const dados = await lerDoc(request); if (dados instanceof Response) return dados;
+    let dados = await lerDoc(request); if (dados instanceof Response) return dados;
     if (ehDono(auth) && auth && auth.usuario && (colecao === 'agenda' || colecao === 'clientes')) {   // proprietário: só o carimbo de autor
       const at0 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
       carimbarAutor(colecao, at0 ? JSON.parse(at0.dados) : null, dados, auth);
@@ -501,6 +501,13 @@ async function api(request, env, partes, auth) {
       const neg = await autorizarGravacao(env, colecao, id, at ? JSON.parse(at.dados) : null, dados, auth); if (neg) return neg;
     }
     if (colecao === 'repasses') { const at1 = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first(); await avisarRepasseA(env, enviarAviso, id, at1 ? JSON.parse(at1.dados) : null, dados); }
+    /* ?mesclar=1 (documentos de trabalho do proprietário, como config/obra e config/extratos): o app manda só as chaves que mudou e o servidor junta ao documento
+       que está gravado agora, em vez de substituir o documento inteiro por uma cópia antiga (auditoria F-05). Na mesma chave vale a última gravação. */
+    let mesclado = false;
+    if (new URL(request.url).searchParams.get('mesclar') === '1' && (colecao === 'configDono' || colecao === 'config')) {
+      const atualM = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
+      dados = { ...(atualM ? JSON.parse(atualM.dados) : {}), ...dados }; mesclado = true;
+    }
     if (new URL(request.url).searchParams.get('soNovo') === '1') {
       /* só cria: se já existe um registro com esse id (outro aparelho acabou de criar), não mexe nele e avisa */
       const r = await env.DB.prepare('INSERT OR IGNORE INTO docs (colecao,id,dados,atualizado) VALUES (?,?,?,?)').bind(colecao, id, JSON.stringify(dados), Date.now()).run();
@@ -516,7 +523,7 @@ async function api(request, env, partes, auth) {
       if (atual && atual.atualizado > base && atual.dados !== JSON.stringify(dados)) return json({ error: { code: 'conflict', message: 'Este registro foi alterado em outro aparelho.' }, atual: { id, data: JSON.parse(atual.dados), v: atual.atualizado } }, 409);
     }
     const ts = Date.now();
-    if (!registraColecao(colecao)) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts }); }
+    if (!registraColecao(colecao)) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts, ...(mesclado ? { doc: dados } : {}) }); }
     const antes = await env.DB.prepare('SELECT dados FROM docs WHERE colecao = ? AND id = ?').bind(colecao, id).first();
     const antesObj = antes ? JSON.parse(antes.dados) : null, mud = antesObj ? mudancas(antesObj, dados) : [];
     if (antesObj && !mud.length) { await stmtGravar(env, colecao, id, dados, ts).run(); return json({ ok: true, v: ts }); }   // nada mudou de verdade (só campos de controle): grava, mas não há o que registrar
@@ -567,7 +574,7 @@ const ROTAS = {
   ler: ['proprietario', (r, e, p) => ler(r, e, p)], recebidos: ['proprietario', (r, e, p) => recebidos(r, e, p)], anexos: ['proprietario', (r, e, p) => anexos(r, e, p)],
   notif: ['sessao', (r, e, p, a) => notif(r, e, p, a)], djen: ['sessao', (r, e, p, au) => checarRotaDjen(p, r.method, au) || djenRotas(r, e, p, au)], datajud: ['sessao', (r, e, p) => datajudRotas(r, e, p)],   // para os demais papéis só quando tiverem filtro próprio (etapa 5.3)
   db: ['sessao', (r, e, p, au) => api(r, e, p, au)],
-  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao, atividade: (env2, f) => avisarAtividade(env2, enviarAviso, f) })],
+  lote: ['sessao', (r, e, p, au) => loteRotas(r, e, p, au, { stmtGravar, NOME, MAX_DOC, checarColecao: (c, a) => checarColecao(c, a) || checarAcessoColecao(c, a), resolverColecao, autorizarGravacao, autorizarExclusao, atividade: (env2, f) => avisarAtividade(env2, enviarAviso, f), CONFLITO })],
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], historico: ['sessao', async (r, e, p, a) => historicoRotas(r, e, p, a, a && a.usuario && a.usuario.papel === 'advogado' ? await escopoDoAdvogado(e, a) : null)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['sessao', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],

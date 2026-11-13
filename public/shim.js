@@ -177,11 +177,12 @@
 
   /* conflito de edição: coleções em que dois aparelhos podem mexer no mesmo registro (o servidor também só confere estas) */
   var CONFLITO = { casos: 1, termosAcordo: 1, alvaras: 1, clientes: 1, despesas: 1, receitasManuais: 1, metas: 1, obraMov: 1 };
-  function enviar(c, id, dados, forcar) {
+  function enviar(c, id, dados, forcar, mesclar) {
     var base = c.versoes[id], q = '';
-    if (forcar) q = '?forcar=1'; else if (CONFLITO[c.nome] && base && !desfazendo) q = '?base=' + base;
+    if (mesclar) q = '?mesclar=1'; else if (forcar) q = '?forcar=1'; else if (CONFLITO[c.nome] && base && !desfazendo) q = '?base=' + base;
     return req('PUT', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id) + q, dados).then(function (j) {
       if (j && j.v) c.versoes[id] = j.v;
+      if (mesclar && j && j.doc) { c.mapa[id] = JSON.parse(JSON.stringify(j.doc)); c.avisar(); }   // o servidor devolve o documento já juntado
       return j;
     }, function (e) {
       if (e && e.code === 'conflict' && e.atual) return resolverConflito(c, id, dados, e.atual);
@@ -202,14 +203,14 @@
     c.fila[id] = p.then(function () { }, function () { });
     return p;
   }
-  function escrever(c, id, dados, apagar) {
+  function escrever(c, id, dados, apagar, mesclar) {
     var antes = c.mapa[id], existia = Object.prototype.hasOwnProperty.call(c.mapa, id);
-    if (apagar) delete c.mapa[id]; else c.mapa[id] = JSON.parse(JSON.stringify(dados));
+    if (apagar) delete c.mapa[id]; else c.mapa[id] = JSON.parse(JSON.stringify(mesclar ? Object.assign({}, antes || {}, dados) : dados));
     c.pendentes++; c.avisar();
     registrar(c, id, antes, existia, dados, apagar);
     var p = naFila(c, id, function () {
       return apagar ? req('DELETE', '/api/db/' + encodeURIComponent(c.nome) + '/' + encodeURIComponent(id)).then(function (j) { delete c.versoes[id]; return j; })
-                    : enviar(c, id, dados, false);
+                    : enviar(c, id, dados, false, mesclar);
     });
     return p.then(function () { c.pendentes--; c.assinatura = ''; try { if (window.__aposGravar) window.__aposGravar(c.nome); } catch (e) { } }, function (e) {
       c.pendentes--;
@@ -230,12 +231,12 @@
       feitos.push({ c: c, id: o.id, antes: antes, existia: existia });
     });
     Object.keys(cols).forEach(function (n) { cols[n].avisar(); });
-    var corpo = { ops: ops.map(function (o) { return o.apagar ? { acao: 'excluir', colecao: o.colecao, id: o.id } : { acao: 'gravar', colecao: o.colecao, id: o.id, dados: o.dados }; }) };
+    var corpo = { ops: ops.map(function (o) { var b = colecao(o.colecao).versoes[o.id]; return Object.assign(o.apagar ? { acao: 'excluir', colecao: o.colecao, id: o.id } : { acao: 'gravar', colecao: o.colecao, id: o.id, dados: o.dados }, CONFLITO[o.colecao] && b ? { base: b } : {}); }) };
     return req('POST', '/api/lote', corpo).then(function () {
       feitos.forEach(function (f) { f.c.pendentes--; f.c.assinatura = ''; delete f.c.versoes[f.id]; });   // o servidor gravou por conta própria: a versão certa só chega na próxima leitura (até lá não se confere conflito deste registro)
     }, function (e) {
       feitos.slice().reverse().forEach(function (f) { f.c.pendentes--; if (f.existia) f.c.mapa[f.id] = f.antes; else delete f.c.mapa[f.id]; });
-      Object.keys(cols).forEach(function (n) { cols[n].avisar(); });
+      Object.keys(cols).forEach(function (n) { cols[n].avisar(); if (e && e.code === 'conflict') { cols[n].assinatura = ''; cols[n].carregar().catch(function () { }); } });   // alguém mexeu em outro aparelho: relê o que está no servidor
       throw e;
     });
   }
@@ -257,7 +258,7 @@
         },
         doc: function (id) {
           var did = id || Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
-          return { set: function (dados) { return escrever(c, did, dados, false); }, delete: function () { return escrever(c, did, null, true); } };
+          return { set: function (dados, opcoes) { return escrever(c, did, dados, false, !!(opcoes && opcoes.mesclar)); }, delete: function () { return escrever(c, did, null, true); } };
         },
         add: function (dados) {
           var did = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
