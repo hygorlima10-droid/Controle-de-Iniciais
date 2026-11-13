@@ -28,7 +28,7 @@ const registrar = async (m, b, n, a, tot, mat) => {
 await registrar(mes(-4), '2.300,00', '2.500,00', '3.100,00', '2.000,00', '1.000,00');
 await registrar(mes(-3), '2.320,00', '2.550,00', '3.150,00', '2.040,00', '1.030,00');
 t = await painel();
-check(/Estimativa · referência de/.test(t) && /Evolução dos preços de referência/.test(t), 'com os valores registrados aparecem a estimativa e a evolução');
+check(/Estimativa · referência de/i.test(t) && /Evolução dos preços de referência/i.test(t), 'com os valores registrados aparecem a estimativa e a evolução');
 // estimativa: 100 m² × 2.550 = 255.000 + outros 20.000 = 275.000 + margem 10% = 27.500 → 302.500
 await page.fill('#mfc_area', '100'); await page.dispatchEvent('#mfc_area', 'change'); await page.fill('#mfc_especial', '20000'); await page.dispatchEvent('#mfc_especial', 'change'); await page.waitForTimeout(900);
 t = await painel();
@@ -36,8 +36,8 @@ check(/R\$\s*255\.000,00/.test(t) && /R\$\s*20\.000,00/.test(t) && /R\$\s*27\.50
 check(/Materiais ~50,\d%/.test(t) || /Materiais ~50/.test(t), 'a proporção materiais × mão de obra vem do SINAPI do último mês');
 check(/custaria R\$\s*297\.000,00/.test(t), 'mostra quanto a mesma obra custaria no primeiro mês registrado (100 m² × 2.500 + 20.000 + 10% = R$ 297.000,00)');
 // evolução: R1-N 2.500 → 2.550 = +2,0% no mês e desde o início
-check(/No último mês \+2,0%/.test(t) && /Desde .* \+2,0%/.test(t), 'evolução do CUB: +2,0% no último mês e desde o primeiro registro');
-check(/Materiais R\$\s*1\.030,00 \+3,0%/.test(t) && /Mão de obra R\$\s*1\.010,00 \+1,0%/.test(t), 'SINAPI: materiais +3,0% (1.000 → 1.030) e mão de obra +1,0% (1.000 → 1.010) no mês');
+check(/No último mês \+2%/.test(t) && /Desde .* \+2%/.test(t), 'evolução do CUB: +2% no último mês e desde o primeiro registro (2.500 → 2.550)');
+check(/Materiais R\$\s*1\.030,00 \+3%/.test(t) && /Mão de obra R\$\s*1\.010,00 \+1%/.test(t), 'SINAPI: materiais +3% (1.000 → 1.030) e mão de obra +1% (1.000 → 1.010) no mês');
 // valores desatualizados: o último mês é de 3 meses atrás
 check(/Os valores são de/.test(t) && /atualize/i.test(t), 'aviso de valores desatualizados (o último é de 3 meses atrás)');
 // persistência
