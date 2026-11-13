@@ -8725,11 +8725,15 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   function persistPatchConfig(patch){
     return persistConfigPlanejamento(Object.assign({}, config.planejamento || {}, patch));
   }
-  function metaValorAtual(m){
+  /* valor da meta até um dia (vazio = todos os movimentos). O valor ATUAL conta só o que já aconteceu (até hoje); o PROJETADO inclui lançamentos de data futura (auditoria F-03) */
+  function metaValorAte(m, dia){
     var t = 0;
-    (m.movimentos || []).forEach(function(x){ t += Number(x.valor) || 0; });
+    (m.movimentos || []).forEach(function(x){ if (!dia || String(x.dia || '') <= dia) t += Number(x.valor) || 0; });
     return r2(t);
   }
+  function metaValorAtual(m){ return metaValorAte(m, todayISO()); }
+  function metaValorProjetado(m){ return metaValorAte(m, ''); }
+  function metaTemFuturo(m){ var h = todayISO(); return (m.movimentos || []).some(function(x){ return String(x.dia || '') > h; }); }
   function metaAlvo(m){
     if (m.tipo === 'reserva') return computeReservaInfo().alvo;
     return Number(m.valorAlvo) > 0 ? Number(m.valorAlvo) : null;
@@ -8791,6 +8795,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       if (m.tipo !== 'reserva') return;
       (m.movimentos || []).forEach(function(x){
         var v = Number(x.valor) || 0;
+        if (String(x.dia || '') > todayISO()) return;   /* lançamento de data futura ainda não é dinheiro guardado */
         if (x.tipo === 'rendimento'){ rend += v; if ((x.dia || '').slice(0, 7) === mesSelecionado) rendMes += v; }
         else aportes += v;
       });
@@ -9520,7 +9525,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
     if (!m){ fecharModalMetaHist(); return; }
     qs('modalMetaHistTitle').textContent = 'Histórico \u2014 ' + m.nome;
     var movs = (m.movimentos || []).slice().sort(function(a, b){ return (b.data || '').localeCompare(a.data || ''); });
-    var topo = '<div class="saldo-data" style="margin-bottom:6px;">Valor atual: <strong>' + fmtMoeda(metaValorAtual(m)) + '</strong></div>' +
+    var topo = '<div class="saldo-data" style="margin-bottom:6px;">Valor atual: <strong>' + fmtMoeda(metaValorAtual(m)) + '</strong>' + (metaTemFuturo(m) ? ' · com os lançamentos previstos: <strong>' + fmtMoeda(metaValorProjetado(m)) + '</strong>' : '') + '</div>' +
       '<div class="hist-corrigir"><button type="button" class="btn btn-ghost" data-hist-corrigir="1">Corrigir valor total</button></div>' +
       '<div class="saldo-data" style="margin-bottom:8px;">Aportes e retiradas também movem o caixa da ' + (m.coluna === 'pj' ? 'PJ' : 'PF') + '. Valor inicial e atualização de valor não mexem no caixa. Excluir uma linha ajusta o valor guardado.</div>';
     var ligarCorrigir = function(){
@@ -9536,7 +9541,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
           '<button type="button" data-mov-excluir-sim="' + escapeHtml(x.id) + '">Sim</button><button type="button" style="color:var(--ink-soft);" data-mov-excluir-nao="1">Cancelar</button></div></div>';
       }
       return '<div class="historico-item"><div><div class="hi-valor">' + (v >= 0 ? '+' : '\u2212') + ' ' + fmtMoeda(Math.abs(v)) + '</div>' +
-        '<div class="hi-data">' + escapeHtml(MOV_LABEL[x.tipo] || x.tipo) + ' \u00b7 ' + fmtData(x.dia) + '</div></div>' +
+        '<div class="hi-data">' + escapeHtml(MOV_LABEL[x.tipo] || x.tipo) + ' \u00b7 ' + (String(x.dia || '') > todayISO() ? 'previsto para ' : '') + fmtData(x.dia) + '</div></div>' +
         '<div class="hi-acoes"><button type="button" data-mov-excluir="' + escapeHtml(x.id) + '">Excluir</button></div></div>';
     }).join('');
     ligarCorrigir();
