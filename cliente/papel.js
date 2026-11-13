@@ -94,5 +94,5 @@ function ppPor(n){
   }
   window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { extAcharMov: (typeof extAcharMov === 'function' ? extAcharMov : null), ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();

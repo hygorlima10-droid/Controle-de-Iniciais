@@ -1722,6 +1722,12 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -8543,17 +8549,17 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
   }
   function listarMovimentosColuna(coluna){
     var mov = [];
-    function add(dataStr, valor, tipo, ts){
+    function add(dataStr, valor, tipo, ts, nome){
       if (!dataStr) return;
       var dia = String(dataStr).slice(0,10);
       /* o horário só vale se for do mesmo dia do lançamento */
       var tsOk = (ts && dataLocalDeIso(ts) === dia) ? String(ts) : null;
-      mov.push({ data: dia, valor: Number(valor)||0, tipo: tipo, ts: tsOk });
+      mov.push({ data: dia, valor: Number(valor)||0, tipo: tipo, ts: tsOk, nome: nome || '' });
     }
     if (coluna === 'pj'){
       listarUnidades().forEach(function(u){
         if (ehObraUn(u)) return;
-        recebimentosUn(u).forEach(function(rc){ add(rc.data, rc.valor, 'entrada', rc.ts); });
+        recebimentosUn(u).forEach(function(rc){ add(rc.data, rc.valor, 'entrada', rc.ts, (u.cliente || '') + ' ' + (u.acao || '')); });
       });
     }
     receitasManuais.forEach(function(r){
@@ -8561,34 +8567,34 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
       if (r.recorrente){
         Object.keys(r.recebimentos || {}).forEach(function(mes){
           var rc = r.recebimentos[mes];
-          if (rc && rc.recebido) add(rc.data, rc.valor, 'entrada', rc.ts);
+          if (rc && rc.recebido) add(rc.data, rc.valor, 'entrada', rc.ts, r.nome);
         });
       } else {
-        add(r.data, r.valor, 'entrada', r.criadoEm);
+        add(r.data, r.valor, 'entrada', r.criadoEm, r.nome);
       }
     });
     metas.forEach(function(m){
       if (m.coluna !== coluna) return;
       (m.movimentos || []).forEach(function(x){
-        if (x.tipo === 'aporte') add(x.dia, Math.abs(Number(x.valor) || 0), 'saida', x.data);
-        else if (x.tipo === 'retirada') add(x.dia, Math.abs(Number(x.valor) || 0), 'entrada', x.data);
+        if (x.tipo === 'aporte') add(x.dia, Math.abs(Number(x.valor) || 0), 'saida', x.data, m.nome);
+        else if (x.tipo === 'retirada') add(x.dia, Math.abs(Number(x.valor) || 0), 'entrada', x.data, m.nome);
       });
     });
     obraMov.forEach(function(x){
-      if (x.tipo === 'aporte' && x.origem === coluna) add(x.data, x.valor, 'saida', x.criadoEm);
-      else if (x.tipo === 'retirada' && x.destino === coluna) add(x.data, x.valor, 'entrada', x.criadoEm);
+      if (x.tipo === 'aporte' && x.origem === coluna) add(x.data, x.valor, 'saida', x.criadoEm, 'obra ' + (x.descricao || ''));
+      else if (x.tipo === 'retirada' && x.destino === coluna) add(x.data, x.valor, 'entrada', x.criadoEm, 'obra ' + (x.descricao || ''));
     });
     despesas.forEach(function(d){
       if (d.coluna !== coluna) return;
       /* com abatimentos, cada um sai do caixa na sua data (e o pagamento "cheio" não é contado de novo) */
       if (d.tipo === 'unica'){
-        if (Array.isArray(d.parciais) && d.parciais.length) d.parciais.forEach(function(p){ add(p.data, p.valor, 'saida', p.ts); });
-        else if (d.pago) add(d.dataPagamento, d.valor, 'saida', d.pagoEm);
+        if (Array.isArray(d.parciais) && d.parciais.length) d.parciais.forEach(function(p){ add(p.data, p.valor, 'saida', p.ts, d.nome); });
+        else if (d.pago) add(d.dataPagamento, d.valor, 'saida', d.pagoEm, d.nome);
       } else {
         Object.keys(d.pagamentos || {}).forEach(function(mes){
           var pg = d.pagamentos[mes];
-          if (pg && Array.isArray(pg.parciais) && pg.parciais.length) pg.parciais.forEach(function(p){ add(p.data, p.valor, 'saida', p.ts); });
-          else if (pg && pg.pago) add(pg.dataPagamento, pg.valor, 'saida', pg.pagoEm);
+          if (pg && Array.isArray(pg.parciais) && pg.parciais.length) pg.parciais.forEach(function(p){ add(p.data, p.valor, 'saida', p.ts, d.nome); });
+          else if (pg && pg.pago) add(pg.dataPagamento, pg.valor, 'saida', pg.pagoEm, d.nome);
         });
       }
     });
@@ -13271,21 +13277,29 @@ function extDataCompra(l, dataLinha){
   return (extDiasEntre(cand, dataLinha) <= 45) ? cand : dataLinha;
 }
 function extMovsApp(coluna){
-  return listarMovimentosColuna(coluna).map(function(m){ return { data: m.data, valor: Math.round(Math.abs(Number(m.valor) || 0) * 100), tipo: m.tipo, usado: false }; });
+  return listarMovimentosColuna(coluna).map(function(m){ return { data: m.data, valor: Math.round(Math.abs(Number(m.valor) || 0) * 100), tipo: m.tipo, usado: false, nome: m.nome || '' }; });
 }
 function extMovsReserva(){
   var out = [];
   metas.forEach(function(m){ if (m.tipo === 'reserva') (m.movimentos || []).forEach(function(x){ if (x.tipo === 'aporte') out.push({ data: String(x.dia || '').slice(0, 10), valor: Math.round(Math.abs(Number(x.valor) || 0) * 100), tipo: 'saida', usado: false }); }); });
   return out;
 }
-function extAcharMov(movs, valorAbs, tipo, data){
-  var melhor = null, dist = 99;
+/* "já lançado no app": mesmo valor e tipo, em até 3 dias, E (mesma data OU nome parecido com o da linha do extrato). Sem isso, uma compra diferente de mesmo valor
+   não vira "já lançado" por engano (auditoria F-04): a linha fica pendente com a nota "parecida com um lançamento de mesmo valor". `linha` e `v` são opcionais
+   (sem eles vale só valor, tipo e data, como antes). */
+function extAcharMov(movs, valorAbs, tipo, data, linha, v){
+  var melhor = null, dist = 99, parecida = null, dParecida = 99;
+  var tl = linha ? extTokens((linha.n || '') + ' ' + (linha.s || '')) : null;
   movs.forEach(function(m){
     if (m.usado || m.valor !== valorAbs || (tipo && m.tipo !== tipo)) return;
     var d = extDiasEntre(m.data, data);
-    if (d <= 3 && d < dist){ melhor = m; dist = d; }
+    if (d > 3) return;
+    var igualNome = !tl || !m.nome || extOverlap(tl, extTokens(m.nome)) >= 1;
+    if ((d === 0 || igualNome) && d < dist){ melhor = m; dist = d; }
+    else if (d < dParecida){ parecida = m; dParecida = d; }
   });
   if (melhor){ melhor.usado = true; return true; }
+  if (parecida && v) v.parecida = 'parecida com um lançamento de mesmo valor em ' + fmtData(parecida.data) + (parecida.nome && parecida.nome.trim() ? ' (' + parecida.nome.trim() + ')' : '') + ': se for o mesmo, marque "já lançado"';
   return false;
 }
 function extCandidatasCobranca(v, unidades){
@@ -13383,7 +13397,7 @@ function extConstruirRevisao(){
     if (v.act !== 'pend') return;
     var sug = extObraSugestao(v);
     if (!sug) return;
-    if (extAcharMov(movs[v.coluna], Math.abs(v.v), 'saida', v.d)){ decidir(v, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
+    if (extAcharMov(movs[v.coluna], Math.abs(v.v), 'saida', v.d, v.l, v)){ decidir(v, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
     decidir(v, sug.act, sug.motivo, { etapa: sug.etapa || extObraEtapaPadrao() });
   });
   /* 3) alvará que cai inteiro na conta: entrada, honorários para a PJ e repasse ao cliente */
@@ -13424,7 +13438,7 @@ function extConstruirRevisao(){
     var pj = v.coluna === 'pj' ? v : w, pf = pj === v ? w : v;
     if (pf.chain){ decidir(pj, 'par', 'já contado no aporte da reserva (via aplicação RDC)'); return; }
     decidir(pf, 'par', 'contrapartida da linha da PJ');
-    if (extAcharMov(movs.pj, Math.abs(pj.v), pj.v < 0 ? 'saida' : 'entrada', pj.d)){ decidir(pj, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
+    if (extAcharMov(movs.pj, Math.abs(pj.v), pj.v < 0 ? 'saida' : 'entrada', pj.d, pj.l, pj)){ decidir(pj, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
     if (pj.v < 0){ decidir(pj, 'transf', 'transferência da PJ para a PF', { tipo: 'prolabore' }); return; }
     sugerirCobranca(pj, 'pfpj', true);
   });
@@ -13432,7 +13446,8 @@ function extConstruirRevisao(){
   views.forEach(function(v){
     if (v.act !== 'pend') return;
     var cobre = v.v > 0 ? 'entrada' : 'saida';
-    if (extAcharMov(movs[v.coluna], Math.abs(v.v), cobre, v.d)){ decidir(v, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
+    if (extAcharMov(movs[v.coluna], Math.abs(v.v), cobre, v.d, v.l, v)){ decidir(v, 'ja', 'valor e data batem com um lançamento que já existe no app'); return; }
+    if (v.parecida && !v.motivo) v.motivo = v.parecida;
     var t = EX.norm(v.l.s + ' ' + v.l.n);
     if (v.alvo){
       if (v.alvo === 'pf' && v.coluna === 'pf'){ decidir(v, 'par', 'transferência entre as suas contas pessoais'); return; }
@@ -22184,7 +22199,7 @@ function ppPor(n){
   }
   window.addEventListener('horus-eu', function(){ aplicar(); try{ ppDesenharHon(); }catch(e){} });
   if (window.__horusEu && window.__horusEu.pronto) aplicar();
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { extAcharMov: (typeof extAcharMov === 'function' ? extAcharMov : null), ppPodeReceber: ppPodeReceber, ppPodeCobrar: ppPodeCobrar, ppPor: ppPor, ppHonorariosMeus: ppHonorariosMeus, ppDesenharHon: ppDesenharHon, ppItemAtencaoOk: ppItemAtencaoOk, ppTelaPermitida: ppTelaPermitida });
 })();
 
 /*PP-FIM*/
