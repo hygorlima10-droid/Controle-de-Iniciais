@@ -37,7 +37,7 @@ check(/Materiais ~50,\d%/.test(t) || /Materiais ~50/.test(t), 'a proporção mat
 check(/custaria R\$\s*297\.000,00/.test(t), 'mostra quanto a mesma obra custaria no primeiro mês registrado (100 m² × 2.500 + 20.000 + 10% = R$ 297.000,00)');
 // evolução: R1-N 2.500 → 2.550 = +2,0% no mês e desde o início
 check(/No último mês \+2%/.test(t) && /Desde .* \+2%/.test(t), 'evolução do CUB: +2% no último mês e desde o primeiro registro (2.500 → 2.550)');
-check(/Materiais R\$\s*1\.030,00 \+3%/.test(t) && /Mão de obra R\$\s*1\.010,00 \+1%/.test(t), 'SINAPI: materiais +3% (1.000 → 1.030) e mão de obra +1% (1.000 → 1.010) no mês');
+check(/Materiais 1\.030,00 \+3%/.test(t) && /Mão de obra 1\.010,00 \+1%/.test(t), 'SINAPI: materiais +3% (1.000 → 1.030) e mão de obra +1% (1.000 → 1.010) no mês');
 // valores desatualizados: o último mês é de 3 meses atrás
 check(/Os valores são de/.test(t) && /atualize/i.test(t), 'aviso de valores desatualizados (o último é de 3 meses atrás)');
 // persistência
