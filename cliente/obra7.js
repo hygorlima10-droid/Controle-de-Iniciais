@@ -356,6 +356,7 @@ function ob7Avisos(){
   ob7Medicoes().forEach(function(m){ if (m.status !== 'liberada' && !m.liberacaoId && m.data && m.data <= somarDias(hoje, 15)) a.push({ tipo: 'med', id: m.id, d: m.data, titulo: 'Obra · ' + m.numero + 'ª medição', detalhe: (m.data < hoje ? 'Prevista para ' : 'Liberação prevista em ') + fmtData(m.data) + (m.status === 'solicitada' ? ' · já pedida ao banco' : ' · peça ao banco'), valor: Number(m.valor) || 0, atraso: m.data < hoje }); });
   var j = null; try{ j = ob7Juros(); }catch(e){}
   if (j){ var at = j.rows.filter(function(x){ return x.situacao === 'atual' && !x.lancado && x.juros > 0.004; })[0]; if (at && todayISO().slice(8, 10) >= '05') a.push({ tipo: 'juros', id: at.mes, d: hoje, titulo: 'Obra · juros de ' + mesLabel(at.mes).toLowerCase(), detalhe: 'Estimado; confira com o boleto do banco', valor: at.juros, atraso: false }); }
+  try{ var atr = mfRefAtrasada(); if (atr && todayISO().slice(8, 10) >= '10') a.push({ tipo: 'calc', id: 'refs', d: hoje, titulo: 'Obra · atualizar custos de referência', detalhe: 'Valores de ' + mfMesCurto(atr.ultimo) + '; já deve ter saído o de ' + mfMesCurto(atr.esperado) + '.', valor: null, atraso: false }); }catch(e){}
   return a.sort(function(x, y){ return x.d.localeCompare(y.d); });
 }
 function ob7LinhaAviso(a){
@@ -393,6 +394,7 @@ var ob7AvisoAtual = null;
 document.addEventListener('click', function(ev){
   var el = ev.target.closest ? ev.target.closest('[data-ob7-aviso]') : null; if (!el) return;
   var p = el.getAttribute('data-ob7-aviso').split('|'), a = ob7Avisos().filter(function(x){ return x.tipo === p[0] && String(x.id) === p[1]; })[0]; if (!a) return;
+  if (a.tipo === 'calc'){ try{ setActiveTab('obra'); mfS.obra = 'calc'; renderObra(); }catch(e){} return; }   /* lembrete mensal: abre a Calculadora */
   ob7MontarEscolha(); ob7AvisoAtual = a;
   qs('obAvTitulo').textContent = a.titulo; qs('obAvInfo').textContent = a.detalhe + (a.valor != null ? ' · ' + fmtMoeda(a.valor) : '');
   qs('obAvFeito').textContent = a.tipo === 'gasto' ? 'Marcar como pago' : (a.tipo === 'check' ? 'Marcar como feito' : (a.tipo === 'med' ? 'Registrar liberação' : 'Lançar o gasto'));
@@ -402,5 +404,5 @@ document.addEventListener('click', function(ev){
 });
 /* itens da obra para as notificações das 10h (o que vence hoje) */
 function ob7Itens(hoje, lim){
-  return ob7Avisos().filter(function(a){ return a.d >= hoje && a.d <= lim && a.tipo !== 'juros'; }).map(function(a){ return { d: a.d, t: 'obra', n: a.titulo, l: '', v: a.valor }; });
+  return ob7Avisos().filter(function(a){ return a.d >= hoje && a.d <= lim && a.tipo !== 'juros' && a.tipo !== 'calc'; }).map(function(a){ return { d: a.d, t: 'obra', n: a.titulo, l: '', v: a.valor }; });
 }

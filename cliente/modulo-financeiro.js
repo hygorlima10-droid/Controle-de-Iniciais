@@ -145,7 +145,7 @@ function mfResumo(){
 }
 
 /* ---------------- CONSTRUÇÃO ---------------- */
-var MF_OBRA_ABAS = [['resumo', 'Resumo'], ['etapas', 'Etapas'], ['gastos', 'Gastos'], ['caixa', 'Dinheiro e financiamento']];
+var MF_OBRA_ABAS = [['resumo', 'Resumo'], ['etapas', 'Etapas'], ['gastos', 'Gastos'], ['caixa', 'Dinheiro e financiamento'], ['calc', 'Calculadora']];
 var MF_OB7 = { fin: 'caixa', jur: 'caixa', cx: 'caixa', chk: 'etapas', ext: 'gastos' };
 /* roda depois de renderObra() (e dos quadros extras do obra7): separa a tela em sub-abas e monta o Resumo */
 function mfObra(){
@@ -153,15 +153,20 @@ function mfObra(){
   var cfg = obraCfg(); if (!cfg.criada || !el.querySelector('.ob-cards')) return;
   var r = obraResumo();
   mfCss();
-  if (mfS.obra == null) mfS.obra = mdInicial('obra', ['etapas', 'gastos', 'caixa', 'tudo']);   /* 'tudo' = a tela inteira de uma vez, como era antes das sub-abas (não aparece na barra; os testes antigos da obra usam) */
+  if (mfS.obra == null) mfS.obra = mdInicial('obra', ['etapas', 'gastos', 'caixa', 'calc', 'tudo']);   /* 'tudo' = a tela inteira de uma vez, como era antes das sub-abas (não aparece na barra; os testes antigos da obra usam) */
   var sub = mfS.obra, filhos = Array.prototype.slice.call(el.children);
   filhos.forEach(function(c){
     var h4 = c.querySelector(':scope > .financeiro-secao-head h4'), t = h4 ? h4.textContent : '', sec = 'etapas';
     if (c.classList.contains('ob-tiles')) sec = 'acoes'; else if (c.hasAttribute('data-ob7-sec')) sec = MF_OB7[c.getAttribute('data-ob7-sec')] || 'caixa'; else if (c.classList.contains('ob-cards')) sec = 'caixa'; else if (/^Gastos/.test(t)) sec = 'gastos'; else if (/^Dinheiro da obra/.test(t)) sec = 'caixa';
-    c.style.display = (sec === 'acoes' || sec === sub || sub === 'tudo') ? '' : 'none';
+    c.style.display = sub === 'calc' ? 'none' : ((sec === 'acoes' || sec === sub || sub === 'tudo') ? '' : 'none');
   });
   var bar = document.createElement('div'); bar.id = 'obAbas'; bar.innerHTML = mdBarraHtml(MF_OBRA_ABAS, sub, function(k){ return 'data-mf-obra="' + k + '"'; });
   el.insertBefore(bar, el.firstChild);
+  if (sub === 'calc'){
+    var pc = document.createElement('div'); pc.className = 'md-painel'; pc.setAttribute('data-mf', 'obra-calc');
+    try{ pc.innerHTML = mfCalcHtml(); }catch(e){ console.error('calculadora da obra', e); pc.innerHTML = '<div class="empty"><strong>Não consegui montar a calculadora</strong>As outras sub-abas continuam funcionando.</div>'; }
+    el.appendChild(pc); return;
+  }
   if (sub !== 'resumo') return;
   var p = document.createElement('div'); p.className = 'md-painel'; p.setAttribute('data-mf', 'obra');
   try{ p.innerHTML = mfObraResumo(r, cfg); }catch(e){ console.error('resumo da obra', e); p.innerHTML = '<div class="empty"><strong>Não consegui montar o resumo</strong>As outras sub-abas continuam funcionando.</div>'; }
@@ -270,3 +275,148 @@ document.addEventListener('click', function(ev){
 });
 (function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { mfS: mfS, mfIr: mfIr }); })();
 mfInit();
+
+/* ---------------- CALCULADORA DE CUSTOS DA OBRA (Construção › Calculadora) ----------------
+   Estimativa de referência: área × CUB do padrão (R1-B baixo, R1-N normal, R1-A alto; Sinduscon-GO, NBR 12.721) + outros custos que o CUB não inclui + margem de segurança.
+   O uso principal é ACOMPANHAR a evolução dos preços: cada mês o proprietário registra os valores de referência (CUB e, se quiser, o SINAPI/IBGE de Goiás, que separa materiais e mão
+   de obra) e a tela mostra quanto subiu. Os valores ficam em config.obra.refs (histórico) e as escolhas em config.obra.calc. Não altera o orçamento nem nenhum cálculo da obra. */
+var MF_PADROES = { b: ['Baixo', 'R1-B'], n: ['Normal', 'R1-N'], a: ['Alto', 'R1-A'] };
+var MF_LINKS = { cub: 'https://cbic.org.br/hubdedados/custo-construcao', sinapi: 'https://sidra.ibge.gov.br/home/sinapi/brasil' };
+function mfNum(t){ var x = String(t == null ? '' : t).trim(); if (!x) return 0; if (x.indexOf(',') >= 0) x = x.replace(/\./g, '').replace(',', '.'); var n = Number(x); return isFinite(n) ? n : 0; }
+function mfMesCurto(m){ return /^\d{4}-\d{2}$/.test(m || '') ? MES_CURTO_AT[Number(m.slice(5, 7)) - 1] + '/' + m.slice(0, 4) : '—'; }
+function mfRefs(){
+  var l = (obraCfg().refs || []).filter(function(r){ return r && /^\d{4}-\d{2}$/.test(r.mes || '') && r.cub && (Number(r.cub.n) > 0 || Number(r.cub.b) > 0 || Number(r.cub.a) > 0); });
+  return l.slice().sort(function(a, b){ return a.mes.localeCompare(b.mes); });
+}
+/* o CUB e o SINAPI de um mês saem no começo do mês seguinte: depois do dia 10 já deve existir o do mês passado; antes disso, o do retrasado */
+function mfRefEsperada(){ var h = todayISO(); return deslocarMes(h.slice(0, 7), h.slice(8, 10) >= '10' ? -1 : -2); }
+function mfRefAtrasada(){ var l = mfRefs(), u = l[l.length - 1]; if (!u) return null; var esp = mfRefEsperada(); return u.mes < esp ? { ultimo: u.mes, esperado: esp } : null; }
+function mfCalcCfg(){ var c = obraCfg().calc || {}; return { area: Number(c.area) > 0 ? Number(c.area) : 0, padrao: MF_PADROES[c.padrao] ? c.padrao : 'n', terreno: Number(c.terreno) > 0 ? Number(c.terreno) : 0, especial: Number(c.especial) > 0 ? Number(c.especial) : 0, mobiliario: Number(c.mobiliario) > 0 ? Number(c.mobiliario) : 0, margem: Number(c.margem) >= 0 && c.margem !== '' && c.margem != null ? Number(c.margem) : 10 }; }
+function mfCalcTotal(cc, ref){
+  var cub = ref && ref.cub ? Number(ref.cub[cc.padrao]) || 0 : 0, basico = r2(cc.area * cub), outros = r2(cc.terreno + cc.especial + cc.mobiliario), margemV = r2((basico + outros) * cc.margem / 100);
+  return { cub: cub, basico: basico, outros: outros, margemV: margemV, total: r2(basico + outros + margemV) };
+}
+function mfVar(a, b){ return a > 0 && b > 0 ? (b / a - 1) * 100 : null; }
+function mfVarTxt(v){ return v === null ? '—' : (v >= 0 ? '+' : '−') + fmtPerc(Math.abs(v)); }
+function mfVarCls(v){ return v === null ? '' : (v > 0.05 ? ' style="color:var(--urgente)"' : (v < -0.05 ? ' style="color:var(--success)"' : '')); }
+function mfCalcHtml(){
+  var refs = mfRefs(), cc = mfCalcCfg(), ult = refs[refs.length - 1] || null, pri = refs[0] || null, atr = mfRefAtrasada(), pad = MF_PADROES[cc.padrao];
+  var h = '';
+  if (!ult){
+    return '<div class="md-card"><div class="md-h"><span class="md-k">Valores de referência</span></div><div class="saldo-data" style="margin:6px 0 10px">Para começar, registre o <b>CUB de Goiás</b> do último mês (Sinduscon-GO) e, se quiser separar materiais e mão de obra, o <b>custo médio do m² em Goiás (SINAPI/IBGE)</b>. Depois, a cada mês, é só acrescentar os novos valores e a tela mostra quanto os preços subiram.</div>' +
+      '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-mfc="atualizar">Registrar valores</button></div>' + mfLinksHtml() + '</div>';
+  }
+  if (atr) h += '<div class="aviso-sis"><span class="as-txt"><b>Os valores são de ' + mfMesCurto(atr.ultimo) + '.</b> Já deve ter saído o de ' + mfMesCurto(atr.esperado) + ': atualize para a estimativa e a evolução não ficarem defasadas.</span><span class="as-acoes"><button type="button" data-mfc="atualizar">Atualizar valores</button></span></div>';
+  var campo = function(rot, id, valor, un, dica){ return '<div class="field"><label class="field-label" for="' + id + '">' + rot + '</label><div style="display:flex;gap:8px;align-items:center"><input type="text" inputmode="decimal" id="' + id + '" data-mfc-in="1" value="' + escapeHtml(valor) + '" style="flex:1"><span class="saldo-data" style="margin:0;white-space:nowrap">' + un + '</span></div>' + (dica ? '<div class="saldo-data" style="margin:2px 0 0">' + dica + '</div>' : '') + '</div>'; };
+  var f2 = function(v){ return v ? String(v).replace('.', ',') : ''; };
+  h += '<div class="md-card"><div class="md-h"><span class="md-k">O que você vai construir</span></div>' +
+    campo('Área construída', 'mfc_area', f2(cc.area), 'm²') +
+    '<div class="field"><label class="field-label">Padrão do acabamento (projeto-padrão da NBR 12.721)</label><div class="segmented" id="mfcPadrao">' + Object.keys(MF_PADROES).map(function(k){ return '<button type="button" class="seg-btn' + (cc.padrao === k ? ' active' : '') + '" data-mfc-padrao="' + k + '">' + MF_PADROES[k][0] + ' · ' + MF_PADROES[k][1] + '</button>'; }).join('') + '</div></div>' +
+    campo('Terreno, projetos e taxas', 'mfc_terreno', f2(cc.terreno), 'R$', 'o CUB não inclui') + campo('Fundação especial, muro, paisagismo, piscina', 'mfc_especial', f2(cc.especial), 'R$', 'o CUB não inclui') + campo('Mobiliário e eletros', 'mfc_mobiliario', f2(cc.mobiliario), 'R$', 'o CUB não inclui') +
+    campo('Margem de segurança', 'mfc_margem', f2(cc.margem), '% sobre a obra', 'regra prática: imprevistos de obra; você escolhe') + '</div>';
+  var t = mfCalcTotal(cc, ult), tPri = pri && pri !== ult ? mfCalcTotal(cc, pri) : null, varTot = tPri ? mfVar(tPri.total, t.total) : null;
+  var mat = ult.sinapi && Number(ult.sinapi.total) > 0 && Number(ult.sinapi.mat) > 0 ? Number(ult.sinapi.mat) / Number(ult.sinapi.total) : null;
+  h += '<div class="md-card" id="mfcEst"><div class="md-h"><span class="md-k">Estimativa · referência de ' + mfMesCurto(ult.mes) + '</span></div>' + mfEstHtml(cc, t, ult, mat, pad, varTot, pri) + '</div>';
+  /* evolução dos preços */
+  var ult12 = refs.slice(-12), serie = ult12.map(function(r){ return Number(r.cub[cc.padrao]) || 0; });
+  var comCub = ult12.filter(function(r){ return Number(r.cub[cc.padrao]) > 0; });
+  var ev = '';
+  if (comCub.length < 2) ev = '<div class="md-vazio">Registre os valores de mais um mês para ver a evolução.</div>';
+  else {
+    var a12 = comCub.length >= 13 ? Number(comCub[comCub.length - 13].cub[cc.padrao]) : null, aM = Number(comCub[comCub.length - 2].cub[cc.padrao]), aI = Number(comCub[0].cub[cc.padrao]), aU = Number(comCub[comCub.length - 1].cub[cc.padrao]);
+    ev = mdLinha(ult12.map(function(r){ return r.mes; }), serie, MD_COR.ouro, { id: 'calc', titulo: 'CUB ' + pad[1] + ' por mês', fmt: function(v){ return Math.round(v).toLocaleString('pt-BR'); } }) +
+      '<div class="mf-cal"><span>No último mês</span><b' + mfVarCls(mfVar(aM, aU)) + '>' + mfVarTxt(mfVar(aM, aU)) + '</b></div>' +
+      '<div class="mf-cal"><span>Desde ' + mfMesCurto(comCub[0].mes) + '</span><b' + mfVarCls(mfVar(aI, aU)) + '>' + mfVarTxt(mfVar(aI, aU)) + '</b></div>' +
+      (a12 ? '<div class="mf-cal"><span>Em 12 meses</span><b' + mfVarCls(mfVar(a12, aU)) + '>' + mfVarTxt(mfVar(a12, aU)) + '</b></div>' : '');
+    var sp = refs.filter(function(r){ return r.sinapi && Number(r.sinapi.total) > 0 && Number(r.sinapi.mat) > 0; });
+    if (sp.length >= 2){
+      var pS = sp[0], uS = sp[sp.length - 1], mdoS = function(r){ return Number(r.sinapi.total) - Number(r.sinapi.mat); }, aS = sp.length >= 2 ? sp[sp.length - 2] : pS;
+      ev += '<div class="pb-sec-t" style="margin:10px 4px 2px">Materiais × mão de obra (SINAPI/IBGE, Goiás, R$/m²)</div>' +
+        '<table class="tabela-p" style="width:100%;font-size:var(--t2)"><tr><th></th><th>' + mfMesCurto(uS.mes) + '</th><th>mês anterior</th><th>desde ' + mfMesCurto(pS.mes) + '</th></tr>' +
+        '<tr><td>Materiais</td><td>' + fmtMoeda(Number(uS.sinapi.mat)) + '</td><td' + mfVarCls(mfVar(Number(aS.sinapi.mat), Number(uS.sinapi.mat))) + '>' + mfVarTxt(mfVar(Number(aS.sinapi.mat), Number(uS.sinapi.mat))) + '</td><td' + mfVarCls(mfVar(Number(pS.sinapi.mat), Number(uS.sinapi.mat))) + '>' + mfVarTxt(mfVar(Number(pS.sinapi.mat), Number(uS.sinapi.mat))) + '</td></tr>' +
+        '<tr><td>Mão de obra</td><td>' + fmtMoeda(mdoS(uS)) + '</td><td' + mfVarCls(mfVar(mdoS(aS), mdoS(uS))) + '>' + mfVarTxt(mfVar(mdoS(aS), mdoS(uS))) + '</td><td' + mfVarCls(mfVar(mdoS(pS), mdoS(uS))) + '>' + mfVarTxt(mfVar(mdoS(pS), mdoS(uS))) + '</td></tr></table>';
+    }
+  }
+  h += mdCard('Evolução dos preços de referência', ev);
+  /* valores guardados */
+  h += '<div class="md-card"><div class="md-h"><span class="md-k">Valores de referência guardados</span></div>' +
+    '<table class="tabela-p" style="width:100%;font-size:var(--t2)"><tr><th>Mês</th><th>R1-B</th><th>R1-N</th><th>R1-A</th><th>SINAPI</th></tr>' +
+    refs.slice().reverse().slice(0, 12).map(function(r){ return '<tr><td><button type="button" class="btn-text" data-mfc="editar" data-mes="' + r.mes + '">' + mfMesCurto(r.mes) + '</button></td><td>' + (r.cub.b ? fmtMoeda(Number(r.cub.b)) : '—') + '</td><td>' + (r.cub.n ? fmtMoeda(Number(r.cub.n)) : '—') + '</td><td>' + (r.cub.a ? fmtMoeda(Number(r.cub.a)) : '—') + '</td><td>' + (r.sinapi && Number(r.sinapi.total) > 0 ? fmtMoeda(Number(r.sinapi.total)) : '—') + '</td></tr>'; }).join('') + '</table>' +
+    '<div class="saldo-data">CUB: Sinduscon-GO (R$/m², NBR 12.721). SINAPI: IBGE/Caixa (custo médio do m² em Goiás). Toque no mês para corrigir.</div>' +
+    '<div class="pb-acts"><button type="button" class="btn btn-primary pb-b" data-mfc="atualizar">Atualizar valores</button></div>' + mfLinksHtml() + '</div>';
+  h += '<div class="saldo-data" style="margin:6px 4px">É uma <b>referência</b>, não um orçamento de engenharia: o CUB não inclui terreno, projetos, taxas, fundação especial, elevadores, paisagismo e mobiliário. Serve para acompanhar se os preços estão subindo.</div>';
+  return h;
+}
+function mfEstHtml(cc, t, ult, mat, pad, varTot, pri){
+  var cal = function(rot, v, tot){ return '<div class="mf-cal' + (tot ? ' tot' : '') + '"><span>' + rot + '</span><b>' + fmtMoeda(v) + '</b></div>'; };
+  if (!(cc.area > 0)) return '<div class="md-vazio">Informe a área construída para ver a estimativa.</div>';
+  if (!(t.cub > 0)) return '<div class="md-vazio">Não há CUB ' + pad[1] + ' registrado em ' + mfMesCurto(ult.mes) + '. Atualize os valores.</div>';
+  return cal('Custo básico · ' + String(cc.area).replace('.', ',') + ' m² × ' + fmtMoeda(t.cub) + '/m² (CUB ' + pad[1] + ')', t.basico) + cal('Outros custos informados', t.outros) + cal('Margem de segurança (' + String(cc.margem).replace('.', ',') + '%)', t.margemV) + cal('Total estimado', t.total, true) +
+    (mat !== null ? '<div class="div-barra" style="height:10px;margin:8px 0 2px"><i style="width:' + (mat * 100).toFixed(1) + '%;background:var(--accent-2,#C98500)"></i><i style="width:' + ((1 - mat) * 100).toFixed(1) + '%;background:#2A78D6"></i></div><div class="saldo-data">Materiais ~' + fmtPerc(mat * 100) + ' · mão de obra ~' + fmtPerc((1 - mat) * 100) + ' (proporção do SINAPI/IBGE em Goiás, ' + mfMesCurto(ult.mes) + ')</div>' : '') +
+    (varTot !== null ? '<div class="mf-cal"><span>Esta mesma obra em ' + mfMesCurto(pri.mes) + ' custaria</span><b>' + fmtMoeda(mfCalcTotal(cc, pri).total) + ' <span' + mfVarCls(varTot) + '>(' + mfVarTxt(varTot) + ')</span></b></div>' : '');
+}
+function mfLinksHtml(){ return '<div class="pb-acts" style="margin-top:4px"><a class="btn btn-ghost pb-b" href="' + MF_LINKS.cub + '" target="_blank" rel="noopener">Abrir tabela do CUB (CBIC)</a><a class="btn btn-ghost pb-b" href="' + MF_LINKS.sinapi + '" target="_blank" rel="noopener">Abrir SINAPI (IBGE)</a></div>'; }
+/* atualiza só a estimativa enquanto digita (sem redesenhar a tela) */
+function mfCalcAoVivo(){
+  var cc = { area: mfNum((qs('mfc_area') || {}).value), padrao: mfCalcCfg().padrao, terreno: mfNum((qs('mfc_terreno') || {}).value), especial: mfNum((qs('mfc_especial') || {}).value), mobiliario: mfNum((qs('mfc_mobiliario') || {}).value), margem: (qs('mfc_margem') || {}).value === '' ? 0 : mfNum((qs('mfc_margem') || {}).value) };
+  var refs = mfRefs(), ult = refs[refs.length - 1], pri = refs[0], el = qs('mfcEst'); if (!ult || !el) return;
+  var t = mfCalcTotal(cc, ult), tp = pri && pri !== ult ? mfCalcTotal(cc, pri) : null, mat = ult.sinapi && Number(ult.sinapi.total) > 0 && Number(ult.sinapi.mat) > 0 ? Number(ult.sinapi.mat) / Number(ult.sinapi.total) : null;
+  el.innerHTML = '<div class="md-h"><span class="md-k">Estimativa · referência de ' + mfMesCurto(ult.mes) + '</span></div>' + mfEstHtml(cc, t, ult, mat, MF_PADROES[cc.padrao], tp ? mfVar(tp.total, t.total) : null, pri);
+}
+function mfCalcSalvar(extra){
+  var cc = mfCalcCfg(), c = Object.assign({}, cc, { area: mfNum((qs('mfc_area') || {}).value) || 0, terreno: mfNum((qs('mfc_terreno') || {}).value), especial: mfNum((qs('mfc_especial') || {}).value), mobiliario: mfNum((qs('mfc_mobiliario') || {}).value), margem: (qs('mfc_margem') || {}).value === '' ? 0 : mfNum((qs('mfc_margem') || {}).value) }, extra || {});
+  return Promise.resolve(persistObraCfg({ calc: c }));
+}
+/* janela "Atualizar valores" */
+function mfRefMontar(){
+  if (qs('overlayMfRef')) return;
+  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayMfRef';
+  d.innerHTML = '<div class="modal"><div class="modal-head"><h2 id="mfRefTit">Atualizar valores de referência</h2><button class="icon-btn" id="mfRefX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+    '<div class="modal-body"><div class="parcela-sum">Abra as tabelas (botões na tela anterior), veja o mês mais recente e digite os valores em R$/m². O app guarda o mês e acompanha a evolução. Se o mês já existir, os valores são substituídos.</div>' +
+    '<div class="field"><label class="field-label" for="mfRefMes">Mês de referência</label><input type="month" id="mfRefMes"></div>' +
+    '<div class="field"><label class="field-label" for="mfRefB">CUB R1-B · padrão baixo (R$/m²)</label><input type="text" inputmode="decimal" id="mfRefB"></div>' +
+    '<div class="field"><label class="field-label" for="mfRefN">CUB R1-N · padrão normal (R$/m²)</label><input type="text" inputmode="decimal" id="mfRefN"></div>' +
+    '<div class="field"><label class="field-label" for="mfRefA">CUB R1-A · padrão alto (R$/m²)</label><input type="text" inputmode="decimal" id="mfRefA"></div>' +
+    '<div class="pb-sec-t" style="margin:10px 4px 2px">SINAPI/IBGE de Goiás (opcional, separa materiais e mão de obra)</div>' +
+    '<div class="field"><label class="field-label" for="mfRefTot">Custo médio do m² (R$/m²)</label><input type="text" inputmode="decimal" id="mfRefTot"></div>' +
+    '<div class="field"><label class="field-label" for="mfRefMat">Parte de materiais (R$/m²)</label><input type="text" inputmode="decimal" id="mfRefMat"></div>' +
+    '<div class="form-error" id="mfRefErro"></div></div>' +
+    '<div class="modal-foot"><button class="btn btn-ghost" id="mfRefRem" type="button" style="display:none">Remover este mês</button><button class="btn btn-ghost" id="mfRefCancel" type="button">Cancelar</button><button class="btn btn-primary" id="mfRefSalvar" type="button">Salvar</button></div></div>';
+  document.body.appendChild(d);
+  qs('mfRefX').addEventListener('click', function(){ d.classList.remove('show'); }); qs('mfRefCancel').addEventListener('click', function(){ d.classList.remove('show'); });
+  qs('mfRefSalvar').addEventListener('click', mfRefSalvar); qs('mfRefRem').addEventListener('click', mfRefRemover);
+  qs('mfRefMes').addEventListener('change', function(){ mfRefPreencher(this.value); });
+}
+function mfRefPreencher(mes){
+  var r = mfRefs().filter(function(x){ return x.mes === mes; })[0], f = function(v){ return Number(v) > 0 ? String(v).replace('.', ',') : ''; };
+  qs('mfRefB').value = r ? f(r.cub.b) : ''; qs('mfRefN').value = r ? f(r.cub.n) : ''; qs('mfRefA').value = r ? f(r.cub.a) : '';
+  qs('mfRefTot').value = r && r.sinapi ? f(r.sinapi.total) : ''; qs('mfRefMat').value = r && r.sinapi ? f(r.sinapi.mat) : '';
+  qs('mfRefRem').style.display = r ? '' : 'none'; qs('mfRefErro').textContent = '';
+}
+function mfRefAbrir(mes){
+  mfRefMontar(); var m = mes || mfRefEsperada(); qs('mfRefMes').value = m; mfRefPreencher(m); qs('overlayMfRef').classList.add('show');
+}
+function mfRefSalvar(){
+  var mes = qs('mfRefMes').value, b = mfNum(qs('mfRefB').value), n = mfNum(qs('mfRefN').value), a = mfNum(qs('mfRefA').value), tot = mfNum(qs('mfRefTot').value), mat = mfNum(qs('mfRefMat').value), erro = '';
+  if (!/^\d{4}-\d{2}$/.test(mes)) erro = 'Escolha o mês de referência.';
+  else if (!(b > 0 || n > 0 || a > 0)) erro = 'Informe ao menos um valor do CUB.';
+  else if ([b, n, a, tot, mat].some(function(v){ return v < 0 || v > 100000; })) erro = 'Confira os valores: são R$ por metro quadrado.';
+  else if ((tot > 0) !== (mat > 0)) erro = 'Para o SINAPI, informe o custo médio e a parte de materiais (ou deixe os dois em branco).';
+  else if (tot > 0 && mat >= tot) erro = 'A parte de materiais precisa ser menor que o custo médio do m².';
+  if (erro){ qs('mfRefErro').textContent = erro; return; }
+  var lista = mfRefs().filter(function(x){ return x.mes !== mes; }).concat([{ mes: mes, cub: { b: b, n: n, a: a }, sinapi: tot > 0 ? { total: tot, mat: mat } : null, em: new Date().toISOString() }]).sort(function(x, y){ return x.mes.localeCompare(y.mes); });
+  Promise.resolve(persistObraCfg({ refs: lista })).then(function(){ qs('overlayMfRef').classList.remove('show'); renderObra(); toast('Valores de ' + mfMesCurto(mes) + ' guardados.'); }).catch(function(e){ qs('mfRefErro').textContent = 'Não consegui salvar: ' + ((e && e.message) || ''); });
+}
+function mfRefRemover(){
+  var mes = qs('mfRefMes').value, lista = mfRefs().filter(function(x){ return x.mes !== mes; });
+  Promise.resolve(persistObraCfg({ refs: lista })).then(function(){ qs('overlayMfRef').classList.remove('show'); renderObra(); toast('Valores de ' + mfMesCurto(mes) + ' removidos.'); });
+}
+document.addEventListener('click', function(ev){
+  var b = ev.target.closest ? ev.target.closest('[data-mfc]') : null;
+  if (b){ var a = b.getAttribute('data-mfc'); if (a === 'atualizar') mfRefAbrir(''); else if (a === 'editar') mfRefAbrir(b.getAttribute('data-mes')); return; }
+  var p = ev.target.closest ? ev.target.closest('[data-mfc-padrao]') : null;
+  if (p){ mfCalcSalvar({ padrao: p.getAttribute('data-mfc-padrao') }).then(function(){ renderObra(); }); }
+});
+document.addEventListener('input', function(ev){ if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-mfc-in')) mfCalcAoVivo(); });
+document.addEventListener('change', function(ev){ if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-mfc-in')) mfCalcSalvar(); });
+(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { mfCalcTotal: mfCalcTotal, mfRefEsperada: mfRefEsperada }); })();
