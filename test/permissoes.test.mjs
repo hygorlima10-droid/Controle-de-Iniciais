@@ -50,6 +50,16 @@ check((await ana('PUT', '/api/db/casos/c5', { cliente: 'Cliente Um', advogados: 
 const ag = await ana('POST', '/api/db/agenda', { tipo: 'tarefa', titulo: 'Minha', data: '2026-11-14' });
 check(ag.s === 200 && ids(await bruno('GET', '/api/db/agenda')) === 'g2' && (await ana('GET', '/api/db/agenda')).j.docs.find((d) => d.id === ag.j.id).data.criadoPor === 'u2', 'tarefa nova é só de quem criou (carimbo de autor)');
 check((await ana('PUT', '/api/db/agenda/g2', { tipo: 'tarefa', titulo: 'mexeu', compartilhada: true })).s === 403, 'tarefa compartilhada de outro só quem criou altera');
+console.log('\n— tarefas: autoria vale para todos os papéis; concluir tarefa compartilhada vale para quem a vê (auditoria F-02)');
+const g2 = { tipo: 'tarefa', titulo: 'Compartilhada', criadoPor: 'u1', compartilhada: true, data: '2026-11-12' };
+check((await ana('PUT', '/api/db/agenda/g2', { ...g2, concluido: true, situacao: 'feito', concluidoPor: 'Ana Advogada', concluidoEm: '2026-11-12' })).s === 200, 'advogada que vê uma tarefa compartilhada de outro pode CONCLUIR (só os campos de conclusão mudam)');
+check((await caio('PUT', '/api/db/agenda/g2', { ...g2, concluido: false, situacao: 'afazer', concluidoPor: '', concluidoEm: '' })).s === 200, 'estagiário também pode reabri-la');
+check((await caio('PUT', '/api/db/agenda/g2', { ...g2, titulo: 'mexeu' })).s === 403 && (await caio('PUT', '/api/db/agenda/g2', { ...g2, titulo: 'mexeu', concluido: true })).s === 403, 'estagiário não muda o conteúdo da tarefa compartilhada de outro (nem junto com a conclusão)');
+check((await caio('PUT', '/api/db/agenda/g4', { tipo: 'tarefa', titulo: 'invadida', data: '2026-11-12', criadoPor: 'u2' })).s === 403 && (await dani('DELETE', '/api/db/agenda/g4')).s === 403, 'estagiário não altera nem exclui a tarefa de outra pessoa (mesmo com a permissão de excluir)');
+check((await caio('PUT', '/api/db/agenda/g3', { tipo: 'prazo', titulo: 'Prazo do processo Um', processo: '0000001-11.2024.8.09.0001', data: '2026-11-13', obs: 'ajustado pelo estagiário' })).s === 200, 'prazo de um processo o estagiário altera (ele trabalha em todos os processos)');
+await dono('PUT', '/api/db/agenda/gx1', { tipo: 'tarefa', titulo: 'do processo', processo: '0000001-11.2024.8.09.0001', data: '2026-11-15', criadoPor: 'u1' });
+const gxp = await dani('POST', '/api/db/agenda', { tipo: 'tarefa', titulo: 'da Dani', data: '2026-11-16' });
+check((await dani('DELETE', '/api/db/agenda/' + gxp.j.id)).s === 200 && (await dani('DELETE', '/api/db/agenda/gx1')).s === 200, 'com a permissão, o estagiário exclui a própria tarefa e a de um processo');
 check((await ana('POST', '/api/lote', { ops: [{ acao: 'gravar', colecao: 'casos', id: 'c2', dados: { cliente: 'x', advogados: [{ oab: '11111/GO' }] } }] })).s === 404, 'o lote segue as mesmas regras');
 
 console.log('\n— estagiário: publicações e agendas de todo o escritório (com opção de desligar)');

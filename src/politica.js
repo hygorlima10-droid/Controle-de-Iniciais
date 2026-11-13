@@ -151,6 +151,13 @@ export function carimbarAutor(colecao, antes, depois, auth) {
   if (!antes) { if (!(ehDono(auth) && depois.criadoPor)) depois.criadoPor = auth.usuario.id; }   // o proprietário pode informar o autor (importações); os demais, nunca
   else if (antes.criadoPor) depois.criadoPor = antes.criadoPor;
 }
+/* agenda: quem pode alterar um item que já existe (vale para advogado e estagiário). Pode: quem criou; quem é responsável; quem participa do processo do item
+   (o estagiário vê todos os processos); e, numa tarefa COMPARTILHADA, qualquer pessoa que a vê pode concluir ou reabrir (só os campos de conclusão mudam). */
+const CAMPOS_CONCLUSAO = ['concluido', 'cancelado', 'situacao', 'concluidoEm', 'concluidoPor', 'protocoladoEm', 'protocoloObs'];
+const estavel = (v) => (Array.isArray(v) ? '[' + v.map(estavel).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + estavel(v[k])).join(',') + '}' : JSON.stringify(v === undefined ? null : v));
+const semConclusao = (d) => { const o = { ...(d || {}) }; for (const k of CAMPOS_CONCLUSAO) delete o[k]; delete o.criadoPor; delete o.id; return estavel(o); };
+const agendaDaPessoa = (antes, u, esc) => antes.criadoPor === u.id || ehResponsavel(antes, u) || (!!antes.processo && (u.papel === 'estagiario' || (!!esc && esc.processos.has(digitos(antes.processo)))));
+const agendaAlteravel = (antes, depois, u, esc) => agendaDaPessoa(antes, u, esc) || (antes.compartilhada === true && !!depois && semConclusao(antes) === semConclusao(depois));
 export async function autorizarGravacao(env, colecao, id, antes, depois, auth, esc) {
   if (ehDono(auth)) { carimbarAutor(colecao, antes, depois, auth); return null; }
   const u = usu(auth);
@@ -159,7 +166,7 @@ export async function autorizarGravacao(env, colecao, id, antes, depois, auth, e
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes) { const ant = { ...antes, id: antes.id || id }; if (!podeVer(colecao, ant, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.'); }
   if (LIVRES.has(colecao)) return null;
-  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo))) && !ehResponsavel(antes, u)) return NEGADO('Só quem criou pode alterar esta tarefa.');
+  if (colecao === 'agenda' && antes && !agendaAlteravel(antes, depois, u, esc)) return NEGADO('Só quem criou, quem é responsável ou quem está no processo pode alterar esta tarefa.');
   if (!antes && (colecao === 'agenda' || colecao === 'clientes')) depois.criadoPor = u.id;
   if (antes && antes.criadoPor && (colecao === 'agenda' || colecao === 'clientes')) depois.criadoPor = antes.criadoPor;   // o autor não muda
   if (u.papel === 'estagiario') {
@@ -182,7 +189,7 @@ export async function autorizarExclusao(env, colecao, id, antes, auth, esc) {
   esc = esc || (u.papel === 'advogado' ? await escopoDoAdvogado(env, auth) : null);
   if (antes && !podeVer(colecao, { ...antes, id: antes.id || id }, auth, esc)) return erro(404, 'not_found', 'Registro não encontrado.');
   if (!podeExcluir(auth)) return NEGADO('Você não tem permissão para excluir registros.');
-  if (colecao === 'agenda' && antes && u.papel === 'advogado' && antes.criadoPor !== u.id && !(antes.processo && esc && esc.processos.has(digitos(antes.processo))) && !ehResponsavel(antes, u)) return NEGADO('Só quem criou pode excluir esta tarefa.');
+  if (colecao === 'agenda' && antes && !agendaDaPessoa(antes, u, esc)) return NEGADO('Só quem criou, quem é responsável ou quem está no processo pode excluir esta tarefa.');
   return null;
 }
 
