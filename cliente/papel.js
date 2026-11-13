@@ -66,7 +66,8 @@ function ppDesenharHon(){
 }
 /* rótulo "recebida por X" nas parcelas pagas de processos com divisão */
 function ppPor(n){
-  var s = n && n.pago && n.divisaoRec && n.divisaoRec.por ? String(n.divisaoRec.por).split(' ')[0] : '';
+  var pago = n && (n.pago || n.status === 'recebido' || n.status === 'recebida');   /* parcela/à vista (pago) ou acordo e alvará inteiros (status recebido) */
+  var s = pago && n.divisaoRec && n.divisaoRec.por ? String(n.divisaoRec.por).split(' ')[0] : '';
   return s ? ' <span class="pp-por">recebida por ' + escapeHtml(s) + '</span>' : '';
 }
 (function(){
