@@ -12,6 +12,7 @@ import { garantirMigracoes } from './migracao.js';
 import { restauracaoRotas } from './restauracao.js';
 import { usuariosRotas } from './usuarios.js';
 import { avisarAtividade, avisarRepasseA, prefsDe, equipeDe, limparPrefs, PREFS_PADRAO, EQUIPE_PADRAO, textoSemanal, usuariosAtivos } from './avisos.js';
+import { indicesRotas, buscarIndices } from './indices.js';
 import { equipeRotas, semAdvogadoRotas, agendaRotas } from './responsaveis.js';
 import { paginasDeAcesso, autenticar, segurancaRotas, temProprietario, proprietario } from './acesso.js';
 import { auditoriaRotas, historicoRotas, lixeiraRotas, limparSeguranca, stmtRegistro, stmtLixeira, registraColecao, vaiParaLixeira, tituloDe, mudancas, autorDe } from './auditoria.js';
@@ -560,7 +561,7 @@ async function enviarSemanal(env) {
 }
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : (async () => { try { await fazerBackup(env); } catch (e) { console.error('backup', e); } try { await enviarSemanal(env); } catch (e) { console.error('resumo semanal', e); } })()));
+    ctx.waitUntil(event.cron === '0 13 * * *' ? (async () => { try { await lerDjen(env); } catch (e) { console.error('leitura do DJEN', e); } try { await limparSeguranca(env); } catch (e) { console.error('limpeza', e); } try { await buscarIndices(env); } catch (e) { console.error('índices da construção', e); } await enviarResumoDiario(env); })() : (event.cron === '0 15,17,19,21 * * *' ? relerSePreciso(env).catch((e) => console.error('releitura do DJEN', e)) : (async () => { try { await fazerBackup(env); } catch (e) { console.error('backup', e); } try { await enviarSemanal(env); } catch (e) { console.error('resumo semanal', e); } })()));
   },
   async fetch(request, env, ctx) {
     return comSeguranca(await tratar(request, env, ctx));
@@ -578,7 +579,7 @@ const ROTAS = {
   backup: ['proprietario', (r, e, p, au) => api(r, e, p, au)], backups: ['proprietario', (r, e, p) => backups(r, e, p)], restaurar: ['proprietario', (r, e, p) => restauracaoRotas(r, e, p)],
   lixeira: ['proprietario', (r, e, p) => lixeiraRotas(r, e, p)], historico: ['sessao', async (r, e, p, a) => historicoRotas(r, e, p, a, a && a.usuario && a.usuario.papel === 'advogado' ? await escopoDoAdvogado(e, a) : null)], auditoria: ['proprietario', (r, e, p) => auditoriaRotas(r, e, p)],
   seguranca: ['sessao', (r, e, p, a) => segurancaRotas(r, e, p, a)], usuarios: ['proprietario', (r, e, p, a) => usuariosRotas(r, e, p, a)],
-  equipe: ['sessao', (r, e) => equipeRotas(r, e)], agenda: ['sessao', (r, e, p, a) => agendaRotas(r, e, p, a)], 'sem-advogado': ['proprietario', (r, e, p, a) => semAdvogadoRotas(r, e, p, a)],
+  indices: ['proprietario', (r, e, p) => indicesRotas(r, e, p)], equipe: ['sessao', (r, e) => equipeRotas(r, e)], agenda: ['sessao', (r, e, p, a) => agendaRotas(r, e, p, a)], 'sem-advogado': ['proprietario', (r, e, p, a) => semAdvogadoRotas(r, e, p, a)],
   eu: ['sessao', (r, e, p, a) => json(a && a.usuario ? (({ id, papel, nome, oabs, permissoes }) => ({ id, papel, nome, oabs, permissoes }))(normalizarUsuario(a.usuario)) : { papel: 'proprietario', nome: '', oabs: [], permissoes: { excluir: true, verTotais: true } })],   // quem está usando (a tela esconde o que é só do proprietário)
 };
 export const RAIZES_API = Object.keys(ROTAS);

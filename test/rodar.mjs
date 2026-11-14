@@ -13,11 +13,11 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..'), SENHA = 'senha-de-teste-123', LOGS = join(tmpdir(), 'horus-testes');
-const BASE_ANTIGA = { SENHA, IMPORTAR_AUTO: '0', LOGIN_ANTIGO: '1', DJEN_URL: 'http://127.0.0.1:8890/api/v1/comunicacao', DJEN_ESPERA_MS: '0', DATAJUD_URL: 'http://127.0.0.1:8891' };
+const BASE_ANTIGA = { SENHA, IMPORTAR_AUTO: '0', LOGIN_ANTIGO: '1', DJEN_URL: 'http://127.0.0.1:8890/api/v1/comunicacao', DJEN_ESPERA_MS: '0', DATAJUD_URL: 'http://127.0.0.1:8891', SIDRA_URL: 'http://127.0.0.1:8892', BCB_URL: 'http://127.0.0.1:8892' };
 
 /* Cada grupo = um servidor (porta, variáveis) + a lista de testes. "porTeste": servidor e banco novos a cada teste. */
 const GRUPOS = {
-  unitarios: { sem_servidor: true, testes: ['datajud', 'djen', 'push', 'pecas'] },
+  unitarios: { sem_servidor: true, testes: ['datajud', 'djen', 'push', 'pecas', 'indices'] },
   principal: { porta: 8812, vars: BASE_ANTIGA, testes: ['login', 'publicacoes', 'agenda', 'processos', 'vinculo-iniciais', 'protocolar-numero', 'abas-fixas', 'revisao-ligacoes', 'modulo-resumo', 'datajud-processos', 'analise-abas', 'audiencias', 'processos-tela', 'relatorios', 'pecas-tela', 'pecas-aprende', 'analises', 'relatorio-cliente', 'partes-unico', 'importar-djen', 'advogados-participantes', 'agenda-importar', 'agenda-detalhe', 'icones', 'restauracao-segura', 'restauracao-tela', 'configuracoes', 'lixeira-auditoria', 'lixeira-tela', 'transferencia-atomica', 'obra7', 'analises-ultimo', 'categorias', 'financas-geral', 'financas-pj', 'financas-pf', 'financas-patrimonio', 'metas-futuras', 'peticoes-layout', 'acordos-layout', 'alvaras-layout', 'obra-layout', 'clientes-arquivados-layout', 'obra-abater', 'adiar', 'modulo-juridico', 'modulo-financeiro', 'largura-kanban', 'logos-abertura', 'analises-semanas', 'analises-historico', 'orcamento', 'simulador', 'analises-futuro', 'obra-resumo', 'extratos-contas', 'conflito-paginas', 'integridade-aparelhos', 'extratos-ja-lancado', 'obra-calculadora', 'agenda-trabalho', 'homologacao', 'homologacao-celular', 'titulos-celular'] },
   'diario-isolado': { porta: 8815, vars: BASE_ANTIGA, porTeste: true, testes: ['publicacoes-iguais', 'leitura-auto', 'agenda-publicacao'] },   // dependem do estado do Diário Oficial: banco novo a cada teste
   'acesso-individual': { porta: 8813, vars: { SENHA, IMPORTAR_AUTO: '0' }, porTeste: true, testes: ['login-individual', 'login-tela'] },

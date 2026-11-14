@@ -356,7 +356,7 @@ function ob7Avisos(){
   ob7Medicoes().forEach(function(m){ if (m.status !== 'liberada' && !m.liberacaoId && m.data && m.data <= somarDias(hoje, 15)) a.push({ tipo: 'med', id: m.id, d: m.data, titulo: 'Obra · ' + m.numero + 'ª medição', detalhe: (m.data < hoje ? 'Prevista para ' : 'Liberação prevista em ') + fmtData(m.data) + (m.status === 'solicitada' ? ' · já pedida ao banco' : ' · peça ao banco'), valor: Number(m.valor) || 0, atraso: m.data < hoje }); });
   var j = null; try{ j = ob7Juros(); }catch(e){}
   if (j){ var at = j.rows.filter(function(x){ return x.situacao === 'atual' && !x.lancado && x.juros > 0.004; })[0]; if (at && todayISO().slice(8, 10) >= '05') a.push({ tipo: 'juros', id: at.mes, d: hoje, titulo: 'Obra · juros de ' + mesLabel(at.mes).toLowerCase(), detalhe: 'Estimado; confira com o boleto do banco', valor: at.juros, atraso: false }); }
-  try{ var atr = mfRefAtrasada(); if (atr && todayISO().slice(8, 10) >= '10') a.push({ tipo: 'calc', id: 'refs', d: hoje, titulo: 'Obra · atualizar custos de referência', detalhe: 'Valores de ' + mfMesCurto(atr.ultimo) + '; já deve ter saído o de ' + mfMesCurto(atr.esperado) + '.', valor: null, atraso: false }); }catch(e){}
+  try{ var atr = mfAtrasado(); if (atr) a.push({ tipo: 'calc', id: 'refs', d: hoje, titulo: 'Obra · valores de referência sem atualizar', detalhe: 'A busca automática do IBGE parou em ' + mfMesCurto(atr.ultimo) + '.', valor: null, atraso: false }); }catch(e){}
   return a.sort(function(x, y){ return x.d.localeCompare(y.d); });
 }
 function ob7LinhaAviso(a){

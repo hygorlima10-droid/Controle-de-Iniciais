@@ -16,7 +16,7 @@ A auditoria externa foi funcional (não visual). Ela **não conseguiu rodar a su
 | "Recebida por" em Acordos e Alvarás | **Limite conhecido** | Documentado; só aparece nas Iniciais. |
 | Cobrança do advogado com valor cheio | **Decisão registrada** | Não é defeito. |
 | Seletor universal de ícones | **Não é defeito** | A etapa 2.5 foi **cancelada pelo proprietário** em 09/11 (a base de ícones ficou pronta). |
-| Calculadora de custos de obra com referências de Goiás | **Não consta nas decisões** | Veio do plano antigo. Precisa de decisão: manter ou retirar do escopo. |
+| Calculadora de custos de obra com referências de Goiás | **Feita (14/11)** | SINAPI/IBGE + INCC automáticos; ver DECISOES.md. |
 | Logos de bancos | **Pendente de arquivos** | Só há logo de Itaú, C6, Caixa e Sicoob (os que o proprietário enviou). |
 
 ## Correções, na ordem
