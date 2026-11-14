@@ -46,7 +46,7 @@ await page.click('#prSub [data-v="analises"]'); await page.waitForTimeout(600);
 check(await visivel('#prAnalises') && !(await visivel('#prListaBloco')), 'sub-aba Análises continua funcionando');
 // ---- Agenda
 await aba('agenda');
-check(await on('#agSeg') === 'Resumo' && /Resumo\s*Semana\s*Mês\s*Lista\s*Quadro/.test((await t('#agSeg')).replace(/\n/g, ' ')), 'Agenda: sub-abas Resumo, Semana, Mês, Lista e Quadro; abre no Resumo');
+check(await on('#agSeg') === 'Resumo' && /Resumo\s*Meu dia\s*Semana\s*Mês\s*Lista\s*Quadro/.test((await t('#agSeg')).replace(/\n/g, ' ')), 'Agenda: sub-abas Resumo, Meu dia, Semana, Mês, Lista e Quadro; abre no Resumo');
 check(await kpi('agenda', 'Hoje') === '1' && await kpi('agenda', 'Prazos em 7 dias') === '1' && await kpi('agenda', 'Audiências em 7 dias') === '1' && await kpi('agenda', 'Atrasados') === '1', 'Agenda: 1 hoje, 1 prazo e 1 audiência em 7 dias, 1 atrasado');
 tx = await t('.md-painel[data-mj="agenda"]');
 check(/CARGA DOS PRÓXIMOS 7 DIAS/i.test(tx) && /POR RESPONSÁVEL/i.test(tx) && /Estagiários/.test(tx) && /PRÓXIMOS COMPROMISSOS/i.test(tx), 'Agenda: carga por dia, por responsável e próximos compromissos');
