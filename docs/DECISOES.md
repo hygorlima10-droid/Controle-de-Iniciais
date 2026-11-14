@@ -176,3 +176,23 @@ Plano completo e conferência de cada achado em `docs/PLANO-CORRECOES-AUDITORIA.
 - **Tela:** a sub-aba abre com os valores carregados. O proprietário digita só **área, fator, outros custos (terreno, fundação especial, muro, piscina…) e margem** (guardados em `config.obra.calc`; o formato antigo com terreno/especial/mobiliário é somado em "outros"). Estimativa = área × R$/m² × fator + outros + margem; proporção materiais × mão de obra do último mês; "Os preços estão subindo?": gráfico de 12 meses, variação no mês e em 12 meses (total, materiais, mão de obra), INCC no mês e acumulado em 12 meses, e a estimativa dele de um ano atrás × hoje. Sem formulário de valores, sem escolha de CUB, sem botão de orçamento total.
 - **Aviso:** só se o último mês do IBGE tiver mais de 2 meses de atraso (a busca automática parou): aparece na tela com "Atualizar agora" e na Central de atenção ("Obra · valores de referência sem atualizar"). Não altera o orçamento nem nenhum cálculo da obra.
 - **Cuidado de uso:** enquanto a pessoa digita, a tela não se redesenha (gravar uma escolha avisa a tela e roubava o foco do campo seguinte). Testes `obra-calculadora` (tela, com o IBGE e o Banco Central simulados) e `indices` (leitura, guarda, falha e espera).
+
+### Agenda: cartão único do prazo, dias úteis e atalhos (14/11/2026)
+- **Pedido do proprietário** (depois de usar 2 dias): a lista confundia a data fatal com a data marcada para mexer na peça; faltavam atalhos de adiar e editar em cada item. Análise, esboço e OK em 14/11.
+- **Um cartão por prazo.** Mostra as duas datas lado a lado ("Trabalhar até" em dourado e "Prazo fatal" em vermelho), cada uma com a sua contagem. Acabou o cartão separado "Dia de trabalhar na peça · interno".
+- **Onde aparece:** o cartão fica no **dia de trabalhar** (é quando se age), na Semana, no Mês e na Lista (a Lista também segue esse dia). Se o dia de trabalhar passou e a peça não foi feita, o cartão vai para **Atrasado** com a data de trabalhar em vermelho, mesmo faltando dias para o fatal. No **dia fatal** há só uma **linha fina de lembrete** (Semana e Mês). Prazo sem dia de trabalhar: só a caixa do prazo fatal, no dia fatal.
+- **Dias úteis:** a contagem do prazo é em dias úteis (descontando sábado, domingo, feriados do TJGO e o recesso de 20/12 a 20/01). Audiências e tarefas seguem em dias corridos. Os contadores do Início, da Central e do Resumo continuam contando pela data fatal.
+- **Atalhos em cada cartão** (Lista, Semana e Mês): **Adiar ▾**, **Editar** e **WhatsApp**; na audiência online, **Entrar na sala** em destaque. Itens vindos das Iniciais têm "Abrir na Iniciais" no lugar de Editar. No Início, as linhas continuam abrindo a ficha (sem botões, para não poluir).
+- **Adiar separado em dois:** "Adiar o trabalho na peça" (próximo dia útil ou outro dia, sem mexer no prazo fatal, com "Desfazer") e "Alterar o prazo fatal" (nova intimação ou dilação). Ao mudar o fatal, o dia de trabalhar escolhido pela pessoa é **mantido**; só se recalcula (2 dias úteis antes) quando deixa de fazer sentido. Antes, adiar apagava o dia de trabalhar.
+- **Menos ruído:** saíram dos cartões "só eu" e "processo não cadastrado" (a ficha do item continua avisando que o processo não está cadastrado).
+- **Avisos no celular:** sem mudança. Só o prazo fatal (5, 2, 1 dia e no dia) e as audiências; **nada no dia de trabalhar** (decisão do proprietário).
+- **Ficou para a próxima rodada (anotado para não esquecer):**
+  1. **"Peça pronta":** etapa entre "a fazer" e "protocolada" (hoje a bolinha encerra o prazo e pede a data do protocolo).
+  2. **Tela "Meu dia":** para trabalhar hoje, vence hoje e atrasado, no topo da Agenda (o Resumo hoje só tem contadores).
+  3. Calculadora de prazo (data da intimação + dias úteis, com feriado e recesso).
+  4. Agenda no calendário do iPhone (link de assinatura só leitura, principalmente audiências).
+  5. Link do cartão para a peça do processo (módulo de Petições).
+  6. Seleção de vários itens (adiar, reatribuir, concluir) e tarefas que se repetem.
+  7. Roteiro de preparação da audiência (documentos, testemunhas, deslocamento).
+- Testes: `agenda-trabalho` (reescrito para o cartão único), `agenda-detalhe` e `agenda-pessoas` (atualizados).
+

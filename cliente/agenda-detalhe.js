@@ -34,6 +34,7 @@ function agdQuando(i){
   var d = agDias(i.data);
   if (i.cancelado) return { t: 'Cancelado', c: 'neutro' };
   if (i.concluido) return { t: i.tipo === 'audiencia' ? 'Realizada' : 'Concluído', c: 'ok' };
+  if (i.tipo === 'prazo') return agChip(i);
   if (d < 0) return { t: (i.tipo === 'audiencia' ? 'Passou há ' : 'Atrasado há ') + (-d) + (d === -1 ? ' dia' : ' dias'), c: 'atraso' };
   if (d === 0) return { t: 'Hoje' + (i.hora ? ' às ' + i.hora : ''), c: 'atraso' };
   if (d === 1) return { t: 'Amanhã' + (i.hora ? ' às ' + i.hora : ''), c: 'breve' };

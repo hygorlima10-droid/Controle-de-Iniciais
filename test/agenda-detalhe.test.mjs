@@ -34,9 +34,9 @@ const foto = async n => { if (process.env.FOTOS) await page.screenshot({ path: p
 await foto('lista');
 /* 1) cartão compacto */
 let tx = await t('#agWrap');
-check(/Atrasado há 3 dias/.test(tx) && /Contestação/.test(tx) && /Prioridade alta/.test(tx), 'cartão mostra "Atrasado há 3 dias" e a prioridade alta');
+check(/(Venceu há \d+ dias? úteis?|Atrasado há 3 dias)/.test(tx) && /Contestação/.test(tx) && /Prioridade alta/.test(tx), 'cartão mostra quanto o prazo está atrasado (em dias úteis) e a prioridade alta');
 check(await page.evaluate((n) => { const c = Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)); return !!c && !!c.querySelector('.agc-cp svg') && c.querySelector('.agc-n').innerText.includes(n); }, N1), 'o número do processo aparece no cartão com o botão de copiar (ícone de dois retângulos)');
-check(await page.evaluate(() => document.querySelectorAll('.agc').length >= 5 && document.querySelector('.agc').getBoundingClientRect().height < 150), 'cartões compactos (altura menor que 150 px)');
+check(await page.evaluate(() => document.querySelectorAll('.agc').length >= 5 && document.querySelector('.agc').getBoundingClientRect().height < 330), 'cartões compactos (altura menor que 330 px, já com as datas e os atalhos)');
 await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)).querySelector('.agc-cp').click()); await page.waitForTimeout(500);
 check((await page.evaluate(() => navigator.clipboard.readText())) === N1 && /copiado/i.test(await t('#toast')), 'tocar no ícone copia o número do processo e avisa');
 check(!(await vis('#overlayAgDet.show')), 'copiar não abre os detalhes');
@@ -44,7 +44,7 @@ check(!(await vis('#overlayAgDet.show')), 'copiar não abre os detalhes');
 await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)).querySelector('.agc-t').click()); await page.waitForTimeout(500);
 check(await vis('#overlayAgDet.show'), 'tocar no cartão abre a folha de detalhes'); await foto('detalhe');
 tx = await t('#agdC');
-check(new RegExp(br_(dia(-3))).test(tx) && /Atrasado há 3 dias/.test(tx) && /Contestação/.test(tx), 'mostra a data, quanto falta/atraso e o título');
+check(new RegExp(br_(dia(-3))).test(tx) && /(Venceu há \d+ dias? úteis?|Atrasado há 3 dias)/.test(tx) && /Contestação/.test(tx), 'mostra a data, quanto falta/atraso e o título');
 check(tx.includes(N1) && /Procedimento Comum/.test(tx) && /Morrinhos/.test(tx) && /15\.000/.test(tx) && /Partes: Maria Aparecida Souza x Banco Gama/.test(tx), 'processo: número, vara, classe, valor da causa e partes (do cadastro do processo)');
 check(/Maria Aparecida Souza ›/.test(tx) && /Estagiários/.test(tx) && /Juntar procuração/.test(tx) && /Contestação - CPC art\. 335/.test(tx) && /PROC-466/.test(tx), 'clientes (clicável), responsáveis, observações, subtipo e origem');
 await page.click('#agdC .agd-cp'); await page.waitForTimeout(400);

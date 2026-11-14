@@ -38,7 +38,7 @@ check(t.includes('Prazo MEU m1') && t.includes('Minha tarefa m5') && !t.includes
 check(await page.locator('.agc-av').count() > 0, 'os cartões mostram as iniciais dos responsáveis');
 await page.click('#esBarra .es-b[data-k="escritorio"]'); await page.waitForTimeout(600); t = await corpo(); await shot('escritorio');
 check(t.includes('Prazo do Bruno m2') && t.includes('Prazo sem responsável m6') && t.includes('Tarefa do escritório m4') && t.includes('Prazo MEU m1') && !t.includes('Tarefa pessoal do Bruno m3'), 'em "Escritório": prazos de todos e tarefas compartilhadas; a tarefa pessoal de outra pessoa continua escondida');
-check(t.includes('compartilhada') && t.includes('só eu'), 'os cartões de tarefa dizem "compartilhada" ou "só eu"');
+check(t.includes('compartilhada') && !t.includes('só eu'), 'os cartões de tarefa compartilhada dizem "compartilhada" (a marca "só eu" saiu dos cartões)');
 
 console.log('\n— carga por pessoa');
 await page.evaluate(() => { const b = document.querySelector('[data-ag="vista"][data-v="resumo"]'); b && b.click(); }); await page.waitForSelector('#agCargaBox .agc-av', { timeout: 8000 }); await shot('carga');
