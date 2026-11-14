@@ -10,7 +10,7 @@ var AGD_COPIA = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" str
 var AGD_ZAP = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.3z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1.2-1.3-2.2-1.2-1 .7c-1-.4-1.9-1.3-2.3-2.3l.7-1-1.2-2.2z"/></svg>';
 var AGD_EDIT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>';
 var AGD_LIXO = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
-var AGD_SIT = [['afazer', 'A fazer'], ['elaboracao', 'Em andamento'], ['feito', 'Concluído'], ['cancelado', 'Cancelado']];
+var AGD_SIT = [['afazer', 'A fazer'], ['elaboracao', 'Em andamento'], ['pronta', 'Peça pronta'], ['feito', 'Concluído'], ['cancelado', 'Cancelado']];
 
 /* ---------- copiar ---------- */
 function agdCopiar(texto, msg){
@@ -82,8 +82,8 @@ function agdDesenhar(){
   h += '<div class="agd-chips">' + chips + '</div>';
   /* situação: um toque */
   if (ag){
-    var atual = i.cancelado ? 'cancelado' : (i.concluido ? 'feito' : (i.situacao === 'elaboracao' ? 'elaboracao' : 'afazer'));
-    h += '<div class="agd-st" role="group" aria-label="Situação">' + AGD_SIT.map(function(s){ return '<button type="button" class="agd-sb ' + s[0] + (atual === s[0] ? ' on' : '') + '" data-agd="sit" data-v="' + s[0] + '" aria-pressed="' + (atual === s[0]) + '">' + (s[0] === 'feito' && i.tipo === 'audiencia' ? 'Realizada' : s[1]) + '</button>'; }).join('') + '</div>';
+    var atual = i.cancelado ? 'cancelado' : (i.concluido ? 'feito' : (i.situacao === 'pronta' ? 'pronta' : (i.situacao === 'elaboracao' ? 'elaboracao' : 'afazer')));
+    h += '<div class="agd-st" role="group" aria-label="Situação">' + AGD_SIT.filter(function(s){ return s[0] !== 'pronta' || i.tipo === 'prazo'; }).map(function(s){ return '<button type="button" class="agd-sb ' + s[0] + (atual === s[0] ? ' on' : '') + '" data-agd="sit" data-v="' + s[0] + '" aria-pressed="' + (atual === s[0]) + '">' + (s[0] === 'feito' && i.tipo === 'audiencia' ? 'Realizada' : s[1]) + '</button>'; }).join('') + '</div>';
     h += '<div class="agd-acoes"><button type="button" class="btn btn-ghost pb-b" data-agd="adiar">Adiar…</button></div>';
   } else if (i.fonte === 'caso'){
     h += '<div class="agd-st">' + [['afazer', 'A fazer'], ['feito', 'Concluído']].map(function(s){ var on = (s[0] === 'feito') === !!i.concluido; return '<button type="button" class="agd-sb ' + s[0] + (on ? ' on' : '') + '" data-agd="sit" data-v="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '</div><div class="agd-acoes"><button type="button" class="btn btn-ghost pb-b" data-agd="adiar">Adiar…</button><button type="button" class="btn btn-ghost pb-b" data-agd="acao">Abrir a inicial</button></div>';
@@ -164,10 +164,11 @@ function agdSalvarDoc(i, patch, msg, desfazer){
   }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
 function agdSituacao(i, s){
-  var abre = { situacao: s, concluido: false, cancelado: false, concluidoEm: '', protocoladoEm: '', protocoloObs: '' };
+  var abre = { situacao: s, concluido: false, cancelado: false, concluidoEm: '', protocoladoEm: '', protocoloObs: '', prontaEm: '', prontaPor: '' };
   if (i.fonte === 'caso'){ if (s === 'feito') agConcluir(i.key, true); else if (i.concluido) agConcluir(i.key, false); return; }
   if (i.fonte !== 'agenda') return;
-  if (s === 'afazer' || s === 'elaboracao'){ if (i.situacao === s && !i.concluido) return; agdSalvarDoc(i, abre, s === 'afazer' ? 'Voltou para “A fazer”.' : 'Em andamento.', false); }
+  if (s === 'pronta'){ if (i.tipo !== 'prazo') return; if (i.situacao === 'pronta' && !i.concluido) return; agdSalvarDoc(i, Object.assign({}, abre, { prontaEm: agHoje(), prontaPor: esS.eu ? esS.eu.nome : '' }), 'Peça pronta. Falta protocolar.', true); }
+  else if (s === 'afazer' || s === 'elaboracao'){ if (i.situacao === s && !i.concluido) return; agdSalvarDoc(i, abre, s === 'afazer' ? 'Voltou para “A fazer”.' : 'Em andamento.', false); }
   else if (s === 'feito'){ if (i.concluido && !i.cancelado) return; if (i.cancelado) agdSalvarDoc(i, abre, '', false).then(function(){ agConcluir(i.key, true); }); else agConcluir(i.key, true); }
   else if (s === 'cancelado'){ if (i.cancelado) return; agdSalvarDoc(i, { situacao: 'cancelado', concluido: true, cancelado: true, concluidoEm: agHoje(), protocoladoEm: '', protocoloObs: '' }, 'Compromisso cancelado.', true); }
 }
@@ -284,7 +285,7 @@ function agdFiltrosAtivos(){ return (agS.resp ? 1 : 0) + ((agS.sit || 'abertos')
     '.agd-t{font-size:1.25rem;line-height:1.25;margin:10px 0 6px;letter-spacing:-.01em;overflow-wrap:anywhere}.agd-perigo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}' +
     '.agd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}' +
     '.agd-st{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.agd-sb{font-family:inherit;font-size:var(--t3);font-weight:700;padding:11px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-soft);cursor:pointer}' +
-    '.agd-sb.on.afazer{border-color:var(--ink);background:var(--ink);color:var(--bg)}.agd-sb.on.elaboracao{border-color:var(--c-gold,#C98500);background:rgba(201,133,0,.14);color:var(--tutela,#8a5a00)}.agd-sb.on.feito{border-color:var(--success);background:rgba(23,137,90,.14);color:var(--success)}.agd-sb.on.cancelado{border-color:var(--ink-soft);background:var(--surface-2,#eee);color:var(--ink-soft)}' +
+    '.agd-sb.on.afazer{border-color:var(--ink);background:var(--ink);color:var(--bg)}.agd-sb.on.elaboracao{border-color:var(--c-gold,#C98500);background:rgba(201,133,0,.14);color:var(--tutela,#8a5a00)}.agd-sb.on.pronta{border-color:var(--success);background:rgba(23,137,90,.14);color:var(--success)}.agd-sb.on.feito{border-color:var(--success);background:rgba(23,137,90,.14);color:var(--success)}.agd-sb.on.cancelado{border-color:var(--ink-soft);background:var(--surface-2,#eee);color:var(--ink-soft)}' +
     '.agd-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}' +
     '.agd-bl{border-top:1px solid var(--border);margin-top:14px;padding-top:12px}.agd-k{font-size:var(--t1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}' +
     '.agd-num{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.agd-num b{font-size:var(--t5);letter-spacing:.01em;overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}' +
@@ -310,5 +311,5 @@ function agdFiltrosAtivos(){ return (agS.resp ? 1 : 0) + ((agS.sit || 'abertos')
     '.ag-c.n1{background:rgba(42,120,214,.10)}.ag-c.n2{background:rgba(201,133,0,.16)}.ag-c.n3{background:rgba(217,59,59,.16)}.ag-c.on{background:var(--ink)}.ag-c.on .ag-n{background:var(--bg);color:var(--ink)}' +
     '.ag-conf{display:flex;gap:8px;align-items:flex-start;background:rgba(217,59,59,.10);border:1px solid rgba(217,59,59,.3);color:var(--urgente);border-radius:12px;padding:8px 11px;font-size:var(--t2);font-weight:700;margin:6px 0}';
   document.head.appendChild(st);
-  window.__horusTeste = Object.assign(window.__horusTeste || {}, { agdAbrir: agdAbrir });
+  window.__horusTeste = Object.assign(window.__horusTeste || {}, { agdAbrir: agdAbrir, agPrazosResumo: agPrazosResumo });
 })();

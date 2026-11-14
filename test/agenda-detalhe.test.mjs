@@ -49,7 +49,7 @@ check(tx.includes(N1) && /Procedimento Comum/.test(tx) && /Morrinhos/.test(tx) &
 check(/Maria Aparecida Souza ›/.test(tx) && /Estagiários/.test(tx) && /Juntar procuração/.test(tx) && /Contestação - CPC art\. 335/.test(tx) && /PROC-466/.test(tx), 'clientes (clicável), responsáveis, observações, subtipo e origem');
 await page.click('#agdC .agd-cp'); await page.waitForTimeout(400);
 check((await page.evaluate(() => navigator.clipboard.readText())) === N1, 'o botão de copiar da folha também copia o número');
-check(await page.evaluate(() => Array.from(document.querySelectorAll('#agdC .agd-sb')).map(b => b.innerText).join('|')) === 'A fazer|Em andamento|Concluído|Cancelado', 'atalhos de situação: A fazer, Em andamento, Concluído, Cancelado');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#agdC .agd-sb')).map(b => b.innerText).join('|')) === 'A fazer|Em andamento|Peça pronta|Concluído|Cancelado', 'atalhos de situação do prazo: A fazer, Em andamento, Peça pronta, Concluído, Cancelado');
 /* 3) atalhos */
 await page.click('#agdC [data-v="elaboracao"]'); await page.waitForTimeout(900);
 let p1 = (await ag()).find(d => d.id === 'p1');

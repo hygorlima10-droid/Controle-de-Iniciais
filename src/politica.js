@@ -153,7 +153,7 @@ export function carimbarAutor(colecao, antes, depois, auth) {
 }
 /* agenda: quem pode alterar um item que já existe (vale para advogado e estagiário). Pode: quem criou; quem é responsável; quem participa do processo do item
    (o estagiário vê todos os processos); e, numa tarefa COMPARTILHADA, qualquer pessoa que a vê pode concluir ou reabrir (só os campos de conclusão mudam). */
-const CAMPOS_CONCLUSAO = ['concluido', 'cancelado', 'situacao', 'concluidoEm', 'concluidoPor', 'protocoladoEm', 'protocoloObs'];
+const CAMPOS_CONCLUSAO = ['concluido', 'cancelado', 'situacao', 'concluidoEm', 'concluidoPor', 'protocoladoEm', 'protocoloObs', 'prontaEm', 'prontaPor'];
 const estavel = (v) => (Array.isArray(v) ? '[' + v.map(estavel).join(',') + ']' : v && typeof v === 'object' ? '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + estavel(v[k])).join(',') + '}' : JSON.stringify(v === undefined ? null : v));
 const semConclusao = (d) => { const o = { ...(d || {}) }; for (const k of CAMPOS_CONCLUSAO) delete o[k]; delete o.criadoPor; delete o.id; return estavel(o); };
 const agendaDaPessoa = (antes, u, esc) => antes.criadoPor === u.id || ehResponsavel(antes, u) || (!!antes.processo && (u.papel === 'estagiario' || (!!esc && esc.processos.has(digitos(antes.processo)))));

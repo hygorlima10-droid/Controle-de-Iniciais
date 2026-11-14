@@ -8,7 +8,7 @@ import { normalizarUsuario, oabsDoRegistro, ehDono } from './politica.js';
 import { canon, tituloDe, ROTULOS } from './auditoria.js';
 
 export const PREFS_PADRAO = { resumo: true, prazos: true, indicado: true, publicacoes: true, repasses: true };
-export const EQUIPE_PADRAO = { convite: true, aparelho: true, recebeu: true, desfeito: true, exclusao: true, honorarios: false, semanal: false };
+export const EQUIPE_PADRAO = { convite: true, aparelho: true, recebeu: true, desfeito: true, exclusao: true, honorarios: false, pronta: true, semanal: false };
 export const prefsDe = (config) => ({ ...PREFS_PADRAO, ...((config && config.avisos) || {}) });
 export const equipeDe = (config) => ({ ...EQUIPE_PADRAO, ...((config && config.equipe) || {}) });
 export const limparPrefs = (b, padrao) => { const o = {}; if (b && typeof b === 'object') for (const k of Object.keys(padrao)) if (typeof b[k] === 'boolean') o[k] = b[k]; return o; };
@@ -60,6 +60,14 @@ export async function avisarAtividade(env, enviar, { colecao, id, antes, depois,
         for (const k of novas) for (const u of usuariosDaChave(us, k)) if (u.id !== ator.id) alvos.add(u.id);
         for (const uid of alvos) await enviar(env, { tag: 'indicado-' + colecao + '-' + id + '-' + uid, titulo: 'Você foi indicado', corpo: quem + ' colocou você como responsável: ' + rotulo + ' · ' + titulo, url: '/' }, uid, 'indicado');
       }
+    }
+    /* peça pronta: quem terminou a peça avisa o proprietário e os advogados responsáveis, para conferirem e protocolarem */
+    if (colecao === 'agenda' && acao === 'alterou' && antes && depois && depois.situacao === 'pronta' && antes.situacao !== 'pronta' && !depois.concluido) {
+      const aviso = { tag: 'pronta-' + id, titulo: 'Peça pronta por ' + quem, corpo: titulo + '. Falta conferir e protocolar.', url: '/' };
+      if (!ehDono(auth)) await enviar(env, { ...aviso, equipe: 'pronta' }, undefined);
+      const us = await usuariosAtivos(env), alvos = new Set();
+      for (const k of chavesDeResponsaveis(colecao, depois)) for (const u of usuariosDaChave(us, k)) if (u.id !== ator.id && u.norm.papel === 'advogado') alvos.add(u.id);
+      for (const uid of alvos) await enviar(env, aviso, uid, 'prazos');
     }
     /* avisos da equipe para o proprietário: só o que outra pessoa fez */
     if (!ehDono(auth)) {

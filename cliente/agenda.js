@@ -12,7 +12,7 @@ var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
 var AG_MODAL = { presencial: 'Presencial', online: 'Online', hibrida: 'Híbrida' };
 var AG_AUDS = ['Conciliação', 'Mediação', 'Instrução e julgamento', 'Justificação', 'Saneamento', 'Custódia', 'Admonitória', 'Outra'];
 var agEditPre = null;
-var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em andamento', feito: 'Concluído', cancelado: 'Cancelado' };
+var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em andamento', pronta: 'Peça pronta', feito: 'Concluído', cancelado: 'Cancelado' };
 var AG_DOW = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], AG_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 function agHoje(){ return todayISO(); }
 function agDias(iso){ return Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(agHoje() + 'T12:00:00Z')) / 86400000); }
@@ -32,7 +32,7 @@ function agUtilTxt(n){ return n + (n === 1 ? ' dia útil' : ' dias úteis'); }
 function agProxUtil(iso){ var d = pbSoma(iso, 1); while (pbNaoUtil(d)) d = pbSoma(d, 1); return d; }
 function agAbrevDia(iso){ return AG_DOW[pbDow(iso)] + ' ' + fmtData(iso).slice(0, 5); }
 /* prazo aberto com "trabalhar até" antes do fatal: o cartão fica no dia de TRABALHAR (é quando se age); no dia fatal só uma linha fina de lembrete */
-function agTemTrab(i){ return i.tipo === 'prazo' && !i.concluido && !!i.trabalhar && i.trabalhar < i.data; }
+function agTemTrab(i){ return i.tipo === 'prazo' && !i.concluido && i.situacao !== 'pronta' && !!i.trabalhar && i.trabalhar < i.data; }   /* peça pronta: só falta protocolar, o cartão vai para o dia fatal */
 function agDataAgir(i){ return agTemTrab(i) ? i.trabalhar : i.data; }
 function agAntesUteis(iso, n){ var d = iso; while (n > 0){ d = pbSoma(d, -1); if (!pbNaoUtil(d)) n--; } return d; }
 
@@ -69,7 +69,7 @@ function agCriar(doc){
 function agItens(op){
   var l = [], quadro = !!(op && op.quadro);
   agDocs.forEach(function(d){
-    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.cancelado ? 'cancelado' : (d.concluido ? 'feito' : (d.situacao || 'afazer')), concluido: !!d.concluido, cancelado: !!d.cancelado, pubId: d.pubId || d.audPubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo', audTipo: d.audTipo || '', modalidade: d.modalidade || '', local: d.local || '', link: d.link || '', obs: d.obs || '', protocoladoEm: d.protocoladoEm || '', protocoloObs: d.protocoloObs || '' });
+    l.push({ key: 'a:' + d.id, fonte: 'agenda', id: d.id, tipo: d.tipo || 'prazo', titulo: d.titulo || 'Prazo', cliente: d.cliente || '', processo: d.processo || '', data: d.data || '', hora: d.hora || '', trabalhar: d.trabalhar || '', situacao: d.cancelado ? 'cancelado' : (d.concluido ? 'feito' : (d.situacao || 'afazer')), concluido: !!d.concluido, cancelado: !!d.cancelado, pubId: d.pubId || d.audPubId || '', avisos: Array.isArray(d.avisos) ? d.avisos : AG_PADRAO.slice(), doc: d, cat: d.tipo || 'prazo', audTipo: d.audTipo || '', modalidade: d.modalidade || '', local: d.local || '', link: d.link || '', obs: d.obs || '', protocoladoEm: d.protocoladoEm || '', protocoloObs: d.protocoloObs || '', prontaEm: d.prontaEm || '', prontaPor: d.prontaPor || '' });
   });
   casos.forEach(function(c){   /* prazos que já existiam nas Iniciais */
     if (c.arquivado || !c.prazo || !c.prazo.data) return;
@@ -135,7 +135,7 @@ function agAtualizarBadge(){
   var n = agAbertos().filter(function(i){ return i.data <= agHoje() && !agPassada(i); }).length, e = qs('menuNAgenda'); if (e) e.textContent = n > 0 ? String(n) : '';
 }
 function agPrazosResumo(hoje, lim){
-  return agAbertos().filter(function(i){ return i.data >= hoje && i.data <= lim; }).map(function(i){ return { d: i.data, h: i.hora || '', n: i.cliente || 'Sem nome', l: i.titulo, t: i.tipo, a: i.avisos }; });
+  return agAbertos().filter(function(i){ return i.data >= hoje && i.data <= lim; }).map(function(i){ return { d: i.data, h: i.hora || '', n: i.cliente || 'Sem nome', l: i.titulo, t: i.tipo, a: (i.situacao === 'pronta' ? i.avisos.filter(function(n){ return n <= 1; }) : i.avisos) }; });
 }
 
 /* ---------- cartão no Início ---------- */
@@ -218,6 +218,7 @@ function agMontarTela(){
     else if (a === 'feito-toggle'){ if (e.target.closest && e.target.closest('[data-agcard]')) return; agS.feitoAberto = !agS.feitoAberto; agRender(); }
     else if (a === 'adiar') agAdiar(k);
     else if (a === 'zap'){ var iz = agdItem(k); if (iz) agdZapAbrir(iz); }
+    else if (a === 'pronta') agPronta(k);
     else if (a === 'mover') agMover(k, v);
   });
   /* arrastar cartões do Quadro: por situação muda a situação; por urgência só dá para soltar em Concluído (a data não muda arrastando) */
@@ -243,10 +244,10 @@ function agRenderIn(){
   var w = qs('agWrap'); if (!w) return;
   if (!agS.ref){ agS.ref = agHoje(); agS.mes = agHoje().slice(0, 7); agS.sel = agHoje(); }
   /* sub-abas padrão (Fase 2): Resumo, Semana, Mês, Lista e Quadro; a última usada fica lembrada */
-  if (!agS.mdOk){ agS.mdOk = 1; if (agS.vista === 'semana') agS.vista = mdInicial('agenda', ['semana', 'mes', 'lista', 'quadro']); }
-  var h = '<div id="agSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista'], ['quadro', 'Quadro']], agS.vista, function(k){ return 'data-ag="vista" data-v="' + k + '"'; }) + '</div>' +
+  if (!agS.mdOk){ agS.mdOk = 1; if (agS.vista === 'semana') agS.vista = mdInicial('agenda', ['meudia', 'semana', 'mes', 'lista', 'quadro']); }
+  var h = '<div id="agSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['meudia', 'Meu dia'], ['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista'], ['quadro', 'Quadro']], agS.vista, function(k){ return 'data-ag="vista" data-v="' + k + '"'; }) + '</div>' +
     '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div>';
-  if (agS.vista === 'resumo'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; agCarregarCarga(); return; }
+  if (agS.vista === 'resumo' || agS.vista === 'meudia'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; if (agS.vista === 'resumo') agCarregarCarga(); return; }
   if (agS.vista !== 'quadro' && agS.filtro === 'alvara') agS.filtro = 'tudo';
   h += '<input type="search" id="agBusca" class="ag-busca" placeholder="Buscar compromisso, processo ou cliente" autocomplete="off" value="' + escapeHtml(agS.busca || '') + '" style="margin-top:8px">';
   var nf = agdFiltrosAtivos();
@@ -258,6 +259,7 @@ function agRenderIn(){
 }
 function agCorpo(){
   if (agS.vista === 'resumo'){ try{ return mjPainel('agenda', mjAgenda()); }catch(e){ console.error('resumo da agenda', e); return '<div class="financeiro-vazio">Não consegui montar o resumo. As outras sub-abas continuam funcionando.</div>'; } }
+  if (agS.vista === 'meudia'){ try{ return agMeuDiaHtml(); }catch(e){ console.error('meu dia', e); return '<div class="financeiro-vazio">Não consegui montar o Meu dia. As outras sub-abas continuam funcionando.</div>'; } }
   var todos = agS.vista === 'quadro' ? agEscopoLista(agItens({ quadro: true })).filter(function(i){ return agS.filtro === 'tudo' || i.cat === agS.filtro; }).sort(agOrdem) : agFiltrados(agEscopoLista(agItens())).sort(agOrdemAgir), h = '';
   if (agS.vista === 'quadro') h += agVistaQuadro(todos);
   else if (agS.vista === 'semana') h += agVistaSemana(todos);
@@ -357,25 +359,38 @@ function agDatasPrazo(i){
   var d = agDias(i.data), u = agUteis(i.data), tem = agTemTrab(i);
   var fe = d < 0 ? 'atrasado' : (d === 0 ? 'hoje' : (d === 1 ? 'amanhã' : (u >= 1 ? 'em ' + agUtilTxt(u) : 'em ' + d + ' dias')));
   var h = '<div class="agd2">';
+  if (i.situacao === 'pronta') h += '<div class="ok"><small>Peça pronta</small><b>✓ ' + escapeHtml(i.prontaEm ? agAbrevDia(i.prontaEm) : 'sim') + '</b><em>' + escapeHtml((i.prontaPor ? 'por ' + String(i.prontaPor).split(' ')[0] + ' · ' : '') + 'falta protocolar') + '</em></div>';
   if (tem){
     var dt = agDias(i.trabalhar), ut = agUteis(i.trabalhar), te = dt < 0 ? 'passou há ' + (ut < 0 ? agUtilTxt(-ut) : (-dt) + (dt === -1 ? ' dia' : ' dias')) : (dt === 0 ? 'hoje' : (dt === 1 ? 'amanhã' : (ut >= 1 ? 'em ' + agUtilTxt(ut) : 'em ' + dt + ' dias')));
     h += '<div class="t' + (dt < 0 ? ' at' : '') + '"><small>Trabalhar até</small><b>' + escapeHtml(agAbrevDia(i.trabalhar)) + '</b><em>' + escapeHtml(te) + '</em></div>';
   }
-  return h + '<div class="f"' + (tem ? '' : ' style="grid-column:1/3"') + '><small>Prazo fatal</small><b>' + escapeHtml(agAbrevDia(i.data)) + '</b><em>' + escapeHtml(fe) + '</em></div></div>';
+  return h + '<div class="f"' + (tem || i.situacao === 'pronta' ? '' : ' style="grid-column:1/3"') + '><small>Prazo fatal</small><b>' + escapeHtml(agAbrevDia(i.data)) + '</b><em>' + escapeHtml(fe) + '</em></div></div>';
 }
-/* atalhos do cartão: adiar, editar, WhatsApp (e "Entrar na sala" nas audiências online) */
+/* atalhos do cartão: peça pronta / protocolar, adiar, editar, WhatsApp (e "Entrar na sala" nas audiências online) */
 function agAcoesCartao(i){
   if (i.concluido) return '';
   var k = escapeHtml(i.key), b = '';
   if (i.tipo === 'audiencia' && /^https?:\/\//i.test(i.link || '')) b += '<a class="pri" data-ag="link" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala ↗</a>';
+  if (i.fonte === 'agenda' && i.tipo === 'prazo') b += i.situacao === 'pronta' ? '<button type="button" class="vd" data-ag="concluir" data-k="' + k + '">Protocolar</button>' : '<button type="button" class="vd" data-ag="pronta" data-k="' + k + '">✓ Peça pronta</button>';
   b += '<button type="button" data-ag="adiar" data-k="' + k + '">⏱ Adiar ▾</button>';
   b += i.fonte === 'agenda' ? '<button type="button" data-ag="abrir" data-k="' + k + '">✎ Editar</button>' : '<button type="button" data-ag="acao" data-k="' + k + '">✎ Abrir na Iniciais</button>';
   b += '<button type="button" data-ag="zap" data-k="' + k + '" aria-label="Mensagem de WhatsApp" title="WhatsApp">💬</button>';
   return '<div class="acx">' + b + '</div>';
 }
+function agBotaoOk(i){
+  if (i.fonte === 'alvara') return '';
+  var rot = i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Marcar como realizada' : 'Concluir'));
+  return '<button type="button" class="agc-ok' + (i.concluido ? ' on' : '') + '" data-ag="' + (i.concluido ? 'reabrir' : 'concluir') + '" data-k="' + escapeHtml(i.key) + '" aria-label="' + rot + '" title="' + rot + '">✓</button>';
+}
+/* "Peça pronta": o prazo segue aberto até ser protocolado; quem marcou fica registrado (o proprietário recebe o aviso no celular) */
+function agPronta(key){
+  var i = agdItem(key); if (!i || i.fonte !== 'agenda' || i.tipo !== 'prazo' || i.concluido) return;
+  agdSalvarDoc(i, { situacao: 'pronta', prontaEm: agHoje(), prontaPor: esS.eu ? esS.eu.nome : '' }, 'Peça pronta. Falta protocolar.', true);
+}
 function agCartao(i){
-  var c = agChip(i), cls = i.concluido ? 'ok' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')), k = escapeHtml(i.key), d = i.doc || {}, tags = '', aberto = !i.concluido && i.tipo === 'prazo';
+  var c = agChip(i), cls = i.concluido ? 'ok' : (i.situacao === 'pronta' ? 'pronta' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr'))), k = escapeHtml(i.key), d = i.doc || {}, tags = '', aberto = !i.concluido && i.tipo === 'prazo';
   if (i.situacao === 'elaboracao') tags += '<span class="pb-tg pz">Em andamento</span>';
+  if (i.situacao === 'pronta' && !i.concluido) tags += '<span class="pb-tg ok">Peça pronta</span>';
   if (/alta/i.test(d.prioridade || '')) tags += '<span class="pb-tg pz">Prioridade alta</span>';
   if (i.tipo === 'audiencia' && i.modalidade) tags += '<span class="pb-tg">' + escapeHtml(AG_MODAL[i.modalidade] || i.modalidade) + '</span>';
   if (i.pubId) tags += '<span class="pb-tg nv">via publicação</span>';
@@ -386,7 +401,7 @@ function agCartao(i){
   if (i.concluido && !i.cancelado && d.concluidoPor) tags += '<span class="pb-tg ok">por ' + escapeHtml(String(d.concluidoPor).split(' ')[0]) + '</span>';
   if (esS.eu) tags += agRespAvatares(i, 3);
   else (Array.isArray(d.responsaveis) ? d.responsaveis : []).slice(0, 3).forEach(function(n){ tags += '<span class="agc-av" title="' + escapeHtml(n) + '">' + escapeHtml(agdSigla(n)) + '</span>'; });
-  var ok = i.fonte === 'alvara' ? '' : '<button type="button" class="agc-ok' + (i.concluido ? ' on' : '') + '" data-ag="' + (i.concluido ? 'reabrir' : 'concluir') + '" data-k="' + k + '" aria-label="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Marcar como realizada' : 'Concluir'))) + '" title="' + (i.concluido ? 'Reabrir' : (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Marcar como realizada' : 'Concluir'))) + '">✓</button>';
+  var ok = agBotaoOk(i);
   return '<div class="agc ' + cls + '" data-ag="det" data-k="' + k + '"><div style="min-width:0"><div class="agc-top"><span>' + escapeHtml(aberto ? 'Prazo' : agTipoLinha(i)) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="agc-t">' + escapeHtml(i.titulo) + '</div>' +
     (i.cliente ? '<div class="agc-s">' + escapeHtml(i.cliente) + '</div>' : '') +
     (i.tipo === 'audiencia' && i.local ? '<div class="agc-s">📍 ' + escapeHtml(i.local) + '</div>' : '') +
@@ -394,15 +409,55 @@ function agCartao(i){
     (aberto ? agDatasPrazo(i) : '') + '<div class="agc-tg">' + tags + '</div>' + agAcoesCartao(i) + '</div>' + ok + '</div>';
 }
 
+/* ---------- Meu dia: só o que pede ação hoje ---------- */
+function agMiniSub(i){
+  var p = [], hoje = agHoje();
+  if (i.cliente) p.push(escapeHtml(i.cliente));
+  if (i.tipo === 'prazo'){
+    if (i.situacao === 'pronta') p.push('<b class="agm-ok">peça pronta ✓' + (i.prontaPor ? ' por ' + escapeHtml(String(i.prontaPor).split(' ')[0]) : '') + '</b>');
+    else if (agTemTrab(i)) p.push('trabalhar até ' + (i.trabalhar < hoje ? '<b class="agm-at">' + escapeHtml(agAbrevDia(i.trabalhar)) + '</b>' : escapeHtml(agAbrevDia(i.trabalhar))));
+    p.push(i.data === hoje ? 'prazo fatal hoje' : 'fatal ' + escapeHtml(agAbrevDia(i.data)));
+  } else if (i.tipo === 'audiencia'){ if (i.modalidade) p.push(escapeHtml(AG_MODAL[i.modalidade] || i.modalidade).toLowerCase()); if (i.local) p.push('📍 ' + escapeHtml(i.local)); }
+  else if (i.tipo === 'tarefa') p.push('tarefa');
+  return p.join(' · ');
+}
+function agMini(i){
+  var hoje = agHoje(), c = agChip(i), cls = i.concluido ? 'ok' : (i.situacao === 'pronta' ? 'pronta' : (i.tipo === 'audiencia' ? 'au' : (i.tipo === 'tarefa' ? 'pe' : 'pr')));
+  if (agTemTrab(i) && i.trabalhar < hoje && i.data >= hoje) c = { t: 'Trabalho atrasado', c: 'atraso' };
+  var lab = i.tipo === 'audiencia' ? 'Audiência' + (i.hora ? ' · ' + i.hora : '') : (i.tipo === 'tarefa' ? 'Tarefa' : 'Prazo');
+  return '<div class="agc ' + cls + '" data-ag="det" data-k="' + escapeHtml(i.key) + '"><div style="min-width:0"><div class="agc-top"><span>' + escapeHtml(lab) + '</span><span class="est est-' + c.c + '">' + escapeHtml(c.t) + '</span></div><div class="agc-t">' + escapeHtml(i.titulo) + '</div><div class="agc-s">' + agMiniSub(i) + '</div>' + agAcoesCartao(i) + '</div>' + agBotaoOk(i) + '</div>';
+}
+function agMeuDiaHtml(){
+  var hoje = agHoje(), am = pbSoma(hoje, 1), todos = agEscopoLista(agItens()), ab = todos.filter(function(i){ return !i.concluido; });
+  var aud = ab.filter(function(i){ return i.tipo === 'audiencia' && i.data === hoje; }).sort(function(a, b){ return (a.hora || '').localeCompare(b.hora || ''); });
+  var vence = ab.filter(function(i){ return i.tipo === 'prazo' && i.data === hoje; });
+  var prontas = ab.filter(function(i){ return i.tipo === 'prazo' && i.situacao === 'pronta' && i.data > hoje; }).sort(agOrdem);
+  var trab = ab.filter(function(i){ return i.tipo !== 'audiencia' && agDataAgir(i) === hoje && !(i.tipo === 'prazo' && i.data === hoje); }).sort(agOrdemAgir);
+  var atr = ab.filter(function(i){ return i.tipo !== 'audiencia' && agDataAgir(i) < hoje; }).sort(agOrdemAgir);
+  var amanha = ab.filter(function(i){ return (i.tipo === 'audiencia' ? i.data : agDataAgir(i)) === am; }).concat(ab.filter(function(i){ return agTemTrab(i) && i.data === am; })).sort(agOrdemAgir);
+  var feitos = todos.filter(function(i){ var d = i.doc || {}; return (i.concluido && !i.cancelado && d.concluidoEm === hoje) || (i.situacao === 'pronta' && !i.concluido && i.prontaEm === hoje); }).length;
+  var abertosHoje = aud.length + vence.length + trab.length + atr.length, total = feitos + abertosHoje;
+  var chip = function(n, txt, cl){ return n ? '<span class="' + cl + '">' + n + ' ' + txt + '</span>' : ''; };
+  var h = '<div class="agm-h"><b>' + escapeHtml(agdDiaSemana(hoje) + ', ' + fmtData(hoje).slice(0, 5)) + '</b><small>hoje</small></div>' +
+    '<div class="agm-res">' + chip(aud.length, aud.length === 1 ? 'audiência' : 'audiências', 'a') + chip(vence.length, vence.length === 1 ? 'vence hoje' : 'vencem hoje', 'r') + chip(trab.length, 'para trabalhar', 'g') + chip(atr.length, atr.length === 1 ? 'atrasado' : 'atrasados', 'r') + chip(prontas.length, prontas.length === 1 ? 'peça pronta' : 'peças prontas', 'v') + '</div>';
+  if (total) h += '<div class="agm-prog"><i style="width:' + Math.round(feitos / total * 100) + '%"></i></div><div class="saldo-data" style="margin:0 0 4px">' + feitos + ' de ' + total + ' resolvidos hoje</div>';
+  var sec = function(cl, tit, l, nota){ return l.length ? '<div class="agm-sec ' + cl + '"><span>' + tit + '</span><small>' + (nota || l.length) + '</small></div>' + l.map(agMini).join('') : ''; };
+  h += sec('a', 'Audiência hoje', aud) + sec('r', 'Vence hoje', vence, 'falta protocolar') + sec('v', 'Peça pronta · conferir e protocolar', prontas) + sec('g', 'Para trabalhar hoje', trab) + sec('r', 'Atrasado', atr);
+  if (!abertosHoje && !prontas.length) h += '<div class="financeiro-vazio">Nada pedindo ação hoje.</div>';
+  if (amanha.length) h += '<div class="agm-sec"><span>Amanhã · ' + escapeHtml(agdDiaSemana(am).toLowerCase() + ' ' + fmtData(am).slice(0, 5)) + '</span><small>' + amanha.length + '</small></div>' + amanha.slice(0, 6).map(function(i){ var f = i.tipo === 'prazo' && i.data === am && agTemTrab(i); return '<div class="agm-am" data-ag="det" data-k="' + escapeHtml(i.key) + '"><span>' + (f ? '⚑ Vence: ' : (i.tipo === 'prazo' ? 'Trabalhar: ' : (i.tipo === 'audiencia' ? 'Audiência' + (i.hora ? ' ' + escapeHtml(i.hora) : '') + ': ' : ''))) + escapeHtml(i.titulo) + '</span><span>' + escapeHtml(i.cliente || '') + '</span></div>'; }).join('') + (amanha.length > 6 ? '<div class="saldo-data">e mais ' + (amanha.length - 6) + '</div>' : '');
+  return h;
+}
+
 /* ---------- Quadro (Kanban geral: prazos, audiências, tarefas, prazos das Iniciais e previsões dos Alvarás) ---------- */
 var AG_ICO = { prazo: ['scale', '#D93B3B'], audiencia: ['user', '#2A78D6'], tarefa: ['check', '#C98500'], inicial: ['doc', '#B7791E'], alvara: ['bank', '#2A78D6'] };
 function agColunas(todos){
   var hoje = agHoje(), iniSem = agIniSemana(hoje), fimSem = pbSoma(iniSem, 6), fimProx = pbSoma(fimSem, 7), recente = pbSoma(hoje, -30), cols;
   if (agS.quadro === 'situacao'){
-    cols = [{ k: 'afazer', t: 'A fazer', ic: 'list', l: [] }, { k: 'elaboracao', t: 'Em andamento', ic: 'doc', l: [] }, { k: 'acomp', t: 'Acompanhando', ic: 'user', l: [] }, { k: 'feito', t: 'Concluído', ic: 'check', l: [] }];
+    cols = [{ k: 'afazer', t: 'A fazer', ic: 'list', l: [] }, { k: 'elaboracao', t: 'Em andamento', ic: 'doc', l: [] }, { k: 'pronta', t: 'Peça pronta', ic: 'check', l: [] }, { k: 'acomp', t: 'Acompanhando', ic: 'user', l: [] }, { k: 'feito', t: 'Concluído', ic: 'check', l: [] }];
     todos.forEach(function(i){
-      if (i.concluido){ if (i.data >= recente) cols[3].l.push(i); }
-      else if (i.fonte !== 'agenda') cols[2].l.push(i);
+      if (i.concluido){ if (i.data >= recente) cols[4].l.push(i); }
+      else if (i.fonte !== 'agenda') cols[3].l.push(i);
+      else if (i.situacao === 'pronta') cols[2].l.push(i);
       else if (i.situacao === 'elaboracao') cols[1].l.push(i);
       else cols[0].l.push(i);
     });
@@ -429,8 +484,10 @@ function agCartaoQuadro(i){
   if (!i.concluido){
     if (i.fonte === 'alvara') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="acao" data-k="' + k + '">Abrir alvará</button>';
     else if (sit && i.fonte === 'agenda' && i.tipo !== 'audiencia' && i.situacao === 'afazer') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="mover" data-k="' + k + '" data-v="elaboracao">Avançar ›</button>';
+    else if (i.fonte === 'agenda' && i.tipo === 'prazo' && i.situacao === 'pronta') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + k + '">Protocolar</button>';
+    else if (sit && i.fonte === 'agenda' && i.tipo === 'prazo' && i.situacao === 'elaboracao') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="pronta" data-k="' + k + '">✓ Peça pronta</button>';
     else btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + k + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
-    if (sit && i.fonte === 'agenda' && i.tipo !== 'audiencia' && i.situacao === 'elaboracao') btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="mover" data-k="' + k + '" data-v="afazer">‹ Voltar</button>';
+    if (sit && i.fonte === 'agenda' && i.tipo !== 'audiencia' && (i.situacao === 'elaboracao' || i.situacao === 'pronta')) btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="mover" data-k="' + k + '" data-v="' + (i.situacao === 'pronta' ? 'elaboracao' : 'afazer') + '">‹ Voltar</button>';
     btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="adiar" data-k="' + k + '">Adiar</button>';
     if (i.fonte === 'caso') btn += '<button type="button" class="btn-text pb-b" data-ag="acao" data-k="' + k + '">Abrir na aba Iniciais</button>';
     else if (i.fonte === 'agenda') btn += '<button type="button" class="btn-text pb-b" data-ag="abrir" data-k="' + k + '">Editar</button>';
@@ -441,16 +498,17 @@ function agCartaoQuadro(i){
 /* solta um cartão do Quadro numa coluna: devolve se pode; com teste = true só confere, sem mudar nada */
 function agSoltar(key, ck, teste){
   var i = agItens({ quadro: true }).filter(function(x){ return x.key === key; })[0]; if (!i) return false;
-  var alvo = ck === 'feito' ? 'feito' : ((agS.quadro === 'situacao' && (ck === 'afazer' || ck === 'elaboracao')) ? ck : '');
+  var alvo = ck === 'feito' ? 'feito' : ((agS.quadro === 'situacao' && (ck === 'afazer' || ck === 'elaboracao' || ck === 'pronta')) ? ck : '');
   if (!alvo || i.fonte === 'alvara') return false;
-  if (alvo !== 'feito' && (i.fonte !== 'agenda' || i.tipo === 'audiencia')) return false;   /* “Em andamento” não existe para audiência nem para prazo vindo das Iniciais */
+  if (alvo !== 'feito' && (i.fonte !== 'agenda' || i.tipo === 'audiencia')) return false;
+  if (alvo === 'pronta' && i.tipo !== 'prazo') return false;   /* “Peça pronta” só existe para prazo */   /* “Em andamento” não existe para audiência nem para prazo vindo das Iniciais */
   if (alvo === 'feito' ? (i.concluido && !i.cancelado) : (!i.concluido && i.situacao === alvo)) return false;   /* já está lá */
   if (teste) return true;
   agdSituacao(i, alvo); return true;
 }
 function agVistaQuadro(todos){
   var cols = agColunas(todos), h = '<div class="pb-seg-lin"><div class="segmented" id="agModo">' + [['urgencia', 'Por urgência'], ['situacao', 'Por situação']].map(function(f){ return '<button type="button" class="seg-btn' + (agS.quadro === f[0] ? ' active' : '') + '" data-ag="modo" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
-  h += '<div class="ag-dica">' + (agS.quadro === 'situacao' ? 'Arraste um cartão entre as colunas para mudar a situação (A fazer, Em andamento, Concluído).' : 'Arraste um cartão para Concluído para marcar como feito. Para mudar a data de um prazo, use “Adiar”.') + '</div>';
+  h += '<div class="ag-dica">' + (agS.quadro === 'situacao' ? 'Arraste um cartão entre as colunas para mudar a situação (A fazer, Em andamento, Peça pronta, Concluído).' : 'Arraste um cartão para Concluído para marcar como feito. Para mudar a data de um prazo, use “Adiar”.') + '</div>';
   h += '<div class="kanban-wrap ag-quadro">' + cols.map(function(c){
     var rail = agS.quadro !== 'situacao' && c.k === 'feito';
     return '<div class="kanban-col ag-col-' + c.k + (rail && !agS.feitoAberto ? ' recolhida' : '') + '" data-agcol="' + c.k + '"' + (rail ? ' data-ag="feito-toggle" title="' + (agS.feitoAberto ? 'Recolher' : 'Abrir') + ' a coluna Concluído"' : '') + '><div class="kanban-col-head"><h4>' + rsIconeColuna(c.t) + ' ' + escapeHtml(c.t) + ' <span class="fv-chip">' + c.l.length + '</span></h4></div>' +
@@ -463,7 +521,7 @@ function agMover(key, destino){
   var i = agItens({ quadro: true }).filter(function(x){ return x.key === key; })[0]; if (!i) return;
   if (i.fonte === 'caso'){ if (destino === 'feito') agConcluir(key, true); return; }
   if (i.fonte !== 'agenda') return;
-  var doc = Object.assign({}, i.doc, { situacao: destino, concluido: destino === 'feito', cancelado: false, concluidoEm: destino === 'feito' ? agHoje() : '' }); delete doc.id;
+  var doc = Object.assign({}, i.doc, { situacao: destino, concluido: destino === 'feito', cancelado: false, concluidoEm: destino === 'feito' ? agHoje() : '' }, destino === 'afazer' || destino === 'elaboracao' ? { prontaEm: '', prontaPor: '' } : {}); delete doc.id;
   pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ Object.assign(i.doc, doc); agDepois(); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
 var agAdiarKey = null, agAdtKey = null;
@@ -557,7 +615,7 @@ function agConcluir(key, feito, prot){
     persistPatch(i.caso, { prazo: Object.assign({}, i.caso.prazo, { concluido: feito }, extra) });
     setTimeout(function(){ agDepois(); }, 400); toast(feito ? 'Prazo concluído.' : 'Prazo reaberto.'); return;
   }
-  var doc = Object.assign({}, i.doc, { concluido: feito, cancelado: false, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '', concluidoPor: feito && esS.eu ? esS.eu.nome : '' }, i.tipo === 'prazo' ? extra : {}); delete doc.id;   /* um só "concluído" para todos os responsáveis; fica registrado quem concluiu */
+  var doc = Object.assign({}, i.doc, { concluido: feito, cancelado: false, situacao: feito ? 'feito' : 'afazer', concluidoEm: feito ? agHoje() : '', concluidoPor: feito && esS.eu ? esS.eu.nome : '' }, feito ? {} : { prontaEm: '', prontaPor: '' }, i.tipo === 'prazo' ? extra : {}); delete doc.id;   /* um só "concluído" para todos os responsáveis; fica registrado quem concluiu */
   pbApi('/api/db/agenda/' + encodeURIComponent(i.id), 'PUT', doc).then(function(){ Object.assign(i.doc, doc); agDepois(); toast(feito ? (i.tipo === 'prazo' ? 'Prazo marcado como protocolado.' : 'Concluído.') : 'Reaberto.'); }).catch(function(e){ toast('Não consegui salvar: ' + e.message); });
 }
 function agMontarEd(){
@@ -800,6 +858,10 @@ function agRevClique(a){
     '.agd2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 2px}.agd2>div{border-radius:11px;padding:6px 9px;background:var(--surface-2,#f6f4ee);border-left:4px solid var(--c-gold,#C98500)}.agd2>div.f,.agd2>div.at{border-left-color:var(--urgente);background:rgba(217,59,59,.07)}.agd2 small{display:block;font-size:var(--t1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}.agd2 b{display:block;font-size:var(--t3)}.agd2 em{font-style:normal;font-size:var(--t1);font-weight:700;color:#8a5a00}.agd2 .f em,.agd2 .at em{color:var(--urgente)}' +
     '.acx{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.acx button,.acx a{display:inline-flex;align-items:center;gap:5px;font-family:inherit;border:1px solid var(--border);background:var(--surface);border-radius:99px;padding:5px 11px;font-size:var(--t2);font-weight:700;color:var(--ink);cursor:pointer;text-decoration:none}.acx .pri{background:var(--ink);color:var(--bg);border-color:transparent}' +
     '.agc>.agc-ok{align-self:start;margin-top:22px}.ag-fina{display:flex;gap:8px;align-items:center;font-size:var(--t2);color:var(--ink-soft);padding:6px 10px;border-left:3px solid var(--urgente);background:rgba(217,59,59,.06);border-radius:8px;margin:5px 0;cursor:pointer}.ag-fina b{color:var(--ink)}' +
+    '.agc.pronta{--ag-c:var(--success)}.acx .vd{background:var(--success);color:#fff;border-color:transparent}.agd2>div.ok{border-left-color:var(--success);background:rgba(23,137,90,.09)}.agd2 .ok em{color:var(--success)}' +
+    '.agm-h{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}.agm-h b{font-size:var(--t5,18px)}.agm-h small{font-size:var(--t2);color:var(--ink-soft)}.agm-res{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.agm-res span{border-radius:99px;padding:4px 10px;font-size:var(--t1);font-weight:800;background:var(--surface-2,#eceae4);color:var(--ink)}.agm-res .r{background:rgba(217,59,59,.12);color:var(--urgente)}.agm-res .a{background:rgba(42,120,214,.13);color:var(--info)}.agm-res .g{background:rgba(201,133,0,.16);color:#8a5a00}.agm-res .v{background:rgba(23,137,90,.14);color:var(--success)}' +
+    '.agm-prog{height:8px;border-radius:99px;background:var(--surface-2,#eceae4);overflow:hidden;margin:2px 0 4px}.agm-prog i{display:block;height:100%;background:var(--success);border-radius:99px}.agm-sec{font-size:var(--t1);font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin:14px 2px 5px;display:flex;justify-content:space-between;color:var(--ink-soft)}.agm-sec.r{color:var(--urgente)}.agm-sec.a{color:var(--info)}.agm-sec.g{color:#8a5a00}.agm-sec.v{color:var(--success)}.agm-sec small{font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink-soft)}' +
+    '.agm-am{display:flex;justify-content:space-between;gap:8px;font-size:var(--t2);padding:7px 10px;background:var(--surface-2,#f6f4ee);border-radius:10px;margin:4px 0;cursor:pointer}.agm-am span:last-child{color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.agm-ok{color:var(--success)}.agm-at{color:var(--urgente)}' +
     '.ag-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}.ag-nav b{font-size:var(--t4)}' +
     '.ag-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.ag-d{font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 5px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--ink-soft);cursor:pointer}.ag-d span{font-size:var(--t1);text-transform:uppercase;font-weight:600}.ag-d b{font-size:var(--t5);color:var(--ink)}.ag-d.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}.ag-d.on b{color:var(--bg)}.ag-d.hoje:not(.on){border-color:var(--accent)}' +
     '.ag-d i,.ag-c i{display:flex;gap:2px;justify-content:center;min-height:6px;font-style:normal}.ag-p{display:inline-block;width:5px;height:5px;border-radius:50%}.ag-p.pr{background:var(--urgente)}.ag-p.au{background:var(--info)}.ag-p.pe{background:var(--c-gold,#C98500)}.ag-p.fe{background:#9a9aa3}' +

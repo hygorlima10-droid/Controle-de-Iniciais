@@ -108,6 +108,22 @@ r = await dono('GET', '/api/auditoria?de=' + hojeD + '&ate=' + hojeD); const r2 
 check(r.j.itens.length >= 1 && r2.j.itens.length === 0, 'o Registro filtra por período (hoje tem ações; 1999 não)');
 r = await dono('GET', '/api/auditoria?colecao=acesso'); check(r.s === 200 && r.j.itens.every((x) => x.rotulo === 'Acesso'), 'o filtro "Acessos" mostra só os eventos de acesso');
 
+console.log('\n— peça pronta: o estagiário avisa que terminou a peça');
+const pz = { tipo: 'prazo', titulo: 'Contestação para conferir', processo: num, data: '2026-12-09', trabalhar: '2026-12-07', situacao: 'afazer', criadoPor: 'u1', resp: ['u:u2'] };
+await dono('PUT', '/api/db/agenda/av7', pz);
+limpar(); r = await caio('PUT', '/api/db/agenda/av7', { ...pz, situacao: 'pronta', prontaEm: hoje, prontaPor: 'Caio Estagiário' }); await esperar(500);
+let pr = await lidas('dono'), pa = await lidas('ana');
+check(r.s === 200, 'o estagiário consegue marcar a peça como pronta no prazo do processo');
+check(pr.some((x) => /Peça pronta por/.test(x.titulo) && /conferir e protocolar/.test(x.corpo)), 'o proprietário recebe "Peça pronta por…" no celular: ' + pr.map((x) => x.titulo).join(' | '));
+check(pa.some((x) => /Peça pronta por/.test(x.titulo)), 'a advogada responsável pelo prazo também recebe');
+check((await lidas('bruno')).length === 0 && (await lidas('dani')).length === 0, 'quem não é responsável nem proprietário não recebe');
+limpar(); await caio('PUT', '/api/db/agenda/av7', { ...pz, situacao: 'pronta', prontaEm: hoje, prontaPor: 'Caio Estagiário', obs: 'só uma observação' }); await esperar(400);
+check((await lidas('dono')).filter((x) => /Peça pronta por/.test(x.titulo)).length === 0, 'não repete o aviso se o prazo já estava com a peça pronta');
+await caio('PUT', '/api/db/agenda/av7', pz); await dono('PUT', '/api/notif/config', { equipe: { pronta: false } });
+limpar(); await caio('PUT', '/api/db/agenda/av7', { ...pz, situacao: 'pronta', prontaEm: hoje, prontaPor: 'Caio' }); await esperar(400);
+check((await lidas('dono')).filter((x) => /Peça pronta por/.test(x.titulo)).length === 0, 'com a chave "Alguém marcar peça pronta" desligada, o proprietário não recebe');
+await dono('PUT', '/api/notif/config', { equipe: { pronta: true } });
+
 for (const col of ['casos', 'agenda']) for (const d of (await dono('GET', '/api/db/' + col)).j.docs) if (d.id.startsWith('av')) await dono('DELETE', '/api/db/' + col + '/' + d.id);
 for (const d of (await dono('GET', '/api/db/repasses')).j.docs) await dono('DELETE', '/api/db/repasses/' + d.id);
 srv.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);
