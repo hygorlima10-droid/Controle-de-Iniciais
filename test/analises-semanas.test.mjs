@@ -16,9 +16,9 @@ await api('PUT', 'config/backup', { ultimoEm: agora }); await api('PUT', 'config
 await api('PUT', 'saldos/pj', { coluna: 'pj', saldoAtual: 3000, atualizadoEm: agora, historico: [{ valor: 3000, data: agora }] });
 await api('PUT', 'saldos/pf', { coluna: 'pf', saldoAtual: 500, atualizadoEm: agora, historico: [{ valor: 500, data: agora }] });
 const desp = (id, nome, v, d, extra = {}) => api('PUT', 'despesas/' + id, { nome, coluna: 'pj', tipo: 'unica', valor: v, data: d, mesReferencia: d.slice(0, 7), categoria: 'estrutura', pago: false, criadoEm: agora, ...extra });
-await desp('d1', 'Contador', 2500, dia(5)); await desp('d2', 'Reforma do telhado', 6000, dia(16)); await desp('d3', 'Já paga', 999, dia(3), { pago: true, dataPagamento: dia(3) });
+await desp('d1', 'Contador', 2500, dia(0)); await desp('d2', 'Reforma do telhado', 6000, dia(16)); await desp('d3', 'Já paga', 999, dia(3), { pago: true, dataPagamento: dia(3) });
 const ac = (id, partes, ps) => api('PUT', 'termosAcordo/' + id, { partes, numeroProcesso: '1', origem: 'proprio', status: 'pendente', valorTotal: ps.reduce((t, p) => t + p.valor, 0), valorMeuHonorario: ps.reduce((t, p) => t + p.valor, 0), parcelas: ps.map((p, i) => ({ numero: i + 1, valor: p.valor, data: p.data, pago: false })), data: ps[0].data, clienteIds: [], criadoEm: agora, atualizadoEm: agora });
-await ac('a1', 'Carlos Andrade x Banco', [{ valor: 900, data: dia(2) }, { valor: 800, data: dia(9) }]);
+await ac('a1', 'Carlos Andrade x Banco', [{ valor: 900, data: dia(0) }, { valor: 800, data: dia(9) }]);
 await api('PUT', 'alvaras/v1', { numeroProcesso: '9', partes: 'Ciclano x Banco', origem: 'proprio', valorTotalHonorarios: 4000, valorMeuHonorario: 4000, status: 'pendente', fase: 'expedido', faseDesde: dia(-3), previsaoLevantamento: dia(10), clienteIds: [], criadoEm: agora, atualizadoEm: agora });
 const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 1280, height: 900 } }); const page = await ctx.newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, x => x.abort());
 await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(3000);
