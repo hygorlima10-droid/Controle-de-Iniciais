@@ -1750,6 +1750,7 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -18692,7 +18693,7 @@ function agCartaoQuadro(i){
     if (i.fonte === 'alvara') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="acao" data-k="' + k + '">Abrir alvará</button>';
     else if (sit && i.fonte === 'agenda' && i.tipo !== 'audiencia' && i.situacao === 'afazer') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="mover" data-k="' + k + '" data-v="elaboracao">Avançar ›</button>';
     else if (i.fonte === 'agenda' && i.tipo === 'prazo' && i.situacao === 'pronta') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + k + '">Protocolar</button>';
-    else if (sit && i.fonte === 'agenda' && i.tipo === 'prazo' && i.situacao === 'elaboracao') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="pronta" data-k="' + k + '">✓ Peça pronta</button>';
+    else if (sit && i.fonte === 'agenda' && i.tipo === 'prazo' && i.situacao === 'elaboracao') btn += '<button type="button" class="btn btn-primary pb-b" data-ag="pronta" data-k="' + k + '">✓ Peça pronta</button><button type="button" class="btn btn-ghost pb-b" data-ag="concluir" data-k="' + k + '">Marcar protocolada</button>';
     else btn += '<button type="button" class="btn btn-primary pb-b" data-ag="concluir" data-k="' + k + '">' + (i.tipo === 'prazo' ? 'Marcar protocolada' : (i.tipo === 'audiencia' ? 'Realizada' : 'Concluir')) + '</button>';
     if (sit && i.fonte === 'agenda' && i.tipo !== 'audiencia' && (i.situacao === 'elaboracao' || i.situacao === 'pronta')) btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="mover" data-k="' + k + '" data-v="' + (i.situacao === 'pronta' ? 'elaboracao' : 'afazer') + '">‹ Voltar</button>';
     btn += '<button type="button" class="btn btn-ghost pb-b" data-ag="adiar" data-k="' + k + '">Adiar</button>';

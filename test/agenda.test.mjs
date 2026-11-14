@@ -129,7 +129,7 @@ await f('PUT', '/api/db/casos/c2', { tipo: 'inicial', cliente: 'Maria Souza', no
 await f('PUT', '/api/db/alvaras/v1', { numeroProcesso: '9v1', partes: 'Souza x Seguradora', origem: 'proprio', valorTotalHonorarios: 1500, valorMeuHonorario: 1500, status: 'pendente', fase: 'expedido', faseDesde: dia(-3), previsaoLevantamento: dia(2), clienteIds: [], criadoEm: agora, atualizadoEm: agora });
 await page.reload(); await page.waitForTimeout(3500);
 await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(800);
-check(await page.evaluate(() => document.querySelectorAll('#agSeg [data-ag="vista"]').length) === 5 && /Quadro/.test(await t('#agSeg')) && !!(await page.$('#agWrap [data-ag="novo"]')), 'a Agenda tem as sub-abas Resumo, Semana, Mês, Lista e Quadro, e o botão Novo');
+check(await page.evaluate(() => document.querySelectorAll('#agSeg [data-ag="vista"]').length) === 6 && /Quadro/.test(await t('#agSeg')) && !!(await page.$('#agWrap [data-ag="novo"]')), 'a Agenda tem as sub-abas Resumo, Meu dia, Semana, Mês, Lista e Quadro, e o botão Novo');
 await page.click('[data-ag="vista"][data-v="quadro"]'); await page.waitForTimeout(500);
 check(/Por urgência/.test(await page.evaluate(() => document.querySelector('#agModo .seg-btn.active').innerText)) && (await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-col').length)) === 6, 'o Quadro abre por urgência, com 6 colunas');
 const colTxt = async k => page.evaluate(k => (document.querySelector('[data-agcol="' + k + '"]') || {}).innerText || '', k);
@@ -154,7 +154,7 @@ check((await dc('casos')).find(c => c.id === 'c2').prazo.concluido === true && /
 check((await dc('casos')).find(c => c.id === 'c2').status === 'pendente', 'e a Inicial continua na fase dela');
 // por situação
 await page.click('[data-ag="modo"][data-v="situacao"]'); await page.waitForTimeout(400);
-check((await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-col').length)) === 4 && /Levantamento do alvará/.test(await colTxt('acomp')), 'por situação: 4 colunas, e o Alvará fica em "Acompanhando"');
+check((await page.evaluate(() => document.querySelectorAll('.ag-quadro .kanban-col').length)) === 5 && /Levantamento do alvará/.test(await colTxt('acomp')), 'por situação: 5 colunas (A fazer, Em andamento, Peça pronta, Acompanhando, Concluído), e o Alvará fica em "Acompanhando"');
 check(/Recolher o sistema/.test(await colTxt('afazer')) && /Avançar/.test(await colTxt('afazer')), 'prazos da Agenda aparecem em "A fazer" com o botão Avançar');
 await page.click('[data-agcol="afazer"] .ag-kc:has-text("Recolher o sistema") [data-ag="mover"]'); await page.waitForTimeout(1000);
 check((await ag()).find(d => d.titulo === 'Recolher o sistema').situacao === 'elaboracao' && /Recolher o sistema/.test(await colTxt('elaboracao')), 'Avançar passa o prazo para "Em elaboração"');
