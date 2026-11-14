@@ -9,6 +9,7 @@ var CF_LINHAS = [
   { id: 'backup', ic: '💾', t: 'Backup e restauração', s: 'cópias, restaurar com segurança, voltar', go: function(){ var b = qs('backupBtn'); if (b) b.click(); } },
   { id: 'csv', ic: '📤', t: 'Exportar lista (CSV)', s: 'Iniciais, acordos, alvarás, clientes', go: function(){ var b = qs('exportBtn'); if (b) b.click(); } },
   { id: 'extregras', ic: '🏦', t: 'Extratos: regras que você ensinou', s: 'palavras do favorecido → despesa, cobrança ou categoria', go: function(){ if (typeof excAbrirRegras === 'function') excAbrirRegras(); } },
+  { id: 'dias', ic: '📅', t: 'Dias sem expediente', s: 'feriado municipal, ponto facultativo, suspensão de prazos', go: function(){ dxAbrir(); } },
   { id: 'usuarios', ic: '👥', t: 'Usuários', s: 'convidar pessoas, permissões e aparelhos', go: function(){ usAbrir(); } },
   { id: 'seguranca', ic: '🔒', t: 'Segurança', s: 'sessões abertas, trocar a senha, avisos de acesso', go: function(){ sgSegAbrir(); } },
   { id: 'lixeira', ic: '🗑', t: 'Lixeira', s: 'restaurar o que foi excluído (30 dias)', go: function(){ sgLixAbrir(); } },
@@ -16,7 +17,7 @@ var CF_LINHAS = [
 ];
 var CF_FUTURAS = [
   { ic: '⚖️', t: 'OABs e publicações', s: 'OAB de cada advogado' },
-  { ic: '🗓', t: 'Agendas e regras operacionais', s: 'compartilhar, feriados, listas' },
+  { ic: '🗓', t: 'Agendas e regras operacionais', s: 'compartilhar e listas' },
 ];
 function cfLinha(l, fut){
   var tag = l.breve ? '<span class="cf-tag">em breve</span>' : (fut ? '<span class="cf-tag">depois</span>' : '<span class="cf-seta">›</span>');

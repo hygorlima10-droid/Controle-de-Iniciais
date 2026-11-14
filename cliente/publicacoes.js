@@ -36,11 +36,12 @@ function pbFeriados(ano){
   return pbFerCache[ano];
 }
 function pbRecesso(iso){ var md = iso.slice(5); return md >= '12-20' || md <= '01-20'; }   /* CPC art. 220: prazos suspensos de 20/12 a 20/01 */
-function pbFeriado(iso){ return !!pbFeriados(Number(iso.slice(0, 4)))[iso]; }
+function pbFeriado(iso){ return !!pbFeriados(Number(iso.slice(0, 4)))[iso] || (typeof dxTem === 'function' && dxTem(iso)); }   /* + dias sem expediente cadastrados em Configurações */
 function pbNaoUtil(iso){ var w = pbDow(iso); return w === 0 || w === 6 || pbFeriado(iso) || pbRecesso(iso); }
 function pbMotivoNaoUtil(iso){
   if (pbDow(iso) === 0 || pbDow(iso) === 6) return pbDiaSem(iso);
   if (pbRecesso(iso)) return 'recesso (prazos suspensos de 20/12 a 20/01)';
+  if (typeof dxTem === 'function' && dxTem(iso)) return 'sem expediente (' + dxNome(iso) + ')';
   if (pbFeriado(iso)) return 'feriado' + (PB_FER_NOMES[iso.slice(5)] ? ' (' + PB_FER_NOMES[iso.slice(5)] + ')' : '');
   return '';
 }

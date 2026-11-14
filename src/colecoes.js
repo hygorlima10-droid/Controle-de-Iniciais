@@ -4,7 +4,7 @@
    - fora da tabela: recusada.
    Coleções que começam com _ nunca passam por aqui (o nome é recusado antes). */
 export const NIVEL = {
-  repasses: 'juridico', casos: 'juridico', termosAcordo: 'juridico', alvaras: 'juridico', clientes: 'juridico', processos: 'juridico', agenda: 'juridico', pecasAprendidas: 'juridico', prazosPub: 'juridico', config: 'juridico',
+  repasses: 'juridico', casos: 'juridico', termosAcordo: 'juridico', alvaras: 'juridico', clientes: 'juridico', processos: 'juridico', agenda: 'juridico', pecasAprendidas: 'juridico', prazosPub: 'juridico', diasSemExpediente: 'juridico', config: 'juridico',
   despesas: 'dono', receitasManuais: 'dono', saldos: 'dono', metas: 'dono', extratos: 'dono', obraMov: 'dono', configDono: 'dono',
 };
 /* documentos de `config` que são do proprietário: ficam na coleção configDono. O endereço antigo (/api/db/config/<id>) continua valendo

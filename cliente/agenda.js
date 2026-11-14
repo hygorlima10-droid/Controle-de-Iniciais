@@ -19,6 +19,7 @@ function agDias(iso){ return Math.round((Date.parse(iso + 'T12:00:00Z') - Date.p
 function agMesCurto(iso){ return AG_MESES[Number(iso.slice(5, 7)) - 1].slice(0, 3).toUpperCase(); }
 function agNomeFeriado(iso){
   var md = iso.slice(5);
+  if (typeof dxTem === 'function' && dxTem(iso)) return dxNome(iso);
   if (pbFeriado(iso)){
     if (PB_FER_NOMES[md]) return PB_FER_NOMES[md];
     var d = Math.round((Date.parse(iso + 'T12:00:00Z') - Date.parse(pbPascoa(Number(iso.slice(0, 4))) + 'T12:00:00Z')) / 86400000);

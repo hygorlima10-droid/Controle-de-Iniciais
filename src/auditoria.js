@@ -4,7 +4,7 @@
 
 export const DIAS_LIXEIRA = 30, DIAS_REGISTRO = 365;
 const COL_AUD = '_auditoria', COL_LIX = '_lixeira';
-export const ROTULOS = { repasses: 'Repasse', casos: 'Inicial', termosAcordo: 'Acordo', alvaras: 'Alvará', clientes: 'Cliente', processos: 'Processo', agenda: 'Agenda', despesas: 'Despesa', receitasManuais: 'Receita', saldos: 'Saldo', metas: 'Meta', extratos: 'Extrato', obraMov: 'Lançamento da obra', pecasAprendidas: 'Peça aprendida', config: 'Configuração' };
+export const ROTULOS = { repasses: 'Repasse', casos: 'Inicial', termosAcordo: 'Acordo', alvaras: 'Alvará', clientes: 'Cliente', processos: 'Processo', agenda: 'Agenda', diasSemExpediente: 'Dia sem expediente', despesas: 'Despesa', receitasManuais: 'Receita', saldos: 'Saldo', metas: 'Meta', extratos: 'Extrato', obraMov: 'Lançamento da obra', pecasAprendidas: 'Peça aprendida', config: 'Configuração' };
 const SEM_REGISTRO = new Set(['config', 'configDono']);        // configurações mudam sozinhas (data do último backup, vínculo…): só ruído
 const SEM_LIXEIRA = new Set(['config', 'configDono']);
 const IGNORAR = new Set(['atualizadoEm', 'proximaAgId', 'djTent', 'djPendente']);
