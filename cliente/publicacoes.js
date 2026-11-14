@@ -49,15 +49,10 @@ function pbProxUtil(iso){ var d = iso; do { d = pbSoma(d, 1); } while (pbNaoUtil
 /* disponibilização → publicação (1º dia útil seguinte) → começa a contar no 1º dia útil seguinte à publicação */
 function pbCalcular(disp, dias, tipo){
   dias = Math.max(1, parseInt(dias, 10) || 1);
-  var pub = pbProxUtil(disp), ini = pbProxUtil(pub), d = ini, n = 1, obs = [];
-  if (tipo === 'corridos'){
-    while (n < dias){ d = pbSoma(d, 1); if (!pbRecesso(d)) n++; }
-    while (pbNaoUtil(d)) d = pbSoma(d, 1);   /* vence em dia sem expediente: passa para o próximo dia útil */
-  } else {
-    while (n < dias){ d = pbSoma(d, 1); if (!pbNaoUtil(d)) n++; }
-  }
-  for (var x = ini; x <= d; x = pbSoma(x, 1)) if (PB_FACULTATIVOS[x]) obs.push(fmtData(x) + ' foi ' + PB_FACULTATIVOS[x]);
-  return { pub: pub, ini: ini, venc: d, obs: obs };
+  var corr = tipo === 'corridos', op = { modo: 'dje', data: disp, dias: dias, regime: corr ? 'custom' : 'cpc', unidade: corr ? 'corridos' : 'uteis', recesso: true, prorroga: true, excluiInicio: true, inicioUtil: true, sobre: 1, dobro: false, extras: [] };
+  var r = pzCalcular(op), obs = [];   /* a contagem é do motor de cliente/prazos.js (a mesma da Calculadora de prazos) */
+  for (var x = r.inicio; x <= r.vencimento; x = pbSoma(x, 1)) if (PB_FACULTATIVOS[x]) obs.push(fmtData(x) + ' foi ' + PB_FACULTATIVOS[x]);
+  return { pub: r.publicacao, ini: r.inicio, venc: r.vencimento, obs: obs, op: op };
 }
 
 /* ---------- vínculo com os processos cadastrados ---------- */
@@ -627,7 +622,7 @@ function pbSalvarPrazo(){
   var mult = pbMult(), r = pbCalcular(p.data, dias * mult, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '', psel = pbPecaSel(p), pcz = pbPecasDe(p);
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
   var pcMostrado = pbPecasDe(p);
-  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, calculo: manual ? undefined : r.op, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
     peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? (psel.rid === 'catalogo' ? 'escolhida' : 'sugerida') : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
     try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }

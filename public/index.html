@@ -1754,6 +1754,9 @@ el.addEventListener('click',fechar);setTimeout(fechar,2800);})();
 
 
 
+
+
+
 <symbol id="ic-sync" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8M18.5 2v4h-4M5.5 22v-4h4"/></symbol>
 <symbol id="ic-mes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
 <symbol id="ic-lista" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
@@ -17528,15 +17531,10 @@ function pbProxUtil(iso){ var d = iso; do { d = pbSoma(d, 1); } while (pbNaoUtil
 /* disponibilização → publicação (1º dia útil seguinte) → começa a contar no 1º dia útil seguinte à publicação */
 function pbCalcular(disp, dias, tipo){
   dias = Math.max(1, parseInt(dias, 10) || 1);
-  var pub = pbProxUtil(disp), ini = pbProxUtil(pub), d = ini, n = 1, obs = [];
-  if (tipo === 'corridos'){
-    while (n < dias){ d = pbSoma(d, 1); if (!pbRecesso(d)) n++; }
-    while (pbNaoUtil(d)) d = pbSoma(d, 1);   /* vence em dia sem expediente: passa para o próximo dia útil */
-  } else {
-    while (n < dias){ d = pbSoma(d, 1); if (!pbNaoUtil(d)) n++; }
-  }
-  for (var x = ini; x <= d; x = pbSoma(x, 1)) if (PB_FACULTATIVOS[x]) obs.push(fmtData(x) + ' foi ' + PB_FACULTATIVOS[x]);
-  return { pub: pub, ini: ini, venc: d, obs: obs };
+  var corr = tipo === 'corridos', op = { modo: 'dje', data: disp, dias: dias, regime: corr ? 'custom' : 'cpc', unidade: corr ? 'corridos' : 'uteis', recesso: true, prorroga: true, excluiInicio: true, inicioUtil: true, sobre: 1, dobro: false, extras: [] };
+  var r = pzCalcular(op), obs = [];   /* a contagem é do motor de cliente/prazos.js (a mesma da Calculadora de prazos) */
+  for (var x = r.inicio; x <= r.vencimento; x = pbSoma(x, 1)) if (PB_FACULTATIVOS[x]) obs.push(fmtData(x) + ' foi ' + PB_FACULTATIVOS[x]);
+  return { pub: r.publicacao, ini: r.inicio, venc: r.vencimento, obs: obs, op: op };
 }
 
 /* ---------- vínculo com os processos cadastrados ---------- */
@@ -18106,7 +18104,7 @@ function pbSalvarPrazo(){
   var mult = pbMult(), r = pbCalcular(p.data, dias * mult, tipo), venc = manual || r.venc, v = pbVinculo(p.processo), trab = '', psel = pbPecaSel(p), pcz = pbPecasDe(p);
   var auto = agAntesUteis(venc, 2); if (auto >= todayISO() && auto < venc) trab = auto;
   var pcMostrado = pbPecasDe(p);
-  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
+  agCriar({ tipo: 'prazo', titulo: desc, processo: p.numero || p.processo, cliente: pbNomeParte(p, v), data: venc, hora: '', trabalhar: trab, situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], resp: esRespChaves('agendapub'), pubId: p.id, calculo: manual ? undefined : r.op, dias: dias * mult, diasBase: dias, dobro: mult > 1 ? qs('pbf_dobro').value : '', contagem: tipo, disp: p.data, inicio: r.ini, manual: !!manual, tribunal: p.tribunal || '',
     peca: psel ? psel.peca : '', pecaId: psel ? psel.rid : '', pecaBase: psel ? psel.base : '', pecaOrigem: psel && psel.peca === desc ? (psel.rid === 'catalogo' ? 'escolhida' : 'sugerida') : (psel ? 'ajustada' : 'manual'), natureza: pcz ? pcz.natureza : '', criadoEm: new Date().toISOString() }).then(function(){
     pbMarcar(pbMembros(p).map(function(x){ return x.id; }), { lida: true, semPrazo: false });
     try{ pbRegistrarEscolha(p, pcMostrado, psel, desc, dias, tipo); }catch(e){ console.error('aprendizado', e); }
@@ -18223,7 +18221,7 @@ var AG_PADRAO = [5, 2, 1, 0];
 var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
 var AG_MODAL = { presencial: 'Presencial', online: 'Online', hibrida: 'Híbrida' };
 var AG_AUDS = ['Conciliação', 'Mediação', 'Instrução e julgamento', 'Justificação', 'Saneamento', 'Custódia', 'Admonitória', 'Outra'];
-var agEditPre = null;
+var agEditPre = null, agEditCalc = null;   /* agEditCalc: parâmetros do cálculo de prazo usado no editor */
 var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em andamento', pronta: 'Peça pronta', feito: 'Concluído', cancelado: 'Cancelado' };
 var AG_DOW = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], AG_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 function agHoje(){ return todayISO(); }
@@ -18415,6 +18413,7 @@ function agMontarTela(){
     else if (a === 'novo') agAbrir(null);
     else if (a === 'rel') rptAgenda();
     else if (a === 'importar'){ agS.menu = false; agiAbrir(); }
+    else if (a === 'calc'){ agS.menu = false; pzAbrir({}); }
     else if (a === 'flt') agdFiltrosAbrir();
     else if (a === 'menu'){ agS.menu = !agS.menu; agRender(); }
     else if (a === 'det') agdAbrir(k);
@@ -18459,14 +18458,14 @@ function agRenderIn(){
   /* sub-abas padrão (Fase 2): Resumo, Semana, Mês, Lista e Quadro; a última usada fica lembrada */
   if (!agS.mdOk){ agS.mdOk = 1; if (agS.vista === 'semana') agS.vista = mdInicial('agenda', ['meudia', 'semana', 'mes', 'lista', 'quadro']); }
   var h = '<div id="agSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['meudia', 'Meu dia'], ['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista'], ['quadro', 'Quadro']], agS.vista, function(k){ return 'data-ag="vista" data-v="' + k + '"'; }) + '</div>' +
-    '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div>';
+    '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div><div style="text-align:right;margin:-4px 2px 2px"><button type="button" class="btn-text" data-ag="calc">🧮 Calculadora de prazos</button></div>';
   if (agS.vista === 'resumo' || agS.vista === 'meudia'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; if (agS.vista === 'resumo') agCarregarCarga(); return; }
   if (agS.vista !== 'quadro' && agS.filtro === 'alvara') agS.filtro = 'tudo';
   h += '<input type="search" id="agBusca" class="ag-busca" placeholder="Buscar compromisso, processo ou cliente" autocomplete="off" value="' + escapeHtml(agS.busca || '') + '" style="margin-top:8px">';
   var nf = agdFiltrosAtivos();
   h += '<div class="ag-filtros" style="margin-top:8px">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas'], ['inicial', 'Iniciais']].concat(agS.vista === 'quadro' ? [['alvara', 'Alvarás']] : []).map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') +
     '<button type="button" class="ag-f' + (nf ? ' tem' : '') + '" data-ag="flt">Filtros' + (nf ? ' · ' + nf : '') + '</button><button type="button" class="ag-f' + (agS.menu ? ' on' : '') + '" data-ag="menu" aria-label="Mais opções">⋯</button></div>';
-  if (agS.menu) h += '<div class="ag-menu" style="margin-top:6px"><button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button><button type="button" class="ag-f" data-ag="importar">📥 Importar do Control Jus</button></div>';
+  if (agS.menu) h += '<div class="ag-menu" style="margin-top:6px"><button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button><button type="button" class="ag-f" data-ag="importar">📥 Importar do Control Jus</button><button type="button" class="ag-f" data-ag="calc">🧮 Calculadora de prazos</button></div>';
   h += '<div id="agCorpo">' + agCorpo() + '</div>';
   w.innerHTML = h;
 }
@@ -18841,6 +18840,7 @@ function agMontarEd(){
     var b = e.target.closest ? e.target.closest('[data-age]') : null; if (!b) return;
     var a = b.getAttribute('data-age');
     if (a === 'tipo'){ agEditTipo = b.getAttribute('data-v'); agAjustarCampos(); Array.prototype.forEach.call(d.querySelectorAll('[data-age="tipo"]'), function(x){ x.classList.toggle('active', x === b); }); }
+    else if (a === 'calc'){ var pr0 = qs('age_data').value; pzAbrir({ retorno: function(res){ qs('age_data').value = res.vencimento; if (res.trabalhar) qs('age_trab').value = res.trabalhar; agEditCalc = { op: res.calculo, venc: res.vencimento }; qs('age_calc_info').textContent = 'contado: ' + pzTextoCalculo(res.calculo); try{ agDicasConflito(); }catch(e){} } }); }
     else if (a === 'salvar') agSalvarEd();
     else if (a === 'dup-salvar'){ agEdDup = true; agSalvarEd(); }
     else if (a === 'dup-abrir'){ d.classList.remove('show'); agdAbrir(b.getAttribute('data-k')); }
@@ -18863,6 +18863,7 @@ function agAjustarCampos(){
   var t = agEditTipo, rot = { prazo: 'Peça / o que fazer', audiencia: 'Assunto da audiência', tarefa: 'Tarefa' };
   qs('age_tit_l').textContent = rot[t]; qs('age_data_l').textContent = t === 'prazo' ? 'Prazo fatal' : (t === 'audiencia' ? 'Data da audiência' : 'Fazer até');
   qs('age_hora_box').style.display = t === 'audiencia' ? '' : 'none'; qs('age_trab_box').style.display = t === 'prazo' ? '' : 'none';
+  if (qs('age_calc_box')) qs('age_calc_box').style.display = t === 'prazo' && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso') ? '' : 'none';
   qs('age_sit_box').style.display = t === 'audiencia' ? 'none' : '';
   var vis = qs('age_vis'), box = qs('age_vis_box'), er = qs('esResp_agenda');
   if (box){ box.style.display = t === 'tarefa' && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso') ? '' : 'none'; if (er && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso')) er.style.display = (t !== 'tarefa' || (vis && vis.value !== 'so_eu')) ? '' : 'none'; }
@@ -18874,7 +18875,7 @@ function agPresetAvisos(a){ var s = JSON.stringify(a || AG_PADRAO); return s ===
 function agAbrir(key, pre){
   agMontarEd();
   var i = key ? agItens().filter(function(x){ return x.key === key; })[0] : null; if (key && !i) return;
-  var P = (!i && pre) ? pre : null; agEditPre = P;
+  var P = (!i && pre) ? pre : null; agEditPre = P; agEditCalc = (P && P.calculo) ? { op: P.calculo, venc: P.data } : null;
   var V = function(k){ return i ? (i[k] || '') : (P ? (P[k] || '') : ''); };
   agEditKey = key || null; agEditTipo = i ? i.tipo : (P && P.tipo ? P.tipo : 'prazo');
   var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
@@ -18886,12 +18887,13 @@ function agAbrir(key, pre){
     '<div class="field" id="age_vis_box"><label class="field-label" for="age_vis">Quem vê esta tarefa</label><select id="age_vis" class="filter-select" style="width:100%"><option value="so_eu">Só eu (tarefa pessoal)</option><option value="resp">Os responsáveis que eu escolher</option><option value="todos">Todo o escritório</option></select></div>' +
     '<div class="field" id="esResp_agenda"' + (caso ? ' style="display:none"' : '') + '></div>' +
     '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(V('data')) + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(V('hora')) + '"></div></div>' +
+    '<div id="age_calc_box" style="margin:-4px 0 8px"><button type="button" class="btn-text" data-age="calc">🧮 Calcular a partir da intimação ›</button> <span class="saldo-data" id="age_calc_info"></span></div>' +
     '<div class="saldo-data" id="age_dica2" style="margin:-4px 0 8px"></div>' +
     '<div id="age_aud_box"><div class="pb-dois"><div class="field"><label class="field-label" for="age_audtipo">Tipo da audiência</label><select id="age_audtipo" class="filter-select" style="width:100%"><option value="">Não informado</option>' + AG_AUDS.map(function(t){ return '<option' + (V('audTipo') === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div><div class="field"><label class="field-label" for="age_mod">Modalidade</label><select id="age_mod" class="filter-select" style="width:100%"><option value="">Não informada</option>' + Object.keys(AG_MODAL).map(function(k){ return '<option value="' + k + '"' + (V('modalidade') === k ? ' selected' : '') + '>' + AG_MODAL[k] + '</option>'; }).join('') + '</select></div></div>' +
     '<div class="field"><label class="field-label" for="age_local">Local</label><input type="text" id="age_local" maxlength="140" value="' + escapeHtml(V('local')) + '" placeholder="Ex.: Fórum de Morrinhos, sala 2"></div>' +
     '<div class="field"><label class="field-label" for="age_link">Link da sala virtual (opcional)</label><input type="text" inputmode="url" autocapitalize="off" id="age_link" maxlength="300" value="' + escapeHtml(V('link')) + '" placeholder="https://…"></div></div>' +
     '<div class="field"><label class="field-label" for="age_obs">Observações (opcional)</label><textarea id="age_obs" maxlength="1200" rows="3" style="width:100%">' + escapeHtml(V('obs')) + '</textarea></div>' +
-    '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : '') + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
+    '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : (P ? (P.trabalhar || '') : '')) + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
     '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + 'Em andamento</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
     '<div class="field" id="age_prot_box" style="display:none"><label class="field-label" for="age_protoc">Data do protocolo</label><input type="date" id="age_protoc" value="' + escapeHtml(V('protocoladoEm') || agHoje()) + '"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
@@ -18902,6 +18904,7 @@ function agAbrir(key, pre){
   agEdInicializar(i, caso);
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
   agDicasConflito();
+  if (agEditCalc && qs('age_calc_info')) qs('age_calc_info').textContent = 'contado: ' + pzTextoCalculo(agEditCalc.op);
   qs('overlayAg').classList.add('show');
 }
 var agEdDup = false;
@@ -18970,6 +18973,7 @@ function agSalvarEd(){
   var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '', audPubId: (agEditPre && agEditPre.audPubId) || '' }; delete base.id;
   var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av,
     obs: qs('age_obs') ? qs('age_obs').value.trim() : (base.obs || ''), audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
+  if (t === 'prazo'){ if (agEditCalc && agEditCalc.venc === data) doc.calculo = agEditCalc.op; else if (i && i.doc && i.doc.calculo && i.data !== data) delete doc.calculo; }   /* o cálculo só vale enquanto a data é a que ele deu */
   if (t === 'prazo'){ if (sit === 'feito'){ doc.protocoladoEm = qs('age_protoc').value || agHoje(); if (!doc.concluidoEm) doc.concluidoEm = agHoje(); } else { doc.protocoladoEm = ''; doc.protocoloObs = ''; } }
   /* responsáveis (quem vê e quem recebe os avisos) e visibilidade da tarefa */
   var ks = esRespChaves('agenda'), vis = t === 'tarefa' && qs('age_vis') ? qs('age_vis').value : 'resp';
@@ -22832,6 +22836,7 @@ function agdDesenhar(){
   if (i.tipo === 'audiencia' && (i.local || i.link)){
     h += agdBloco('Onde', (i.local ? '<div>' + escapeHtml(i.local) + '</div>' : '') + (/^https?:\/\//i.test(i.link || '') ? '<div class="agd-acoes"><a class="btn btn-ghost pb-b" href="' + escapeHtml(i.link) + '" target="_blank" rel="noopener noreferrer">Entrar na sala virtual ↗</a></div>' : ''));
   }
+  if (i.tipo === 'prazo' && d.calculo && !i.concluido) h += agdBloco('Como o prazo foi contado', '<div class="agd-sub" style="margin:0">' + escapeHtml(pzTextoCalculo(d.calculo)) + '</div><div class="agd-sub">Se um dia sem expediente for cadastrado em Configurações, a data é recalculada sozinha.</div>');
   if (i.tipo === 'prazo' && i.trabalhar && i.trabalhar < i.data && !i.concluido) h += agdBloco('Trabalhar na peça até', '<div>' + escapeHtml(fmtData(i.trabalhar)) + '</div>');
   if (i.concluido && i.tipo === 'prazo' && i.protocoladoEm && !i.cancelado) h += agdBloco('Protocolo', '<div>Protocolada em ' + escapeHtml(fmtData(i.protocoladoEm)) + (i.protocoloObs ? ' · ' + escapeHtml(i.protocoloObs) : '') + '</div>');
   if (d.obs) h += agdBloco('Observações', '<div class="agd-obs">' + escapeHtml(d.obs) + '</div>');
@@ -23066,7 +23071,7 @@ var PZ_REGIMES = {
 function pzRegime(op){
   var b = PZ_REGIMES[op.regime] || PZ_REGIMES.cpc, o = {};
   Object.keys(b).forEach(function(k){ o[k] = b[k]; });
-  if (op.regime === 'custom' || op.sobre){ ['unidade', 'recesso', 'prorroga', 'excluiInicio'].forEach(function(k){ if (op[k] !== undefined && op[k] !== null) o[k] = op[k]; }); }
+  if (op.regime === 'custom' || op.sobre){ ['unidade', 'recesso', 'prorroga', 'excluiInicio', 'inicioUtil'].forEach(function(k){ if (op[k] !== undefined && op[k] !== null) o[k] = op[k]; }); }
   return o;
 }
 /* op = { modo: 'dje' | 'ciencia' | 'inicio', data, dias, regime, dobro, extras: [datas], (personalizado: unidade, recesso, prorroga, excluiInicio) }
@@ -23092,8 +23097,13 @@ function pzCalcular(op){
     }
     out.vencimento = d;
   } else {
-    for (var k = 0; k < total; k++){ var dd = pbSoma(first, k), semFim = pbDow(dd) === 0 || pbDow(dd) === 6 || pbFeriado(dd) || extras.indexOf(dd) >= 0; passos.push({ iso: dd, t: k === total - 1 ? 'venc' : 'conta', n: k + 1, nota: semFim ? motivo(dd) : '' }); }
-    var v = pbSoma(first, total - 1);
+    var dd = first, cnt = 0, g3 = 0;
+    while (cnt < total && g3++ < 5000){
+      if (rg.recesso && pbRecesso(dd)) passos.push({ iso: dd, t: 'pula', motivo: pbMotivoNaoUtil(dd) || 'recesso' });
+      else { cnt++; var semFim = pbDow(dd) === 0 || pbDow(dd) === 6 || pbFeriado(dd) || extras.indexOf(dd) >= 0; passos.push({ iso: dd, t: cnt === total ? 'venc' : 'conta', n: cnt, nota: semFim ? motivo(dd) : '' }); if (cnt === total) break; }
+      dd = pbSoma(dd, 1);
+    }
+    var v = dd;
     if (rg.prorroga){
       var semProrroga = function(x){ var w = pbDow(x); return w === 0 || w === 6 || pbFeriado(x) || extras.indexOf(x) >= 0; }, g2 = 0;
       if (semProrroga(v)) passos[passos.length - 1].t = 'conta';
@@ -23206,9 +23216,109 @@ function dxDesfazerTudo(){
     persistPatch(m.caso, { prazo: m.antes }); return Promise.resolve();
   })).then(function(){ qs('overlayDxRes').classList.remove('show'); try{ agDepois(); }catch(e){} toast('Datas voltaram ao que eram.'); });
 }
+
+/* ============================================================
+   CALCULADORA DE PRAZOS (tela)
+   Abre pela Agenda (botão "Calculadora de prazos"), pelo editor do prazo ("Calcular a partir da intimação") e por Publicações.
+   Com `retorno`, o botão final devolve a data para quem chamou; sem `retorno`, cria o prazo na Agenda já com a data, o "trabalhar até" e os parâmetros (`calculo`),
+   que permitem recalcular o prazo se um dia sem expediente for cadastrado depois.
+   ============================================================ */
+var pzS = null;
+var PZ_MODOS = [['dje', 'Publicação no Diário (DJe)'], ['ciencia', 'Ciência direta ou eletrônica'], ['inicio', 'Contar a partir de…']];
+var PZ_DATA_ROT = { dje: 'Data da disponibilização no DJe', ciencia: 'Data da ciência (intimação)', inicio: 'Dia do começo da contagem' };
+function pzRegimeSalvo(){ try{ var r = localStorage.getItem('horus.pzRegime'); return PZ_REGIMES[r] ? r : 'cpc'; }catch(e){ return 'cpc'; } }
+function pzMontar(){
+  if (qs('overlayPz')) return;
+  var d = document.createElement('div'); d.className = 'overlay'; d.id = 'overlayPz';
+  d.innerHTML = '<div class="modal"><div class="modal-head"><h2>Calculadora de prazos</h2><button class="icon-btn" id="pzX" type="button" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="modal-body" id="pzC"></div></div>';
+  document.body.appendChild(d);
+  d.addEventListener('click', function(e){
+    if (e.target === d || (e.target.closest && e.target.closest('#pzX'))){ d.classList.remove('show'); return; }
+    var b = e.target.closest ? e.target.closest('[data-pz]') : null; if (!b) return;
+    var a = b.getAttribute('data-pz');
+    if (a === 'modo'){ pzS.op.modo = b.getAttribute('data-v'); pzDesenhar(); }
+    else if (a === 'extra-add'){ var v = qs('pz_extra').value; if (pzIso(v) && pzS.op.extras.indexOf(v) < 0){ pzS.op.extras.push(v); pzS.op.extras.sort(); } pzDesenhar(); }
+    else if (a === 'extra-rem'){ pzS.op.extras = pzS.op.extras.filter(function(x){ return x !== b.getAttribute('data-v'); }); pzDesenhar(); }
+    else if (a === 'mem'){ pzS.mem = !pzS.mem; pzAtualizar(); }
+    else if (a === 'usar') pzUsar();
+    else if (a === 'criar') pzCriar();
+  });
+  d.addEventListener('input', function(e){ var t = e.target; if (!t || !t.id || t.id.indexOf('pz_') !== 0) return; if (t.id !== 'pz_extra') pzLer(); pzAtualizar(); });
+  d.addEventListener('change', function(e){ var t = e.target; if (!t || !t.id || t.id.indexOf('pz_') !== 0) return; pzLer(); if (t.id === 'pz_regime'){ try{ localStorage.setItem('horus.pzRegime', pzS.op.regime); }catch(x){} pzDesenhar(); } else pzAtualizar(); });
+}
+function pzAbrir(o){
+  o = o || {}; pzMontar();
+  pzS = { retorno: o.retorno || null, mem: false, op: { modo: o.modo || 'dje', data: o.data || '', dias: o.dias || 15, regime: o.regime || pzRegimeSalvo(), dobro: !!o.dobro, extras: [], unidade: 'uteis', recesso: true, prorroga: false, excluiInicio: true } };
+  var rg = PZ_REGIMES[pzS.op.regime]; ['unidade', 'recesso', 'prorroga', 'excluiInicio'].forEach(function(k){ pzS.op[k] = rg[k]; });
+  pzDesenhar(); qs('overlayPz').classList.add('show');
+}
+function pzLer(){
+  var op = pzS.op, g = function(id){ return qs(id); };
+  if (g('pz_regime') && g('pz_regime').value !== op.regime){ op.regime = g('pz_regime').value; var rg = PZ_REGIMES[op.regime]; ['unidade', 'recesso', 'prorroga', 'excluiInicio'].forEach(function(k){ op[k] = rg[k]; }); }
+  if (g('pz_data')) op.data = g('pz_data').value; if (g('pz_dias')) op.dias = g('pz_dias').value; if (g('pz_dobro')) op.dobro = g('pz_dobro').checked;
+  if (op.regime === 'custom'){ if (g('pz_unid')) op.unidade = g('pz_unid').value; if (g('pz_rec')) op.recesso = g('pz_rec').checked; if (g('pz_pro')) op.prorroga = g('pz_pro').checked; if (g('pz_exc')) op.excluiInicio = g('pz_exc').checked; }
+}
+function pzDesenhar(){
+  var el = qs('pzC'), op = pzS.op, rg = pzRegime(op), cust = op.regime === 'custom';
+  var h = '<div class="field"><label class="field-label" for="pz_regime">Tipo de processo (regra de contagem)</label><select id="pz_regime" class="filter-select" style="width:100%">' + Object.keys(PZ_REGIMES).map(function(k){ return '<option value="' + k + '"' + (op.regime === k ? ' selected' : '') + '>' + PZ_REGIMES[k].nome + '</option>'; }).join('') + '</select><div class="saldo-data" style="margin:3px 2px 0" id="pz_ref"></div></div>' +
+    '<div class="field"><label class="field-label">Como você ficou sabendo</label><div class="segmented" id="pzModo">' + PZ_MODOS.map(function(m){ return '<button type="button" class="seg-btn' + (op.modo === m[0] ? ' active' : '') + '" data-pz="modo" data-v="' + m[0] + '" style="flex:1;padding:8px 4px;line-height:1.2;font-size:var(--t2)">' + m[1] + '</button>'; }).join('') + '</div></div>' +
+    '<div class="pb-dois"><div class="field"><label class="field-label" for="pz_data">' + PZ_DATA_ROT[op.modo] + '</label><input type="date" id="pz_data" value="' + escapeHtml(op.data) + '"></div><div class="field"><label class="field-label" for="pz_dias">Prazo (dias)</label><input type="number" id="pz_dias" min="1" max="365" inputmode="numeric" value="' + escapeHtml(String(op.dias)) + '"></div></div>';
+  if (cust) h += '<div class="pb-sec" style="padding:8px 4px"><div class="field"><label class="field-label" for="pz_unid">Contagem</label><select id="pz_unid" class="filter-select" style="width:100%"><option value="uteis"' + (op.unidade === 'uteis' ? ' selected' : '') + '>dias úteis</option><option value="corridos"' + (op.unidade === 'corridos' ? ' selected' : '') + '>dias corridos (contínuos)</option></select></div>' +
+    '<label class="ad-it" style="border:0;padding:3px 0"><input type="checkbox" id="pz_exc"' + (op.excluiInicio ? ' checked' : '') + '><span class="ad-t">Não contar o dia do começo</span></label>' +
+    '<label class="ad-it" style="border:0;padding:3px 0"><input type="checkbox" id="pz_rec"' + (op.recesso ? ' checked' : '') + '><span class="ad-t">Suspender no recesso (20/12 a 20/01)</span></label>' +
+    '<label class="ad-it" style="border:0;padding:3px 0"><input type="checkbox" id="pz_pro"' + (op.prorroga ? ' checked' : '') + '><span class="ad-t">Se vencer em dia sem expediente, passar para o próximo dia útil</span></label></div>';
+  h += '<label class="ad-it" style="border:0;padding:6px 0"><input type="checkbox" id="pz_dobro"' + (op.dobro ? ' checked' : '') + '><span class="ad-t">Prazo em dobro <small class="saldo-data">(Fazenda Pública, Ministério Público, Defensoria, litisconsortes com advogados diferentes)</small></span></label>' +
+    '<div class="field"><label class="field-label" for="pz_extra">Dia sem expediente só neste cálculo (opcional)</label><div style="display:flex;gap:8px"><input type="date" id="pz_extra" style="flex:1"><button type="button" class="btn btn-ghost pb-b" data-pz="extra-add">Adicionar</button></div>' + (op.extras.length ? '<div style="margin-top:6px">' + op.extras.map(function(x){ return '<span class="pb-tg" style="margin:2px 4px 2px 0">' + escapeHtml(fmtData(x)) + ' <button type="button" class="btn-text" data-pz="extra-rem" data-v="' + x + '" aria-label="Remover" style="padding:0 2px">✕</button></span>'; }).join('') + '</div>' : '') + '<div class="saldo-data" style="margin:3px 2px 0">Para feriado municipal ou suspensão que vale sempre, cadastre em Configurações › Dias sem expediente.</div></div>' +
+    '<div id="pzRes"></div><div class="pb-aviso" style="margin:10px 4px">Conferência obrigatória: o app não conhece suspensões pontuais do tribunal (indisponibilidade do sistema, portarias). A memória de cálculo mostra cada dia para você conferir.</div>';
+  el.innerHTML = h; pzAtualizar();
+}
+function pzResumoPulos(r){
+  var fds = false, outros = [];
+  r.passos.forEach(function(p){ if (p.t !== 'pula') return; var w = pbDow(p.iso); if ((w === 0 || w === 6) && !pbFeriado(p.iso)) fds = true; else outros.push(p); });
+  var l = []; if (fds) l.push('sábados e domingos');
+  var rec = outros.filter(function(p){ return /recesso/i.test(p.motivo || ''); }), fer = outros.filter(function(p){ return !/recesso/i.test(p.motivo || ''); });
+  fer.forEach(function(p){ l.push(fmtData(p.iso).slice(0, 5) + (p.motivo ? ' ' + p.motivo : '')); });
+  if (rec.length) l.push('recesso (' + fmtData(rec[0].iso).slice(0, 5) + ' a ' + fmtData(rec[rec.length - 1].iso).slice(0, 5) + ')');
+  return l.join('; ');
+}
+function pzAtualizar(){
+  var el = qs('pzRes'); if (!el || !pzS) return;
+  var op = pzS.op, rg = pzRegime(op), r = pzCalcular(op), ref = qs('pz_ref');
+  if (ref) ref.textContent = rg.ref + ' · ' + (rg.unidade === 'uteis' ? 'dias úteis' : 'dias corridos (contínuos)') + (rg.excluiInicio ? ' · o dia do começo não conta' : '');
+  if (r.erro){ el.innerHTML = '<div class="saldo-data" style="margin:10px 4px">' + escapeHtml(r.erro) + '</div>'; return; }
+  var dow = function(iso){ return AG_DOW[pbDow(iso)]; }, pulos = pzResumoPulos(r), pubPasso = r.passos.filter(function(p){ return p.t === 'pub'; })[0];
+  var h = '<div class="pb-sec" style="margin-top:10px;border:1px solid var(--border);border-radius:16px;padding:12px"><div class="saldo-data" style="margin:0">Prazo fatal</div><div style="font-size:var(--t7,22px);font-weight:800;color:var(--urgente)">' + escapeHtml(PB_DIAS[pbDow(r.vencimento)] + ', ' + fmtData(r.vencimento)) + '</div><div class="saldo-data" style="margin:0 0 6px">' + r.total + (r.regime.unidade === 'uteis' ? ' dias úteis' : ' dias corridos') + (op.dobro ? ' (em dobro)' : '') + ' · conta a partir de ' + escapeHtml(dow(r.inicio) + ' ' + fmtData(r.inicio).slice(0, 5)) + '</div>';
+  if (op.modo === 'dje') h += '<div class="pb-lin"><span>Publicação</span><b>' + escapeHtml(dow(r.publicacao) + ' ' + fmtData(r.publicacao)) + '</b></div>';
+  else if (op.modo === 'ciencia' && pubPasso && pubPasso.iso !== op.data) h += '<div class="pb-lin"><span>Ciência considerada em</span><b>' + escapeHtml(dow(pubPasso.iso) + ' ' + fmtData(pubPasso.iso)) + '</b></div>';
+  h += '<div class="pb-lin"><span>Começa a contar</span><b>' + escapeHtml(dow(r.inicio) + ' ' + fmtData(r.inicio)) + '</b></div>' + (pulos ? '<div class="pb-lin"><span>Pulou</span><b style="text-align:right">' + escapeHtml(pulos) + '</b></div>' : '') + '<div class="pb-lin"><span>Vence</span><b>' + escapeHtml(dow(r.vencimento) + ' ' + fmtData(r.vencimento)) + (r.passos.some(function(p){ return p.t === 'prorroga'; }) ? ' (prorrogado)' : '') + '</b></div>' +
+    (r.trabalhar ? '<div class="pb-lin"><span>Trabalhar até</span><b>' + escapeHtml(dow(r.trabalhar) + ' ' + fmtData(r.trabalhar)) + '</b> <small class="saldo-data">2 dias úteis antes</small></div>' : '') +
+    '<button type="button" class="btn-text" data-pz="mem" style="margin-top:6px">' + (pzS.mem ? '▾ Esconder' : '▸ Ver') + ' a memória de cálculo dia a dia</button>';
+  if (pzS.mem) h += '<div style="margin-top:4px">' + r.passos.map(function(p){
+    var rot = { disp: 'disponibilização (não conta)', pub: p.t === 'pub' ? 'publicação / ciência (não conta)' : '', pula: 'não conta: ' + (p.motivo || 'sem expediente'), conta: 'dia ' + p.n + (p.nota ? ' · ' + p.nota : ''), venc: 'dia ' + p.n + ' · VENCE' + (p.prorrogado ? ' (prorrogado)' : ''), prorroga: 'vence em dia sem expediente: ' + (p.motivo || '') }[p.t] || '';
+    var cor = p.t === 'venc' ? 'color:var(--urgente);font-weight:800' : ((p.t === 'pula' || p.t === 'disp' || p.t === 'pub' || p.t === 'prorroga') ? 'color:var(--ink-soft)' + (p.t === 'pula' ? ';text-decoration:line-through' : '') : '');
+    return '<div class="pb-lin" style="' + cor + '"><span>' + escapeHtml(fmtData(p.iso).slice(0, 5) + ' ' + dow(p.iso)) + '</span><b style="font-weight:600;text-align:right">' + escapeHtml(rot) + '</b></div>';
+  }).join('') + '</div>';
+  h += '</div><div class="pb-acts" style="margin-top:10px">' + (pzS.retorno ? '<button type="button" class="btn btn-primary" data-pz="usar">Usar esta data</button>' : '<button type="button" class="btn btn-primary" data-pz="criar">Criar prazo na Agenda</button>') + '</div>';
+  el.innerHTML = h; pzS.res = r;
+}
+function pzParametros(op){ return { modo: op.modo, data: op.data, dias: Math.round(Number(op.dias)), regime: op.regime, dobro: !!op.dobro, extras: (op.extras || []).slice(), unidade: op.unidade, recesso: !!op.recesso, prorroga: !!op.prorroga, excluiInicio: !!op.excluiInicio, sobre: op.regime === 'custom' ? 1 : 0 }; }
+function pzUsar(){
+  var r = pzS.res; if (!r || r.erro) return; var cb = pzS.retorno, calc = pzParametros(pzS.op);
+  qs('overlayPz').classList.remove('show'); if (cb) cb({ vencimento: r.vencimento, trabalhar: r.trabalhar, calculo: calc, resultado: r });
+}
+function pzCriar(){
+  var r = pzS.res; if (!r || r.erro) return; var calc = pzParametros(pzS.op);
+  qs('overlayPz').classList.remove('show'); agAbrir(null, { tipo: 'prazo', data: r.vencimento, trabalhar: r.trabalhar, calculo: calc });
+}
+/* texto curto de como o prazo foi contado (ficha do item) */
+function pzTextoCalculo(c){
+  if (!c) return ''; var rg = PZ_REGIMES[c.regime] || PZ_REGIMES.cpc, dias = Number(c.dias) * (c.dobro ? 2 : 1), un = (c.unidade || rg.unidade) === 'uteis' ? 'dias úteis' : 'dias corridos';
+  return rg.nome + ' · ' + dias + ' ' + un + (c.dobro ? ' (em dobro)' : '') + ' a partir de ' + ({ dje: 'disponibilização no DJe em ', ciencia: 'ciência em ', inicio: 'início em ' }[c.modo] || '') + fmtData(c.data);
+}
+
 /* ao entrar, carrega o calendário do escritório */
 (function(){ ppDonoP().then(function(){ dxCarregar(); }); })();
-(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { pzCalcular: pzCalcular, dxTem: dxTem, dxAplicar: dxAplicar, dxCarregar: dxCarregar, pbNaoUtil: pbNaoUtil, pbSoma: pbSoma, pbDow: pbDow }); })();
+(function(){ window.__horusTeste = Object.assign(window.__horusTeste || {}, { pzCalcular: pzCalcular, dxTem: dxTem, dxAplicar: dxAplicar, dxCarregar: dxCarregar, pbNaoUtil: pbNaoUtil, pbSoma: pbSoma, pbDow: pbDow, pzAbrir: pzAbrir }); })();
 
 /*AGD-FIM*/
 /*IC-INICIO*/

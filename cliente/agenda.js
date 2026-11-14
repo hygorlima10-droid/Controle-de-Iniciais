@@ -11,7 +11,7 @@ var AG_PADRAO = [5, 2, 1, 0];
 var AG_TIPOS = { prazo: 'Prazo', audiencia: 'Audiência', tarefa: 'Tarefa' };
 var AG_MODAL = { presencial: 'Presencial', online: 'Online', hibrida: 'Híbrida' };
 var AG_AUDS = ['Conciliação', 'Mediação', 'Instrução e julgamento', 'Justificação', 'Saneamento', 'Custódia', 'Admonitória', 'Outra'];
-var agEditPre = null;
+var agEditPre = null, agEditCalc = null;   /* agEditCalc: parâmetros do cálculo de prazo usado no editor */
 var AG_SITUACAO = { afazer: 'A fazer', elaboracao: 'Em andamento', pronta: 'Peça pronta', feito: 'Concluído', cancelado: 'Cancelado' };
 var AG_DOW = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'], AG_MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 function agHoje(){ return todayISO(); }
@@ -203,6 +203,7 @@ function agMontarTela(){
     else if (a === 'novo') agAbrir(null);
     else if (a === 'rel') rptAgenda();
     else if (a === 'importar'){ agS.menu = false; agiAbrir(); }
+    else if (a === 'calc'){ agS.menu = false; pzAbrir({}); }
     else if (a === 'flt') agdFiltrosAbrir();
     else if (a === 'menu'){ agS.menu = !agS.menu; agRender(); }
     else if (a === 'det') agdAbrir(k);
@@ -247,14 +248,14 @@ function agRenderIn(){
   /* sub-abas padrão (Fase 2): Resumo, Semana, Mês, Lista e Quadro; a última usada fica lembrada */
   if (!agS.mdOk){ agS.mdOk = 1; if (agS.vista === 'semana') agS.vista = mdInicial('agenda', ['meudia', 'semana', 'mes', 'lista', 'quadro']); }
   var h = '<div id="agSeg">' + mdBarraHtml([['resumo', 'Resumo'], ['meudia', 'Meu dia'], ['semana', 'Semana'], ['mes', 'Mês'], ['lista', 'Lista'], ['quadro', 'Quadro']], agS.vista, function(k){ return 'data-ag="vista" data-v="' + k + '"'; }) + '</div>' +
-    '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div>';
+    '<div class="ini-acoes ag-acoes md-um"><button type="button" class="acao acao-ouro" data-ag="novo"><svg><use href="#ic-plus"/></svg><span>Novo compromisso</span></button></div><div style="text-align:right;margin:-4px 2px 2px"><button type="button" class="btn-text" data-ag="calc">🧮 Calculadora de prazos</button></div>';
   if (agS.vista === 'resumo' || agS.vista === 'meudia'){ w.innerHTML = h + '<div id="agCorpo">' + agCorpo() + '</div>'; if (agS.vista === 'resumo') agCarregarCarga(); return; }
   if (agS.vista !== 'quadro' && agS.filtro === 'alvara') agS.filtro = 'tudo';
   h += '<input type="search" id="agBusca" class="ag-busca" placeholder="Buscar compromisso, processo ou cliente" autocomplete="off" value="' + escapeHtml(agS.busca || '') + '" style="margin-top:8px">';
   var nf = agdFiltrosAtivos();
   h += '<div class="ag-filtros" style="margin-top:8px">' + [['tudo', 'Tudo'], ['prazo', 'Prazos'], ['audiencia', 'Audiências'], ['tarefa', 'Tarefas'], ['inicial', 'Iniciais']].concat(agS.vista === 'quadro' ? [['alvara', 'Alvarás']] : []).map(function(f){ return '<button type="button" class="ag-f' + (agS.filtro === f[0] ? ' on' : '') + '" data-ag="filtro" data-v="' + f[0] + '">' + f[1] + '</button>'; }).join('') +
     '<button type="button" class="ag-f' + (nf ? ' tem' : '') + '" data-ag="flt">Filtros' + (nf ? ' · ' + nf : '') + '</button><button type="button" class="ag-f' + (agS.menu ? ' on' : '') + '" data-ag="menu" aria-label="Mais opções">⋯</button></div>';
-  if (agS.menu) h += '<div class="ag-menu" style="margin-top:6px"><button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button><button type="button" class="ag-f" data-ag="importar">📥 Importar do Control Jus</button></div>';
+  if (agS.menu) h += '<div class="ag-menu" style="margin-top:6px"><button type="button" class="ag-f" data-ag="rel">🖨 Relatório</button><button type="button" class="ag-f" data-ag="importar">📥 Importar do Control Jus</button><button type="button" class="ag-f" data-ag="calc">🧮 Calculadora de prazos</button></div>';
   h += '<div id="agCorpo">' + agCorpo() + '</div>';
   w.innerHTML = h;
 }
@@ -629,6 +630,7 @@ function agMontarEd(){
     var b = e.target.closest ? e.target.closest('[data-age]') : null; if (!b) return;
     var a = b.getAttribute('data-age');
     if (a === 'tipo'){ agEditTipo = b.getAttribute('data-v'); agAjustarCampos(); Array.prototype.forEach.call(d.querySelectorAll('[data-age="tipo"]'), function(x){ x.classList.toggle('active', x === b); }); }
+    else if (a === 'calc'){ var pr0 = qs('age_data').value; pzAbrir({ retorno: function(res){ qs('age_data').value = res.vencimento; if (res.trabalhar) qs('age_trab').value = res.trabalhar; agEditCalc = { op: res.calculo, venc: res.vencimento }; qs('age_calc_info').textContent = 'contado: ' + pzTextoCalculo(res.calculo); try{ agDicasConflito(); }catch(e){} } }); }
     else if (a === 'salvar') agSalvarEd();
     else if (a === 'dup-salvar'){ agEdDup = true; agSalvarEd(); }
     else if (a === 'dup-abrir'){ d.classList.remove('show'); agdAbrir(b.getAttribute('data-k')); }
@@ -651,6 +653,7 @@ function agAjustarCampos(){
   var t = agEditTipo, rot = { prazo: 'Peça / o que fazer', audiencia: 'Assunto da audiência', tarefa: 'Tarefa' };
   qs('age_tit_l').textContent = rot[t]; qs('age_data_l').textContent = t === 'prazo' ? 'Prazo fatal' : (t === 'audiencia' ? 'Data da audiência' : 'Fazer até');
   qs('age_hora_box').style.display = t === 'audiencia' ? '' : 'none'; qs('age_trab_box').style.display = t === 'prazo' ? '' : 'none';
+  if (qs('age_calc_box')) qs('age_calc_box').style.display = t === 'prazo' && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso') ? '' : 'none';
   qs('age_sit_box').style.display = t === 'audiencia' ? 'none' : '';
   var vis = qs('age_vis'), box = qs('age_vis_box'), er = qs('esResp_agenda');
   if (box){ box.style.display = t === 'tarefa' && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso') ? '' : 'none'; if (er && !(agEditKey && agItens().filter(function(x){ return x.key === agEditKey; })[0].fonte === 'caso')) er.style.display = (t !== 'tarefa' || (vis && vis.value !== 'so_eu')) ? '' : 'none'; }
@@ -662,7 +665,7 @@ function agPresetAvisos(a){ var s = JSON.stringify(a || AG_PADRAO); return s ===
 function agAbrir(key, pre){
   agMontarEd();
   var i = key ? agItens().filter(function(x){ return x.key === key; })[0] : null; if (key && !i) return;
-  var P = (!i && pre) ? pre : null; agEditPre = P;
+  var P = (!i && pre) ? pre : null; agEditPre = P; agEditCalc = (P && P.calculo) ? { op: P.calculo, venc: P.data } : null;
   var V = function(k){ return i ? (i[k] || '') : (P ? (P[k] || '') : ''); };
   agEditKey = key || null; agEditTipo = i ? i.tipo : (P && P.tipo ? P.tipo : 'prazo');
   var caso = i && i.fonte === 'caso', sit = i ? i.situacao : 'afazer';
@@ -674,12 +677,13 @@ function agAbrir(key, pre){
     '<div class="field" id="age_vis_box"><label class="field-label" for="age_vis">Quem vê esta tarefa</label><select id="age_vis" class="filter-select" style="width:100%"><option value="so_eu">Só eu (tarefa pessoal)</option><option value="resp">Os responsáveis que eu escolher</option><option value="todos">Todo o escritório</option></select></div>' +
     '<div class="field" id="esResp_agenda"' + (caso ? ' style="display:none"' : '') + '></div>' +
     '<div class="pb-dois"><div class="field"><label class="field-label" id="age_data_l" for="age_data">Prazo fatal</label><input type="date" id="age_data" value="' + escapeHtml(V('data')) + '"></div><div class="field" id="age_hora_box"><label class="field-label" for="age_hora">Hora</label><input type="time" id="age_hora" value="' + escapeHtml(V('hora')) + '"></div></div>' +
+    '<div id="age_calc_box" style="margin:-4px 0 8px"><button type="button" class="btn-text" data-age="calc">🧮 Calcular a partir da intimação ›</button> <span class="saldo-data" id="age_calc_info"></span></div>' +
     '<div class="saldo-data" id="age_dica2" style="margin:-4px 0 8px"></div>' +
     '<div id="age_aud_box"><div class="pb-dois"><div class="field"><label class="field-label" for="age_audtipo">Tipo da audiência</label><select id="age_audtipo" class="filter-select" style="width:100%"><option value="">Não informado</option>' + AG_AUDS.map(function(t){ return '<option' + (V('audTipo') === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select></div><div class="field"><label class="field-label" for="age_mod">Modalidade</label><select id="age_mod" class="filter-select" style="width:100%"><option value="">Não informada</option>' + Object.keys(AG_MODAL).map(function(k){ return '<option value="' + k + '"' + (V('modalidade') === k ? ' selected' : '') + '>' + AG_MODAL[k] + '</option>'; }).join('') + '</select></div></div>' +
     '<div class="field"><label class="field-label" for="age_local">Local</label><input type="text" id="age_local" maxlength="140" value="' + escapeHtml(V('local')) + '" placeholder="Ex.: Fórum de Morrinhos, sala 2"></div>' +
     '<div class="field"><label class="field-label" for="age_link">Link da sala virtual (opcional)</label><input type="text" inputmode="url" autocapitalize="off" id="age_link" maxlength="300" value="' + escapeHtml(V('link')) + '" placeholder="https://…"></div></div>' +
     '<div class="field"><label class="field-label" for="age_obs">Observações (opcional)</label><textarea id="age_obs" maxlength="1200" rows="3" style="width:100%">' + escapeHtml(V('obs')) + '</textarea></div>' +
-    '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : '') + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
+    '<div class="field" id="age_trab_box"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_trab">Trabalhar na peça até (opcional)</label><input type="date" id="age_trab" value="' + escapeHtml(i ? i.trabalhar : (P ? (P.trabalhar || '') : '')) + '"><div class="saldo-data">Em branco, o app marca 2 dias úteis antes do prazo fatal.</div></div>' +
     '<div class="field" id="age_sit_box"><label class="field-label" for="age_sit">Situação</label><select id="age_sit" class="filter-select" style="width:100%"><option value="afazer"' + (sit === 'afazer' ? ' selected' : '') + '>A fazer</option>' + (caso ? '' : '<option value="elaboracao"' + (sit === 'elaboracao' ? ' selected' : '') + 'Em andamento</option>') + '<option value="feito"' + (sit === 'feito' ? ' selected' : '') + '>Concluído (protocolado)</option></select></div>' +
     '<div class="field" id="age_prot_box" style="display:none"><label class="field-label" for="age_protoc">Data do protocolo</label><input type="date" id="age_protoc" value="' + escapeHtml(V('protocoladoEm') || agHoje()) + '"></div>' +
     '<div class="field"' + (caso ? ' style="display:none"' : '') + '><label class="field-label" for="age_av">Avisar no celular</label><select id="age_av" class="filter-select" style="width:100%">' + [['padrao', '5, 2 e 1 dia antes + no dia'], ['umdia', '1 dia antes + no dia'], ['dia', 'só no dia'], ['nenhum', 'não avisar']].map(function(o){ return '<option value="' + o[0] + '"' + (agPresetAvisos(i ? i.avisos : null) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>' +
@@ -690,6 +694,7 @@ function agAbrir(key, pre){
   agEdInicializar(i, caso);
   agAjustarCampos(); if (i && !caso) qs('age_proc').dispatchEvent(new Event('input', { bubbles: true }));
   agDicasConflito();
+  if (agEditCalc && qs('age_calc_info')) qs('age_calc_info').textContent = 'contado: ' + pzTextoCalculo(agEditCalc.op);
   qs('overlayAg').classList.add('show');
 }
 var agEdDup = false;
@@ -758,6 +763,7 @@ function agSalvarEd(){
   var base = i ? Object.assign({}, i.doc) : { criadoEm: new Date().toISOString(), pubId: '', audPubId: (agEditPre && agEditPre.audPubId) || '' }; delete base.id;
   var doc = Object.assign(base, { tipo: t, titulo: tit, processo: qs('age_proc').value.trim(), cliente: qs('age_cli').value.trim(), data: data, hora: t === 'audiencia' ? qs('age_hora').value : '', trabalhar: trab, situacao: sit, concluido: sit === 'feito', avisos: av,
     obs: qs('age_obs') ? qs('age_obs').value.trim() : (base.obs || ''), audTipo: t === 'audiencia' ? qs('age_audtipo').value : '', modalidade: t === 'audiencia' ? qs('age_mod').value : '', local: t === 'audiencia' ? qs('age_local').value.trim() : '', link: link });
+  if (t === 'prazo'){ if (agEditCalc && agEditCalc.venc === data) doc.calculo = agEditCalc.op; else if (i && i.doc && i.doc.calculo && i.data !== data) delete doc.calculo; }   /* o cálculo só vale enquanto a data é a que ele deu */
   if (t === 'prazo'){ if (sit === 'feito'){ doc.protocoladoEm = qs('age_protoc').value || agHoje(); if (!doc.concluidoEm) doc.concluidoEm = agHoje(); } else { doc.protocoladoEm = ''; doc.protocoloObs = ''; } }
   /* responsáveis (quem vê e quem recebe os avisos) e visibilidade da tarefa */
   var ks = esRespChaves('agenda'), vis = t === 'tarefa' && qs('age_vis') ? qs('age_vis').value : 'resp';
