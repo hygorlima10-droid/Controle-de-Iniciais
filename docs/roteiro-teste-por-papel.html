@@ -1,0 +1,126 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Roteiro de teste do Horus por papel</title>
+<style>
+@page{size:A4;margin:16mm 14mm}
+body{font-family:Inter,Segoe UI,Arial,sans-serif;color:#1f1d1a;font-size:12.5px;line-height:1.45}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:20px 0 6px;border-bottom:2px solid #C98500;padding-bottom:3px;page-break-after:avoid}h3{font-size:13.5px;margin:12px 0 4px;page-break-after:avoid}
+.sub{color:#6c6a63;margin:0 0 10px}.box{background:#f6f4ee;border-radius:8px;padding:8px 11px;margin:8px 0}
+ul{list-style:none;padding:0;margin:4px 0}li{margin:3px 0;padding-left:20px;position:relative;page-break-inside:avoid}li:before{content:"☐";position:absolute;left:0;font-size:14px}
+li.n:before{content:"✗";color:#b3261e;font-weight:800}li.i:before{content:"•";left:6px}
+table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #d6d3ca;padding:5px 7px;text-align:left;vertical-align:top}th{background:#eceae4}
+.cred{font-family:ui-monospace,Menlo,monospace;background:#fff;border:1px solid #d6d3ca;border-radius:6px;padding:1px 6px}
+.quebra{page-break-before:always}small{color:#6c6a63}
+</style>
+<h1>Roteiro de teste do Horus por papel</h1>
+<p class="sub">Fase 5, etapa 5.9 · para o proprietário e para a pessoa de confiança · marque cada quadradinho ☐ ao conferir</p>
+
+<div class="box"><b>Em uma frase:</b> primeiro você testa sozinho com dois usuários de mentira (advogado e estagiário); depois uma pessoa de confiança usa de verdade por alguns dias; só então o escritório inteiro recebe convite.</div>
+
+<h2>0 · Antes de começar (você)</h2>
+<ul>
+<li>Publicar a versão mais recente <b>levando também o arquivo de agendamento</b> (o backup semanal e o resumo da equipe passaram para segunda-feira às 8h).</li>
+<li>Em <b>Configurações → Backup</b>: baixar uma cópia para guardar fora do sistema (o app já faz uma por semana, mas esta fica com você).</li>
+<li>Abrir o app como proprietário e ver se tudo está igual a antes (Início, Iniciais, Finanças). Nada deve ter mudado para você.</li>
+</ul>
+
+<h2>1 · Fase A — você, com os dois usuários de teste (uns 40 minutos)</h2>
+<p>Use uma janela anônima (ou outro navegador) para entrar como o usuário de teste sem sair da sua conta. Entre em <span class="cred">/login</span> com o e-mail e a senha que combinamos.</p>
+
+<h3>A1 · Advogado de teste (OAB 99901/GO) — o que ele <u>deve</u> ver e fazer</h3>
+<ul>
+<li>No menu: Início, Iniciais, Termos de Acordo, Alvarás, Agenda, Processos, Publicações, Clientes, Arquivados, Cobrança de clientes e <b>Minha conta</b>.</li>
+<li>Na barra de baixo do celular: Início · Iniciais · Acordos · Alvarás · <b>Agenda</b> · Mais.</li>
+<li>Com você logado como proprietário, crie uma <b>Inicial de teste</b> escolhendo o advogado de teste como responsável. No app do advogado ela aparece; as demais Iniciais do escritório <b>não</b>.</li>
+<li>Crie um <b>prazo</b> com o advogado de teste como responsável: no app dele aparece em "Minha agenda" e no Início.</li>
+<li>No Início dele aparece <b>"Honorários dos seus processos"</b> (só a parte dele) e o card <b>Repasses</b>, quando houver.</li>
+<li>Ele consegue <b>cobrar</b> (menu → Cobrança de clientes) só os clientes da Inicial de teste.</li>
+<li>Em Minha conta: trocar a senha, ver os aparelhos conectados e <b>"Avisos neste celular"</b>.</li>
+<li>No processo da Inicial de teste: botão <b>"Histórico: quem fez o quê"</b> mostra as ações (a partir de agora).</li>
+</ul>
+
+<h3>A2 · Advogado de teste — o que ele <u>não</u> pode ver</h3>
+<ul>
+<li class="n">Nenhuma tela de <b>Finanças</b>, Análises, Construção nem Extratos; nenhum item "Financeiro" no menu.</li>
+<li class="n">Nenhum aviso de <b>backup</b> nem de limite do sistema; nada de <b>Relatório do Murilo</b>.</li>
+<li class="n"><b>Backup</b> e <b>Exportar CSV</b> não aparecem.</li>
+<li class="n">Iniciais, Acordos, Alvarás e clientes de <b>outros advogados</b> não aparecem.</li>
+<li class="n">Usuários, Segurança do escritório, Registro de ações e Lixeira não aparecem.</li>
+</ul>
+
+<h3>A3 · Estagiário de teste — o que ele <u>deve</u> ver e fazer</h3>
+<ul>
+<li>Todo o jurídico: Iniciais, Acordos, Alvarás, Agenda, Processos, Publicações (se a permissão estiver ligada), Clientes, Arquivados.</li>
+<li>O <b>valor de cada registro</b> (honorário, parcelas, valor de cada cliente).</li>
+<li>Criar e editar cadastros, prazos e tarefas; abrir o histórico do processo.</li>
+<li>Barra do celular com <b>Agenda</b>; Minha conta com senha, aparelhos e avisos (sem a opção "Repasses").</li>
+</ul>
+
+<h3>A4 · Estagiário de teste — o que ele <u>não</u> pode ver nem fazer</h3>
+<ul>
+<li class="n">Nenhuma tela de Finanças; nenhum aviso de backup; nenhum item do proprietário na Central de atenção.</li>
+<li class="n"><b>Total a receber</b> no título de Clientes, abas <b>Resumo / A cobrar / Em atraso</b>, "Maiores valores a receber" e botão <b>Cobrar</b>.</li>
+<li class="n">Em Iniciais, Acordos e Alvarás: sem abas <b>Resumo</b> e <b>Recebimentos</b> e sem somas nas colunas (se "Ver totais" estiver desligado).</li>
+<li class="n"><b>"Registrar pagamento"</b> e <b>"Marcar como recebido"</b>: não aparecem; os quadradinhos de pago só mostram o estado.</li>
+<li class="n">Cobrança de clientes e "Recebi R$": não existem para ele. Excluir registros: só se você ligar a permissão.</li>
+</ul>
+
+<h3>A5 · Avisos no celular (precisa do iPhone, uns 10 minutos)</h3>
+<ul>
+<li>No iPhone, abra o Horus <b>pelo ícone na tela de início</b>, entre como o usuário de teste e toque em <b>Minha conta → Avisos neste celular → Ativar avisos neste aparelho</b>; permita as notificações.</li>
+<li>Toque em <b>"Enviar um aviso de teste"</b>: deve chegar só nesse aparelho.</li>
+<li>Como proprietário, coloque o usuário de teste como responsável de um prazo: ele recebe <b>"Você foi indicado"</b>.</li>
+<li>Como o usuário de teste, exclua um registro de teste (com a permissão de excluir ligada): você recebe <b>"Registro excluído por …"</b>.</li>
+<li>Em <b>Configurações → Lembretes no iPhone</b>, desligue um aviso da equipe e repita a ação: o aviso não chega.</li>
+</ul>
+
+<h3>A6 · Repasses entre advogados</h3>
+<ul>
+<li>Numa Inicial de teste com divisão (você 70% / advogado de teste 30%), o <b>advogado de teste</b> marca a parcela como recebida na conta dele.</li>
+<li>Para você aparece "recebeu honorários · repasse a receber" e <b>nada entra no seu financeiro</b> ainda.</li>
+<li>O advogado marca <b>"Já repassei"</b>; você <b>confirma que recebeu</b>; só então o valor entra na PJ.</li>
+</ul>
+
+<h2 class="quebra">2 · Fase B — pessoa de confiança (3 a 7 dias)</h2>
+<div class="box"><b>Quem:</b> alguém do escritório que use o app de verdade e avise quando algo estranhar. Começar por <b>um advogado</b> e, na semana seguinte, um estagiário.</div>
+<ul>
+<li>Antes: apagar os usuários de teste (peça para mim) — ou deixar até o fim da Fase B.</li>
+<li>Convidar pelo app: <b>Configurações → Usuários → Convidar</b>; informar nome, e-mail e papel; para advogado, marcar a(s) OAB(s) dele; conferir as permissões (excluir e "Ver totais").</li>
+<li>Enviar o link do convite (vale 48 horas e só funciona uma vez). A pessoa cria a senha sozinha.</li>
+<li>Nos primeiros dias, pedir que ela: ver as próprias Iniciais e agenda; criar um prazo; marcar um recebimento (advogado); ligar os avisos no celular.</li>
+<li>Todo dia, você olha <b>Configurações → Registro de ações</b> (filtre pela pessoa) e confere que o que ela fez faz sentido.</li>
+<li>Pedir que ela anote <b>o que não achou</b> (um processo que devia aparecer) e <b>o que viu demais</b> (algo que não devia): print da tela, dia e hora.</li>
+</ul>
+<h3>Pode abrir para os demais quando…</h3>
+<ul>
+<li>passaram 3 a 7 dias sem a pessoa ver nada que não devia;</li>
+<li>nenhum processo dela ficou escondido por engano;</li>
+<li>os avisos no celular chegaram (resumo das 10h e "Você foi indicado");</li>
+<li>o Registro de ações mostrou o nome certo em tudo que ela fez;</li>
+<li>você fez uma cópia (backup) baixada depois dos primeiros cadastros dela.</li>
+</ul>
+
+<h2>3 · Fase C — abrir para o escritório</h2>
+<ul>
+<li>Convidar <b>um papel por vez</b> (primeiro os advogados, depois os estagiários), uma pessoa por dia nos primeiros dias.</li>
+<li>Combinar a regra de ouro: <b>cada advogado só aparece nos processos em que está cadastrado</b>; se faltar processo, o advogado pede a você para incluí-lo como responsável.</li>
+<li>Estagiários: decidir se podem <b>excluir</b> (padrão: não) e se veem <b>publicações e agendas de todos</b> (padrão: sim; dá para desligar por pessoa).</li>
+</ul>
+
+<h2>4 · Se algo der errado</h2>
+<table>
+<tr><th style="width:34%">Problema</th><th>O que fazer</th></tr>
+<tr><td>Uma pessoa viu o que não devia</td><td>Configurações → Usuários → abrir a pessoa → <b>Desativar</b> (derruba os aparelhos na hora). Me mande o print com dia e hora.</td></tr>
+<tr><td>Alguém excluiu algo sem querer</td><td>Configurações → <b>Lixeira</b>: restaurar (guarda 30 dias). O Registro de ações mostra quem fez.</td></tr>
+<tr><td>Link de convite vazou ou venceu</td><td>Usuários → cancelar o convite e gerar outro.</td></tr>
+<tr><td>Aparelho perdido</td><td>Usuários → pessoa → <b>Aparelhos</b> → encerrar.</td></tr>
+<tr><td>Dados bagunçados</td><td>Configurações → Backup e restauração (cópia automática semanal e a que você baixou).</td></tr>
+<tr><td>Quero voltar a ser só eu</td><td>Desativar todas as pessoas; o acesso do proprietário não muda.</td></tr>
+</table>
+
+<h2>5 · Limites conhecidos desta versão (já combinados)</h2>
+<ul class="i">
+<li class="i">O histórico do processo só mostra ações feitas <b>depois</b> da publicação.</li>
+<li class="i">"Recebida por X" aparece nas Iniciais; nos Acordos e Alvarás vem depois.</li>
+<li class="i">A Cobrança do advogado mostra o <b>valor cheio</b> do registro, não a parte dele.</li>
+<li class="i">Os avisos de celular dependem de cada pessoa ativar no próprio aparelho; no iPhone, só pelo ícone na tela de início (iOS 16.4 ou mais novo).</li>
+</ul>
+</html>

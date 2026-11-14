@@ -1,0 +1,41 @@
+// Testa a visão "Último mês" da aba Análises.
+// Suba antes:  npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8802
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8802', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const agora = new Date().toISOString(), hoje = new Date();
+const mes = n => { const d = new Date(hoje.getFullYear(), hoje.getMonth() + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.6' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
+await api('PUT', 'config/backup', { ultimoEm: agora });
+const rec = [[-3, 4000], [-2, 6000], [-1, 10000]];
+for (const [n, v] of rec) await api('PUT', 'receitasManuais/r' + n, { nome: 'Honorários', coluna: 'pj', valor: v, mesReferencia: mes(n), data: mes(n) + '-10', recorrente: false, criadoEm: agora });
+const gas = [[-3, 3000, 1000], [-2, 3000, 1000], [-1, 3000, 2500]];
+for (const [n, a, p] of gas) { for (const [k, nome, v, cat] of [['a', 'Aluguel', a, 'estrutura'], ['p', 'Pessoal fixo', p, 'pessoal']]) await api('PUT', 'despesas/d' + k + n, { nome, coluna: 'pj', tipo: 'unica', valor: v, data: mes(n) + '-12', mesReferencia: mes(n), categoria: cat, pago: true, dataPagamento: mes(n) + '-12', criadoEm: agora }); }
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 420, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2500);
+await page.evaluate(() => document.querySelector('[data-tab="analises"]').click()); await page.waitForTimeout(1000);
+const txt = () => page.evaluate(() => document.getElementById('anWrap').innerText);
+let t = await txt();
+check(await page.evaluate(() => document.querySelector('#anPeriodoSeg .active').textContent) === 'Último mês', 'a aba abre já em "Último mês"');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#anPeriodoSeg button')).map(b => b.textContent).join('|')) === 'Último mês|Histórico|Semanas|Simulador|Futuro', 'seletor com os 5 botões (Último mês, Histórico, Semanas, Simulador, Futuro)');
+check(/R\$\s*10\.000,00/.test(t) && /R\$\s*5\.500,00/.test(t), 'mostra o recebido (10.000) e o gasto (5.500) do último mês fechado');
+check(/Sobrou[\s\S]*4\.500,00/i.test(t) && /Recebi/i.test(t) && /Gastei/i.test(t), 'indicadores Recebi, Gastei e Sobrou (R$ 4.500)');
+check(/vs\. média/.test(t) && /▲/.test(t) && /Patrimônio/i.test(t), 'cada indicador compara com a média (▲/▼ vs. média) e há o cartão de Patrimônio');
+check(/Estrutura/.test(t) && /Pessoal/.test(t), 'lista gastos por categoria');
+check(/Gastou mais em: Pessoal/.test(t), '"O que mais mudou" aponta Pessoal');
+check(/Os 4 cenários lado a lado/.test(t) && /Média 6 m/.test(t) && /Média 12 m/.test(t) && /Próx\. 3 m/.test(t), 'quadro com os 4 cenários');
+await page.evaluate(() => document.querySelector('#anWrap .ct-row summary').click()); await page.waitForTimeout(200);
+check(await page.evaluate(() => !!document.querySelector('#anWrap .ct-row[open] .ct-det .ct-l')), 'tocar na categoria mostra as despesas dela');
+await page.click('[data-an-ult="-1"]'); await page.waitForTimeout(500);
+t = await txt(); check(/R\$\s*6\.000,00/.test(t), 'a seta ‹ leva ao mês anterior (recebido 6.000)');
+await page.evaluate(() => { document.querySelectorAll('[data-an-ult="1"]')[0].click(); }); await page.waitForTimeout(300);
+check(await page.evaluate(() => document.querySelector('[data-an-ult="1"]').disabled), 'não avança além do último mês fechado');
+await page.evaluate(() => document.querySelector('[data-an-periodo="hist"]').click()); await page.waitForTimeout(500);
+check(/Quanto entrou por mês/.test(await txt()), 'a visão de 6 meses continua como antes');
+await page.evaluate(() => document.querySelector('[data-an-periodo="fut"]').click()); await page.waitForTimeout(500);
+check(/Como cada mês termina/.test(await txt()), 'o conteúdo da antiga "Próx. 3 meses" agora vive em Futuro');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

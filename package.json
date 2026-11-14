@@ -1,0 +1,13 @@
+{
+  "name": "controle-juridico",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --persist-to .dev-data",
+    "banco:local": "wrangler d1 execute controle-juridico --local --persist-to .dev-data --file=schema.sql",
+    "banco:remoto": "wrangler d1 execute controle-juridico --remote --file=schema.sql",
+    "deploy": "wrangler deploy",
+    "teste": "node test/rodar.mjs"
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

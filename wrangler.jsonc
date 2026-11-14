@@ -1,0 +1,11 @@
+{
+  "name": "controle-juridico",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "controle-juridico", "database_id": "6e63cb30-f3a4-4611-9b53-275284e1fbec" }
+  ],
+  "triggers": { "crons": ["0 11 * * 1", "0 13 * * *", "0 15,17,19,21 * * *"] },
+  "observability": { "enabled": true }
+}

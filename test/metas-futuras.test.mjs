@@ -1,0 +1,32 @@
+// Auditoria F-03: um aporte de data FUTURA numa meta não entra no valor atual nem no patrimônio; fica "previsto para dd/mm" até o dia chegar.
+// Grupo principal:  node test/rodar.mjs metas-futuras
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8812', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const dia = n => new Date(Date.now() - 3 * 3600e3 + n * 86400000).toISOString().slice(0, 10), agora = new Date().toISOString();
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.71' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
+await api('PUT', 'config/backup', { ultimoEm: agora });
+await api('PUT', 'saldos/pj', { coluna: 'pj', saldoAtual: 4000, atualizadoEm: agora, historico: [{ valor: 4000, data: agora }] });
+await api('PUT', 'saldos/pf', { coluna: 'pf', saldoAtual: 500, atualizadoEm: agora, historico: [{ valor: 500, data: agora }] });
+await api('PUT', 'metas/m1', { tipo: 'reserva', coluna: 'pj', nome: 'Reserva de emergência', movimentos: [{ id: 'i1', tipo: 'inicial', valor: 2000, dia: dia(-60), data: agora }, { id: 'f1', tipo: 'aporte', valor: 1000, dia: dia(10), data: agora }], criadoEm: agora });
+await api('PUT', 'metas/m2', { tipo: 'comum', coluna: 'pf', nome: 'Viagem', valorAlvo: 6000, prazo: dia(150), movimentos: [{ id: 'i2', tipo: 'inicial', valor: 1200, dia: dia(-10), data: agora }], criadoEm: agora });
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 390, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
+await page.evaluate(() => document.querySelector('[data-tab="financeiro"][data-fin="patrimonio"]').click()); await page.waitForTimeout(900);
+const t = async s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const tx = await t('#finPatrimonio');
+check(/R\$\s*7\.700,00/.test(tx) && !/R\$\s*8\.700,00/.test(tx), 'o patrimônio atual não conta o aporte de R$ 1.000 que só acontece daqui a 10 dias (4.000 + 500 + 2.000 + 1.200 = 7.700)');
+await page.click('#finPatrimonio [data-menu-toggle="m1"]'); await page.waitForTimeout(300);
+await page.click('#finPatrimonio [data-meta-hist="m1"]'); await page.waitForTimeout(600);
+const hist = await t('#listaMetaHist');
+check(/Valor atual:\s*R\$\s*2\.000,00/.test(hist) && /com os lançamentos previstos:\s*R\$\s*3\.000,00/.test(hist) && /previsto para/.test(hist), 'o histórico mostra valor atual R$ 2.000, o projetado R$ 3.000 e marca o lançamento "previsto para dd/mm": ' + hist.replace(/\n/g, ' · ').slice(0, 150));
+await page.evaluate(() => document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show')));
+await page.click('#finPatrimonio [data-menu-toggle="m1"]').catch(() => { }); await page.waitForTimeout(200);
+await page.evaluate(() => { const b = document.querySelector('#finPatrimonio [data-meta-mov="m1|retirada"]'); if (b) b.click(); }); await page.waitForTimeout(500);
+await page.fill('#metaMovValorInput', '2500'); await page.click('#saveBtnMetaMov').catch(async () => { await page.evaluate(() => { const o = document.querySelector('#overlayMetaMov'); const b = [...o.querySelectorAll('button')].find(x => /Salvar|Registrar|Confirmar/.test(x.innerText)); if (b) b.click(); }); }); await page.waitForTimeout(500);
+check(/maior que o valor guardado/.test(await t('#formErrorMetaMov')), 'retirar R$ 2.500 é recusado (só há R$ 2.000 guardados hoje), mesmo havendo um aporte previsto');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

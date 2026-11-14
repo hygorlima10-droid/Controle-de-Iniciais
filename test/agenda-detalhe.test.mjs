@@ -1,0 +1,147 @@
+// Testa a Agenda renovada: cartão compacto com copiar número, folha de detalhes ao tocar, atalhos de situação (A fazer, Em andamento, Concluído, Cancelado),
+// mensagens de WhatsApp (cliente e equipe), busca e filtros, calendário com contagem e aviso de conflito de audiências.
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8812', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), agora = new Date().toISOString();
+const dia = n => new Date(Date.parse(hoje + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10), br_ = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+const r0 = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.98' } }); const ck = r0.headers.get('set-cookie').split(';')[0];
+const f = async (m, p, b) => { const x = await fetch(B + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }); return { s: x.status, j: await x.json().catch(() => ({})) }; };
+const ag = async () => ((await f('GET', '/api/db/agenda')).j.docs || []).map(d => ({ id: d.id, ...d.data }));
+for (const col of ['agenda', 'processos', 'clientes', 'casos', 'config', 'alvaras']) for (const d of (await f('GET', '/api/db/' + col)).j.docs || []) await f('DELETE', '/api/db/' + col + '/' + d.id);
+await f('PUT', '/api/db/config/backup', { ultimoEm: agora }); await f('PUT', '/api/db/config/importacaoAuto', { ativo: false, desde: agora }); await f('PUT', '/api/db/config/processosIgnorados', { numeros: {} }); await f('PUT', '/api/db/config/vinculoIniciais', { corte: hoje });
+const N1 = '5392788-08.2026.8.09.0107', N2 = '6064267-09.2026.8.09.0108';
+await f('PUT', '/api/db/clientes/cli1', { nome: 'Maria Aparecida Souza', telefone: '(62) 99876-5432', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/clientes/cli2', { nome: 'Cooperativa Teste', pagador: 'cliente', criadoEm: agora });
+await f('PUT', '/api/db/processos/d' + N1.replace(/\D/g, ''), { numero: N1, partes: 'Maria Aparecida Souza x Banco Gama S.A.', orgao: 'TJGO · Morrinhos · 1º Vara Cível', classe: 'Procedimento Comum', valorCausa: 15000, clienteIds: ['cli1'], honorarios: 'sem', arquivado: false, origem: 'manual', criadoEm: agora });
+const base = { situacao: 'afazer', concluido: false, avisos: [5, 2, 1, 0], criadoEm: agora, pubId: '', audPubId: '' };
+await f('PUT', '/api/db/agenda/p1', { ...base, tipo: 'prazo', titulo: 'Contestação', processo: N1, cliente: 'Maria Aparecida Souza', clienteIds: ['cli1'], data: dia(-3), responsaveis: ['Estagiários', 'Hygor Lima Andrade'], partes: ['Maria Aparecida Souza'], obs: 'Juntar procuração e comprovante.', subtipo: 'Contestação - CPC art. 335', prioridade: 'Alta', origem: 'controljus', codigoControlJus: 'PROC-466', trabalhar: dia(-5) });
+await f('PUT', '/api/db/agenda/a1', { ...base, tipo: 'audiencia', titulo: 'audiência de conciliação', processo: N2, cliente: 'Cooperativa Teste', clienteIds: ['cli2'], data: dia(2), hora: '13:00', audTipo: 'Conciliação', modalidade: 'online', local: 'Sala virtual do TJGO', link: 'https://meet.google.com/abc-defg-hij', responsaveis: ['Hygor Lima Andrade'] });
+await f('PUT', '/api/db/agenda/a2', { ...base, tipo: 'audiencia', titulo: 'audiência CEJUS', processo: '', cliente: 'Outro Cliente', data: dia(2), hora: '13:30', audTipo: 'Conciliação', modalidade: 'presencial', local: 'Fórum de Morrinhos', responsaveis: ['Murilo Falone Rocha'] });
+await f('PUT', '/api/db/agenda/t1', { ...base, tipo: 'tarefa', titulo: 'Juntar planilha', processo: '', cliente: '', data: dia(5) });
+await f('PUT', '/api/db/agenda/p2', { ...base, tipo: 'prazo', titulo: 'manifestar saneamento', processo: '5368644-67.2026.8.09.0107', cliente: 'Cliente Sem Cadastro', data: dia(7), responsaveis: ['Murilo Falone Rocha'] });
+const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'America/Sao_Paulo', permissions: ['clipboard-read', 'clipboard-write'] });
+await ctx.addInitScript(() => { try { localStorage.setItem('horus.leituraAuto', '0'); } catch (e) { /* sem armazenamento */ } window.__abertos = []; window.open = (u) => { window.__abertos.push(String(u)); return null; }; });
+const page = await ctx.newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, x => x.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(4000);
+const t = s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const vis = s => page.evaluate(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0; }, s);
+await page.evaluate(() => document.querySelector('#drawer [data-tab="agenda"]').click()); await page.waitForTimeout(900);
+await page.click('[data-ag="vista"][data-v="lista"]'); await page.waitForTimeout(500);
+
+const foto = async n => { if (process.env.FOTOS) await page.screenshot({ path: process.env.FOTOS + '/agd-' + n + '.png' }); };
+await foto('lista');
+/* 1) cartão compacto */
+let tx = await t('#agWrap');
+check(/(Venceu há \d+ dias? úteis?|Atrasado há 3 dias)/.test(tx) && /Contestação/.test(tx) && /Prioridade alta/.test(tx), 'cartão mostra quanto o prazo está atrasado (em dias úteis) e a prioridade alta');
+check(await page.evaluate((n) => { const c = Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)); return !!c && !!c.querySelector('.agc-cp svg') && c.querySelector('.agc-n').innerText.includes(n); }, N1), 'o número do processo aparece no cartão com o botão de copiar (ícone de dois retângulos)');
+check(await page.evaluate(() => document.querySelectorAll('.agc').length >= 5 && document.querySelector('.agc').getBoundingClientRect().height < 330), 'cartões compactos (altura menor que 330 px, já com as datas e os atalhos)');
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)).querySelector('.agc-cp').click()); await page.waitForTimeout(500);
+check((await page.evaluate(() => navigator.clipboard.readText())) === N1 && /copiado/i.test(await t('#toast')), 'tocar no ícone copia o número do processo e avisa');
+check(!(await vis('#overlayAgDet.show')), 'copiar não abre os detalhes');
+/* 2) detalhes ao tocar */
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)).querySelector('.agc-t').click()); await page.waitForTimeout(500);
+check(await vis('#overlayAgDet.show'), 'tocar no cartão abre a folha de detalhes'); await foto('detalhe');
+tx = await t('#agdC');
+check(new RegExp(br_(dia(-3))).test(tx) && /(Venceu há \d+ dias? úteis?|Atrasado há 3 dias)/.test(tx) && /Contestação/.test(tx), 'mostra a data, quanto falta/atraso e o título');
+check(tx.includes(N1) && /Procedimento Comum/.test(tx) && /Morrinhos/.test(tx) && /15\.000/.test(tx) && /Partes: Maria Aparecida Souza x Banco Gama/.test(tx), 'processo: número, vara, classe, valor da causa e partes (do cadastro do processo)');
+check(/Maria Aparecida Souza ›/.test(tx) && /Estagiários/.test(tx) && /Juntar procuração/.test(tx) && /Contestação - CPC art\. 335/.test(tx) && /PROC-466/.test(tx), 'clientes (clicável), responsáveis, observações, subtipo e origem');
+await page.click('#agdC .agd-cp'); await page.waitForTimeout(400);
+check((await page.evaluate(() => navigator.clipboard.readText())) === N1, 'o botão de copiar da folha também copia o número');
+check(await page.evaluate(() => Array.from(document.querySelectorAll('#agdC .agd-sb')).map(b => b.innerText).join('|')) === 'A fazer|Em andamento|Peça pronta|Concluído|Cancelado', 'atalhos de situação do prazo: A fazer, Em andamento, Peça pronta, Concluído, Cancelado');
+/* 3) atalhos */
+await page.click('#agdC [data-v="elaboracao"]'); await page.waitForTimeout(900);
+let p1 = (await ag()).find(d => d.id === 'p1');
+check(p1.situacao === 'elaboracao' && p1.concluido === false && /Em andamento/.test(await t('#agdC')) && await page.evaluate(() => document.querySelector('#agdC .agd-sb.elaboracao').classList.contains('on')), 'Em andamento: grava, marca o atalho e continua aberto (atrasado)');
+await page.click('#agdC [data-v="cancelado"]'); await page.waitForTimeout(900);
+p1 = (await ag()).find(d => d.id === 'p1');
+check(p1.cancelado === true && p1.concluido === true && p1.situacao === 'cancelado' && /Cancelado/.test(await t('#agdC .est')), 'Cancelado: grava como cancelado e fechado');
+check(/Desfazer/.test(await t('#toast')), 'cancelar oferece "Desfazer"');
+await page.click('#toast button'); await page.waitForTimeout(900);
+p1 = (await ag()).find(d => d.id === 'p1'); check(p1.cancelado !== true && p1.concluido === false && p1.situacao === 'elaboracao', 'Desfazer volta ao que era (Em andamento)');
+await page.click('#agdC [data-v="cancelado"]'); await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector('#overlayAgDet [data-agd="fechar"]').click()); await page.waitForTimeout(300);
+check(!/Contestação/.test(await t('#agCorpo')), 'cancelado sai da lista de compromissos em aberto (e não conta como atraso)');
+check(!/Atrasado/.test(await t('#agCorpo')) || !/Contestação/.test(await t('#agCorpo')), 'não aparece mais como atrasado');
+/* filtro de situação */
+await page.click('[data-ag="flt"]'); await page.waitForTimeout(300); await page.click('[data-agf="sit"][data-v="cancelados"]'); await page.waitForTimeout(300);
+check(/Ver 1 compromisso/.test(await t('#agfC')), 'filtro Situação › Cancelados conta 1 compromisso');
+await page.click('[data-agf="ver"]'); await page.waitForTimeout(300);
+check(/Contestação/.test(await t('#agCorpo')) && !/audiência de conciliação/.test(await t('#agCorpo')) && /Filtros · 1/.test(await t('.ag-filtros')), 'a lista mostra só os cancelados; o botão Filtros indica 1 filtro ativo');
+await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)); c.querySelector('.agc-t').click(); }); await page.waitForTimeout(400);
+await page.click('#agdC [data-v="afazer"]'); await page.waitForTimeout(900);
+p1 = (await ag()).find(d => d.id === 'p1'); check(p1.situacao === 'afazer' && p1.concluido === false && !p1.cancelado, 'A fazer reabre o compromisso cancelado');
+await page.click('#agdC [data-v="feito"]'); await page.waitForTimeout(500);
+check(await vis('#overlayAgProt.show'), 'Concluído, num prazo, pergunta a data do protocolo (como antes)');
+await page.fill('#agp_data', dia(-1)); await page.click('#agpOk'); await page.waitForTimeout(1000);
+p1 = (await ag()).find(d => d.id === 'p1'); check(p1.concluido === true && p1.situacao === 'feito' && p1.protocoladoEm === dia(-1) && !p1.cancelado, 'Concluído grava com a data do protocolo');
+await page.click('#agdC [data-v="afazer"]'); await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector('#overlayAgDet [data-agd="fechar"]').click());
+await page.click('[data-ag="flt"]'); await page.click('[data-agf="limpar"]'); await page.click('[data-agf="ver"]'); await page.waitForTimeout(400);
+check(!/Filtros ·/.test(await t('.ag-filtros')) && /Contestação/.test(await t('#agCorpo')), 'Limpar remove os filtros e o compromisso reaberto volta à lista');
+/* ✓ no cartão */
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Juntar planilha/.test(x.innerText)).querySelector('.agc-ok').click()); await page.waitForTimeout(900);
+check((await ag()).find(d => d.id === 't1').concluido === true && /Desfazer/.test(await t('#toast')) === false, 'o ✓ do cartão conclui uma tarefa direto da lista');
+/* 4) WhatsApp */
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /audiência de conciliação/.test(x.innerText)).querySelector('.agc-t').click()); await page.waitForTimeout(500);
+check(/Entrar na sala virtual/.test(await t('#agdC')) && /Sala virtual do TJGO/.test(await t('#agdC')) && /13:00/.test(await t('#agdC')), 'audiência: hora, local e link da sala na folha');
+await page.click('#agdC [data-agd="zap"]'); await page.waitForTimeout(500); await foto('zap');
+let msg = await page.evaluate(() => document.getElementById('agzTxt').value);
+check(await vis('#overlayAgZap.show') && /Para o cliente/.test(await t('#agzC')) && /Para a equipe/.test(await t('#agzC')), 'abre a mensagem de WhatsApp com as duas opções: cliente e equipe');
+check(/Olá, Cooperativa!/.test(msg) && /audiência de conciliação/.test(msg) && /13:00/.test(msg) && /meet\.google\.com/.test(msg) && msg.includes(N2) && !/Estagi/.test(msg), 'mensagem do cliente: saudação, tipo, data e hora, sala virtual e processo (sem dados internos)');
+await page.evaluate(() => { document.getElementById('agzTxt').value += '\nAté lá!'; document.getElementById('agzTxt').dispatchEvent(new Event('input', { bubbles: true })); });
+await page.click('#agzC [data-agz="enviar"]'); await page.waitForTimeout(300);
+let url = await page.evaluate(() => window.__abertos[0] || '');
+check(/^https:\/\/wa\.me\/\?text=/.test(url) && decodeURIComponent(url).includes('Até lá!'), 'cliente sem telefone: abre o WhatsApp sem número, com o texto (inclusive a edição)');
+await page.click('#agzC [data-agz="aba"][data-v="equipe"]'); await page.waitForTimeout(300);
+msg = await page.evaluate(() => document.getElementById('agzTxt').value);
+check(/📌 Audiência \(Conciliação\)/.test(msg) && /Responsáveis: Hygor Lima Andrade/.test(msg) && /Situação: A fazer/.test(msg) && /Cooperativa Teste/.test(msg), 'mensagem da equipe: título, responsáveis, cliente e situação');
+await page.evaluate(() => document.querySelector('#overlayAgZap [data-agz="fechar"]').click()); await page.evaluate(() => document.querySelector('#overlayAgDet [data-agd="fechar"]').click()); await page.waitForTimeout(300);
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /Contestação/.test(x.innerText)).querySelector('.agc-t').click()); await page.waitForTimeout(500);
+await page.click('#agdC [data-agd="zap"]'); await page.waitForTimeout(400);
+msg = await page.evaluate(() => document.getElementById('agzTxt').value);
+check(/Olá, Maria!/.test(msg) && /estamos cuidando da providência/.test(msg) && !/\d{2}\/\d{2}\/\d{4}/.test(msg.replace(N1, '')), 'prazo para o cliente: informa que está cuidando, sem expor a data interna do prazo');
+await page.click('#agzC [data-agz="enviar"]'); await page.waitForTimeout(300);
+url = await page.evaluate(() => window.__abertos[1] || '');
+check(/^https:\/\/wa\.me\/5562998765432\?text=/.test(url), 'cliente com telefone: abre direto na conversa dele (+55 62 99876-5432)');
+await page.evaluate(() => document.querySelector('#overlayAgZap [data-agz="fechar"]').click()); await page.waitForTimeout(200);
+/* 5) processo, cliente e cadastro */
+check(await vis('#agdC [data-agd="proc"]'), 'processo cadastrado: botão "Ver o processo"');
+await page.click('#agdC [data-agd="cliente"]'); await page.waitForTimeout(600);
+check(await vis('#overlayClientePerfil.show') && !(await vis('#overlayAgDet.show')), 'tocar no cliente abre o perfil dele');
+await page.evaluate(() => document.querySelector('#overlayClientePerfil .icon-btn, #overlayClientePerfil [data-close]') && document.querySelector('#overlayClientePerfil').classList.remove('show'));
+await page.evaluate(() => Array.from(document.querySelectorAll('.agc')).find(x => /manifestar saneamento/.test(x.innerText)).querySelector('.agc-t').click()); await page.waitForTimeout(500);
+check(/ainda não está cadastrado/.test(await t('#agdC')) && await vis('#agdC [data-agd="proc-novo"]'), 'processo não cadastrado: avisa e oferece cadastrar');
+await page.evaluate(() => document.querySelector('#overlayAgDet [data-agd="fechar"]').click()); await page.waitForTimeout(300);
+/* 6) busca e filtros */
+await page.fill('#agBusca', '5392788'); await page.waitForTimeout(400);
+check(/Contestação/.test(await t('#agCorpo')) && !/audiência CEJUS/.test(await t('#agCorpo')) && (await page.evaluate(() => document.activeElement.id)) === 'agBusca', 'busca pelo número do processo (parte dele) filtra a lista e mantém o cursor na caixa');
+await page.fill('#agBusca', 'cooperativa'); await page.waitForTimeout(400);
+check(/audiência de conciliação/.test(await t('#agCorpo')) && !/Contestação/.test(await t('#agCorpo')), 'busca pelo nome do cliente');
+await page.fill('#agBusca', ''); await page.waitForTimeout(300);
+await page.click('[data-ag="flt"]'); await page.waitForTimeout(300); await foto('filtros');
+check(/Murilo Falone Rocha/.test(await t('#agfC')) && /Hygor Lima Andrade/.test(await t('#agfC')) && /Estagiários/.test(await t('#agfC')), 'o filtro de responsável lista a equipe que aparece nos compromissos');
+await page.click('[data-agf="resp"][data-v="Murilo Falone Rocha"]'); await page.waitForTimeout(300);
+check(/Ver 2 compromissos/.test(await t('#agfC')), 'filtro Responsável › Murilo: 2 compromissos');
+await page.click('[data-agf="ver"]'); await page.waitForTimeout(300);
+check(/audiência CEJUS/.test(await t('#agCorpo')) && /manifestar saneamento/.test(await t('#agCorpo')) && !/audiência de conciliação/.test(await t('#agCorpo')), 'a lista mostra só os do Murilo');
+await page.click('[data-ag="flt"]'); await page.click('[data-agf="limpar"]'); await page.click('[data-agf="per"][data-v="hoje"]'); await page.click('[data-agf="ver"]'); await page.waitForTimeout(300);
+check(/Contestação/.test(await t('#agCorpo')) && !/audiência CEJUS/.test(await t('#agCorpo')), 'período Hoje: esconde o futuro, mas o que está atrasado continua aparecendo');
+await page.click('[data-ag="flt"]'); await page.click('[data-agf="limpar"]'); await page.click('[data-agf="ver"]'); await page.waitForTimeout(300);
+/* 7) calendário: contagem, carga e conflito */
+await page.click('[data-ag="vista"][data-v="mes"]'); await page.waitForTimeout(500);
+const celula = await page.evaluate((d) => { const c = document.querySelector('.ag-c[data-v="' + d + '"]'); return c ? { n: (c.querySelector('.ag-n') || {}).innerText, cls: c.className } : null; }, dia(2));
+check(celula && celula.n === '2' && /n2/.test(celula.cls), 'mês: o dia das duas audiências mostra o selo "2" e a cor de carga média: ' + JSON.stringify(celula));
+await page.click('.ag-c[data-v="' + dia(2) + '"]'); await page.waitForTimeout(400);
+await foto('mes');
+check(/Duas audiências em horários próximos: 13:00 e 13:30/.test(await t('#agCorpo')), 'aviso de conflito: audiências às 13:00 e 13:30 no mesmo dia');
+await page.click('[data-ag="vista"][data-v="semana"]'); await page.waitForTimeout(400);
+check(await page.evaluate(() => document.querySelectorAll('.ag-d .ag-n').length >= 1), 'semana: os dias mostram a contagem');
+/* 8) Início não conta cancelados */
+await page.evaluate(() => document.querySelector('#drawer [data-tab="inicio"]').click()); await page.waitForTimeout(700);
+check(!/Juntar planilha/.test(await t('#inicioPrazos')), 'o cartão de prazos do Início não traz o que já está concluído');
+await page.click('#inicioPrazos [data-ag-abrir]'); await page.waitForTimeout(500);
+check(await vis('#overlayAgDet.show'), 'tocar num prazo do Início abre os detalhes');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

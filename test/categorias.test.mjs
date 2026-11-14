@@ -1,0 +1,62 @@
+// Testa categorias com ícones, lançamentos dentro de cada categoria (Análises) e "Já lançados" (Extratos).
+// Suba antes:  npx wrangler dev --local --persist-to .dev-data --var SENHA:senha-de-teste-123 --port 8802
+import { createRequire } from 'node:module';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8802', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const agora = new Date().toISOString(), hoje = new Date();
+const mes = n => { const d = new Date(hoje.getFullYear(), hoje.getMonth() + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.3' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + '/api/db/' + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+const get = async (col, id) => (await (await api('GET', col)).json()).docs.find(d => d.id === id)?.data;
+for (const col of ['casos', 'termosAcordo', 'alvaras', 'clientes', 'despesas', 'receitasManuais', 'metas', 'saldos', 'config', 'extratos', 'obraMov']) for (const d of (await (await api('GET', col)).json()).docs) await api('DELETE', col + '/' + d.id);
+await api('PUT', 'config/backup', { ultimoEm: agora });
+const m0 = mes(0), m1 = mes(-1), dd = (m, d) => m + '-' + String(d).padStart(2, '0');
+await api('PUT', 'receitasManuais/r1', { nome: 'Honorários', coluna: 'pj', valor: 9000, mesReferencia: m1, data: dd(m1, 10), recorrente: false, criadoEm: agora });
+await api('PUT', 'despesas/d1', { nome: 'Cabelo Giovanna', coluna: 'pf', tipo: 'unica', valor: 340, data: dd(m0, 3), mesReferencia: m0, categoria: 'outros', pago: true, dataPagamento: dd(m0, 3), origemExtrato: true, criadoEm: agora });
+await api('PUT', 'despesas/d2', { nome: 'FACEBOOK SERVICOS', coluna: 'pj', tipo: 'unica', valor: 204.99, data: dd(m0, 4), mesReferencia: m0, categoria: 'sistemas', pago: true, dataPagamento: dd(m0, 4), origemExtrato: true, criadoEm: agora });
+await api('PUT', 'despesas/d3', { nome: 'Posto Ipiranga', coluna: 'pf', tipo: 'unica', valor: 150, data: dd(m1, 12), mesReferencia: m1, categoria: 'outros', pago: true, dataPagamento: dd(m1, 12), criadoEm: agora });
+await api('PUT', 'extratos/dd_' + m0 + '_x', { tipo: 'diaadia', mes: m0, conta: 'x', coluna: 'pf', cats: { Mercado: { v: 300, n: 2 }, 'Alimentação': { v: 120, n: 1 } }, linhas: [{ id: 'l1', d: dd(m0, 2), t: 'Atacadão', v: 200, c: 'Mercado', h: 'a' }, { id: 'l2', d: dd(m0, 3), t: 'Hortifruti', v: 100, c: 'Mercado', h: 'b' }, { id: 'l3', d: dd(m0, 3), t: 'Padaria Pão Quente', v: 120, c: 'Alimentação', h: 'c' }], atualizadoEm: agora });
+await api('PUT', 'extratos/dd_' + m1 + '_x', { tipo: 'diaadia', mes: m1, conta: 'x', coluna: 'pf', cats: { Mercado: { v: 50, n: 1 } }, atualizadoEm: agora });
+const br = await chromium.launch(); const page = await (await br.newContext({ viewport: { width: 400, height: 900 } })).newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2800);
+const txt = s => page.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
+const aba = async (t) => { await page.evaluate(t => document.querySelector('[data-tab="' + t + '"]').click(), t); await page.waitForTimeout(800); };
+await aba('analises'); await page.evaluate(() => document.querySelector('[data-an-periodo="hist"]').click()); await page.waitForTimeout(700);
+let t = await txt('#anWrap');
+check(await page.evaluate(() => document.querySelectorAll('#anWrap .ct-row .ct-ic svg').length) >= 4, 'cada categoria tem ícone colorido');
+check(!/Outras \(\d+\)/.test(t), 'não existe mais o item "Outras (n)"');
+check(/Dia a dia · Mercado/.test(t) && /Dia a dia · Alimentação/.test(t) && /Sistemas/.test(t) && /Outros/.test(t), 'todas as categorias aparecem na mesma lista');
+check(await page.evaluate(() => !!document.querySelector('#anWrap .ct-donut circle')), 'a rosca aparece com os segmentos');
+const cor = rot => page.evaluate(r => { const d = document.querySelector('[data-ct-chave="' + r + '"] .ct-ic'); return d ? d.style.backgroundColor : ''; }, rot);
+check((await cor('Dia a dia · Mercado')) !== (await cor('Dia a dia · Alimentação')) && (await cor('Sistemas')) !== (await cor('Outros')), 'categorias diferentes têm cores diferentes');
+await page.evaluate(() => document.querySelector('[data-ct-chave="Dia a dia · Mercado"] summary').click()); await page.waitForTimeout(300);
+t = await txt('[data-ct-chave="Dia a dia · Mercado"]');
+check(/Atacadão/.test(t) && /Hortifruti/.test(t) && /R\$\s*200,00/.test(t) && /extratos confirmados antes desta versão/.test(t), 'o "Dia a dia · Mercado" mostra os lançamentos e avisa do mês antigo sem detalhe');
+await page.evaluate(() => document.querySelector('[data-ct-chave="Outros"] summary').click()); await page.waitForTimeout(300);
+check(/Cabelo Giovanna/.test(await txt('[data-ct-chave="Outros"]')) && /Posto Ipiranga/.test(await txt('[data-ct-chave="Outros"]')), '"Outros" mostra as despesas com nome');
+// editar despesa: Cabelo -> Pessoal, novo nome
+await page.click('[data-ct-chave="Outros"] [data-ct-edit^="desp|d1"]'); await page.waitForTimeout(300);
+check(await page.evaluate(() => document.getElementById('overlayCtEd').classList.contains('show') && /não muda/.test(document.getElementById('ctEdInfo').innerText)), 'abre a folha de edição dizendo que o valor não muda');
+await page.selectOption('#ctEdCat', 'pessoal'); await page.fill('#ctEdNome', 'Cabelo (Giovanna)'); await page.click('#ctEdSalvar'); await page.waitForTimeout(1200);
+const d1 = await get('despesas', 'd1'); check(d1.categoria === 'pessoal' && d1.nome === 'Cabelo (Giovanna)' && d1.valor === 340, 'despesa salva com nova categoria e nome, mesmo valor');
+check(/Pessoal/.test(await txt('#anWrap')), 'a categoria nova aparece na análise');
+// Extratos: Já lançados
+await aba('extratos');
+check(await page.evaluate(() => !!document.querySelector('#extJa .ct-jadet')), 'aparece o bloco "Já lançados" na aba Extratos');
+await page.evaluate(() => document.querySelector('#extJa .ct-jadet summary').click()); await page.waitForTimeout(300);
+t = await txt('#extJa');
+check(/Atacadão/.test(t) && /Padaria Pão Quente/.test(t) && /Cabelo \(Giovanna\)/.test(t) && /FACEBOOK/.test(t), 'lista dia a dia e despesas lançadas pelo extrato no mês');
+await page.click('[data-ctja-filtro="dia"]'); await page.waitForTimeout(200);
+check(!/FACEBOOK/.test(await txt('#extJa')) && /Atacadão/.test(await txt('#extJa')), 'o filtro "Dia a dia" funciona');
+await page.fill('#ctJaBusca', 'padaria'); await page.waitForTimeout(200);
+check(/Padaria/.test(await txt('#ctJaLista')) && !/Atacadão/.test(await txt('#ctJaLista')), 'a busca filtra por nome');
+// editar linha do dia a dia: Padaria -> Mercado, renomear
+await page.click('#extJa [data-ct-edit^="dd|l3"]'); await page.waitForTimeout(300);
+await page.selectOption('#ctEdCat', 'Mercado'); await page.fill('#ctEdNome', 'Padaria (compra do mês)'); await page.click('#ctEdSalvar'); await page.waitForTimeout(1200);
+const doc = await get('extratos', 'dd_' + m0 + '_x');
+check(doc.cats.Mercado.v === 420 && doc.cats.Mercado.n === 3 && !doc.cats['Alimentação'] && doc.linhas.find(l => l.id === 'l3').c === 'Mercado' && doc.linhas.find(l => l.id === 'l3').t === 'Padaria (compra do mês)', 'trocar a categoria da linha move o valor entre as categorias e guarda o novo nome');
+await aba('analises'); await page.evaluate(() => document.querySelector('[data-an-periodo="ult"]').click()); await page.waitForTimeout(600);
+check(await page.evaluate(() => document.querySelectorAll('#anWrap .ct-row').length) >= 1, 'o "Último mês" usa o mesmo cartão com ícones');
+check(erros.length === 0, 'sem erros de JavaScript' + (erros.length ? ': ' + erros.join(' | ') : ''));
+await br.close(); console.log(falhas ? '\n' + falhas + ' FALHA(S)' : '\nTudo certo'); process.exit(falhas ? 1 : 0);

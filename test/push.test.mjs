@@ -1,0 +1,24 @@
+// Teste da cifragem do Web Push (RFC 8291) e da assinatura VAPID (RFC 8292), sem servidor: o "aparelho" decifra o que o código envia.
+import http from 'node:http';
+import { cifrar, enviarPush, gerarChavesVapid } from '../src/push.js';
+import { novoAparelho, decifrar, verificarJwt } from './push.helper.mjs';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const ap = await novoAparelho();
+const msg = { titulo: '2 itens vencem hoje', corpo: 'Joana Murilo · Parcela 2 · R$ 1.000,00\nPlano de saúde (PF)', tag: 'hoje', url: '/', acento: 'ção ✓' };
+const corpo = await cifrar(msg, ap.p256dh, ap.authB64);
+check(corpo.length > 100 && corpo[20] === 65, 'o corpo cifrado tem o formato aes128gcm (cabeçalho com a chave de 65 bytes)');
+const lido = await decifrar(ap, corpo); check(JSON.stringify(lido) === JSON.stringify(msg), 'o aparelho consegue decifrar e lê a mensagem (com acentos) sem perda');
+const outro = await novoAparelho(); let falhou = false; try { await decifrar(outro, corpo); } catch (e) { falhou = true; } check(falhou, 'outro aparelho não consegue ler a mensagem');
+const v = await gerarChavesVapid(); check(v.publica.length === 87 && v.privada.length === 43, 'chaves VAPID geradas (pública de 65 bytes e privada de 32)');
+let recebido = null;
+const srv = http.createServer((q, s) => { const partes = []; q.on('data', (c) => partes.push(c)); q.on('end', () => { recebido = { headers: q.headers, corpo: Buffer.concat(partes), url: q.url }; s.writeHead(201); s.end(); }); }).listen(9994);
+const r = await enviarPush(v, 'mailto:teste@exemplo.com', { endpoint: 'http://127.0.0.1:9994/push/x', keys: { p256dh: ap.p256dh, auth: ap.authB64 } }, msg);
+check(r.ok && r.status === 201 && !r.remover, 'o envio é aceito pelo serviço de push (201)');
+check(recebido.headers['content-encoding'] === 'aes128gcm' && recebido.headers.ttl && /^vapid t=.+, k=.+$/.test(recebido.headers.authorization), 'cabeçalhos: Content-Encoding, TTL e Authorization vapid');
+const [, t, k] = /^vapid t=(.+), k=(.+)$/.exec(recebido.headers.authorization); const j = await verificarJwt(t, k);
+check(k === v.publica && j.ok && j.cab.alg === 'ES256' && j.corpo.aud === 'http://127.0.0.1:9994' && j.corpo.sub === 'mailto:teste@exemplo.com' && j.corpo.exp > Date.now() / 1000, 'o token VAPID é válido: assinatura ES256 confere com a chave pública, aud e sub corretos');
+check(JSON.stringify(await decifrar(ap, recebido.corpo)) === JSON.stringify(msg), 'o corpo enviado pela rede também decifra certo');
+srv.close(); const srv410 = http.createServer((q, s) => { s.writeHead(410); s.end(); }).listen(9993);
+const r2 = await enviarPush(v, 'mailto:t@e.com', { endpoint: 'http://127.0.0.1:9993/x', keys: { p256dh: ap.p256dh, auth: ap.authB64 } }, msg); check(!r2.ok && r2.remover, 'resposta 410 (inscrição cancelada) pede para remover o aparelho'); srv410.close();
+const r3 = await enviarPush(v, 'mailto:t@e.com', { endpoint: 'http://127.0.0.1:9/x', keys: { p256dh: ap.p256dh, auth: ap.authB64 } }, msg); check(!r3.ok && !r3.remover, 'falha de rede não remove o aparelho');
+console.log(falhas ? falhas + ' FALHAS' : 'tudo ok'); process.exit(falhas ? 1 : 0);

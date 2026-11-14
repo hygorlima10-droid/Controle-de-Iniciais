@@ -1,0 +1,86 @@
+// Testa as notificações de ponta a ponta com um "serviço de push" de mentira e um "aparelho" que decifra.
+// Suba antes:  npx wrangler dev --local --persist-to .dev-data --test-scheduled --var SENHA:senha-de-teste-123 --port 8804
+import http from 'node:http'; import { createRequire } from 'node:module';
+import { novoAparelho, decifrar, verificarJwt } from './push.helper.mjs';
+const { chromium } = createRequire('/opt/node22/lib/node_modules/')('playwright');
+const B = process.env.BASE || 'http://127.0.0.1:8804', SENHA = 'senha-de-teste-123';
+let falhas = 0; const check = (c, m) => { console.log((c ? '  ok   ' : '  FALHA ') + m); if (!c) falhas++; };
+const caixa = []; let resp = 201;
+let recusaHttps = false;
+const srv = http.createServer((q, s) => { const p = []; q.on('data', c => p.push(c)); q.on('end', () => { const jwt = /t=([^,]+)/.exec(q.headers.authorization || '')[1], sub = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url')).sub; if (recusaHttps && /^https?:/.test(sub)) { s.writeHead(403); s.end('{"reason":"BadJwtToken"}'); return; } caixa.push({ url: q.url, headers: q.headers, corpo: Buffer.concat(p), sub }); s.writeHead(resp); s.end(resp === 403 ? '{"reason":"BadJwtToken"}' : ''); }); }).listen(9995);
+const hojeBR = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), somar = n => new Date(Date.now() - 3 * 3600e3 + n * 86400000).toISOString().slice(0, 10);
+let r = await fetch(B + '/login', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ senha: SENHA }), headers: { 'cf-connecting-ip': '9.9.9.8' } }); const ck = r.headers.get('set-cookie').split(';')[0];
+const api = (m, p, b) => fetch(B + p, { method: m, headers: { cookie: ck, 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined });
+for (const p of ['/api/notif/estado', '/api/notif/chave']) { r = await fetch(B + p); check(r.status === 401, p + ' sem sessão: bloqueado'); }
+r = await fetch(B + '/api/notif/agora', { method: 'POST' }); check(r.status === 401, 'enviar sem sessão: bloqueado');
+r = await fetch(B + '/sw.js'); check(r.status === 200 && /addEventListener\('push'/.test(await r.text()), 'o service worker abre sem login (o iPhone busca sem sessão)');
+const chave = (await (await api('GET', '/api/notif/chave')).json()).publica; check(chave.length === 87, 'o servidor gera a chave pública VAPID (65 bytes)');
+check((await (await api('GET', '/api/notif/chave')).json()).publica === chave, 'a chave é a mesma nas próximas vezes');
+const ap = await novoAparelho();
+const sub = { endpoint: 'http://127.0.0.1:9995/push/aparelho1', keys: { p256dh: ap.p256dh, auth: ap.authB64 } };
+r = await api('POST', '/api/notif/inscrever', { endpoint: 'ftp://x', keys: {} }); check(r.status === 400, 'inscrição inválida: recusa');
+r = await api('POST', '/api/notif/inscrever', sub); check(r.status === 200, 'inscreve o aparelho');
+const hoje = hojeBR(), rid = Date.now().toString(36);
+await api('PUT', '/api/notif/config', { alertas: true, esconder: false });
+const resumo = { itens: [{ d: hoje, t: 'pagamento', n: 'Joana Murilo', l: 'Parcela 2', v: 1000 }, { d: hoje, t: 'despesa', n: 'Plano de saúde (PF)', l: '', v: 800 }, { d: somar(-3), t: 'pagamento', n: 'Atrasada Silva', l: 'Parcela 1', v: 500 }, { d: somar(5), t: 'pagamento', n: 'Futura Souza', l: 'Parcela 3', v: 700 }],
+  alertas: [{ chave: 'reserva|' + rid, titulo: 'Reserva de emergência em 20% do alvo', detalhe: 'R$ 3.913,67 de R$ 19.788,78.' }, { chave: 'caixa|' + rid, titulo: 'Caixa previsto negativo em fevereiro de 2027', detalhe: 'Só com parcelas e receitas fixas.' }] };
+r = await api('PUT', '/api/notif/resumo', resumo); check((await r.json()).itens === 4, 'o app envia o resumo (vencimentos dos próximos dias e alertas)');
+const lidas = async () => { const o = []; for (const c of caixa) o.push(await decifrar(ap, c.corpo)); return o; };
+r = await api('POST', '/api/notif/agora?forcar=1'); let j = await r.json();
+check(j.enviadas === 3 && caixa.length === 3, 'o envio manda 3 notificações: 1 resumo do dia + 2 alertas novos');
+let m = await lidas(); const resumoHoje = m.find(x => /vencem hoje/.test(x.titulo));
+check(resumoHoje.titulo === '2 itens vencem hoje' && /Joana Murilo · Parcela 2 · R\$ 1\.000,00/.test(resumoHoje.corpo) && /Plano de saúde \(PF\) · R\$ 800,00/.test(resumoHoje.corpo), 'o resumo traz só o que vence hoje, com nome e valor');
+check(!/Atrasada|Futura/.test(JSON.stringify(m)), 'atrasados e vencimentos futuros NÃO entram na notificação');
+check(m.filter(x => /^alerta-/.test(x.tag)).length === 2, 'os 2 alertas do app chegam, cada um em sua notificação');
+const h = caixa[0].headers; const [, t, k] = /^vapid t=(.+), k=(.+)$/.exec(h.authorization); const jw = await verificarJwt(t, k);
+check(k === chave && jw.ok && jw.corpo.aud === 'http://127.0.0.1:9995' && jw.corpo.sub === B, 'assinatura VAPID válida com a chave do servidor, e o contato (sub) é o endereço do próprio app');
+caixa.length = 0; r = await api('POST', '/api/notif/agora'); j = await r.json();
+check(j.enviadas === 0 && /já enviado hoje/.test(j.motivo), 'rodar de novo no mesmo dia não envia nada (sem repetição)');
+caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); j = await r.json(); m = await lidas();
+check(j.enviadas === 1 && /vencem hoje/.test(m[0].titulo), 'forçando o envio de novo, só o resumo vai: os alertas já avisados neste mês não repetem');
+await api('PUT', '/api/notif/resumo', { ...resumo, alertas: [...resumo.alertas, { chave: 'despesa|' + rid, titulo: 'Internet veio mais cara', detalhe: '30% acima da média.' }] });
+caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); m = await lidas();
+check(m.filter(x => /^alerta-/.test(x.tag)).length === 1 && m.some(x => x.tag === 'alerta-despesa|' + rid), 'um alerta novo aparece uma única vez');
+await api('PUT', '/api/notif/config', { alertas: false, esconder: true });
+await api('PUT', '/api/notif/resumo', { ...resumo, alertas: [{ chave: 'outro|' + rid, titulo: 'Alerta que não deve chegar', detalhe: 'x' }] });
+caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); m = await lidas();
+check(m.length === 1 && m[0].corpo === 'Abra o app para ver.' && m[0].titulo === '2 itens vencem hoje', 'com "esconder valores e nomes" a notificação diz só a quantidade, e com alertas desligados eles não chegam');
+await api('PUT', '/api/notif/config', { alertas: true, esconder: false });
+await api('PUT', '/api/notif/resumo', { itens: [{ d: somar(-1), t: 'pagamento', n: 'Atrasada', l: 'P1', v: 1 }], alertas: [] });
+caixa.length = 0; r = await api('POST', '/api/notif/agora?forcar=1'); check((await r.json()).enviadas === 0 && caixa.length === 0, 'sem nada vencendo hoje e sem alerta novo: nenhuma notificação');
+caixa.length = 0; r = await api('POST', '/api/notif/teste'); m = await lidas(); check(m.length === 1 && m[0].titulo === 'Notificação de teste', 'o botão de teste envia a notificação de teste');
+resp = 410; caixa.length = 0; await api('POST', '/api/notif/teste'); j = await (await api('GET', '/api/notif/estado')).json(); check(j.aparelhos === 0, 'aparelho que cancelou (resposta 410) é removido sozinho'); resp = 201;
+resp = 403; caixa.length = 0; await api('POST', '/api/notif/inscrever', sub); r = await api('POST', '/api/notif/teste'); j = await r.json(); const est403 = await (await api('GET', '/api/notif/estado')).json();
+check(j.enviadas === 0 && j.falhas && j.falhas[0].status === 403 && /BadJwtToken/.test(j.falhas[0].motivo), 'quando o serviço recusa (403), a resposta traz o código e o motivo para diagnóstico');
+check(est403.aparelhos === 1, 'recusa 403 não remove o aparelho (só 404/410 removem)'); resp = 201;
+// contato VAPID: se a Apple recusar o endereço, o servidor tenta um e-mail e lembra o que funcionou
+recusaHttps = true; caixa.length = 0; r = await api('POST', '/api/notif/teste'); j = await r.json();
+check(j.enviadas === 1 && caixa.length === 1 && /^mailto:/.test(caixa[0].sub), 'se o serviço recusa o contato (403 BadJwtToken), o servidor tenta outro formato de contato e o envio passa');
+caixa.length = 0; await api('POST', '/api/notif/teste'); check(caixa.length === 1 && /^mailto:/.test(caixa[0].sub), 'na vez seguinte já usa direto o contato que funcionou'); recusaHttps = false;
+// pelo agendamento das 10h (13:00 UTC)
+await api('POST', '/api/notif/inscrever', sub); await api('PUT', '/api/notif/resumo', resumo);
+caixa.length = 0; r = await fetch(B.replace('http://', 'http://') + '/__scheduled?cron=0+13+*+*+*'); await new Promise(z => setTimeout(z, 1500));
+check(r.status === 200, 'o agendamento diário (cron 13:00 UTC = 10:00 em Brasília) roda');
+const dia = (await (await api('GET', '/api/notif/estado')).json()); check(dia.hora === '10:00', 'o estado informa o horário das 10:00');
+// pela tela
+const br = await chromium.launch(); const ctx = await br.newContext({ viewport: { width: 400, height: 860 } }); const page = await ctx.newPage(); const erros = []; page.on('pageerror', e => erros.push(e.message)); await page.route(/fonts\./, r => r.abort());
+await page.addInitScript(`(function(){ var sub=null; var fake={endpoint:'http://127.0.0.1:9995/push/ui',keys:{p256dh:'${ap.p256dh}',auth:'${ap.authB64}'}};
+  window.PushManager=function(){}; window.Notification=function(){}; Notification.permission='default'; Notification.requestPermission=function(){ Notification.permission='granted'; return Promise.resolve('granted'); };
+  var pm={subscribe:function(){ sub={endpoint:fake.endpoint,toJSON:function(){return fake;},unsubscribe:function(){sub=null;return Promise.resolve(true);}}; return Promise.resolve(sub); },getSubscription:function(){return Promise.resolve(sub);}};
+  Object.defineProperty(navigator,'serviceWorker',{value:{register:function(){return Promise.resolve({pushManager:pm});},ready:Promise.resolve({pushManager:pm}),getRegistration:function(){return Promise.resolve({pushManager:pm});}}}); window.__pm=pm; })();`);
+await page.goto(B + '/'); await page.fill('input[name=senha]', SENHA); await page.click('button[type=submit]'); await page.waitForTimeout(2000);
+await page.evaluate(() => document.getElementById('abrirLembretesBtn').click()); await page.waitForTimeout(700);
+let txt = await page.evaluate(() => document.getElementById('ntCorpo').innerText);
+check(/10:00/.test(txt) && /vence hoje/.test(txt) && /Ativar avisos neste aparelho/.test(txt) && !!(await page.evaluate(() => document.getElementById('overlayLembretes').classList.contains('show'))), 'a tela "Lembretes no iPhone" explica as regras (10:00, só o que vence hoje) e oferece Ativar');
+await api('DELETE', '/api/notif/inscrever', sub); await page.evaluate(() => document.querySelector('[data-nt="ativar"]').click()); await page.waitForTimeout(1500);
+j = await (await api('GET', '/api/notif/estado')).json(); txt = await page.evaluate(() => document.getElementById('ntCorpo').innerText);
+check(j.aparelhos === 1 && /Ativados/.test(txt), 'tocar em Ativar pede a permissão, inscreve o aparelho e mostra "Ativados"');
+await page.waitForTimeout(5000); j = await (await api('GET', '/api/notif/estado')).json(); check(!!j.resumoEm, 'depois de ativar, o app envia sozinho a lista de vencimentos ao servidor');
+caixa.length = 0; await page.evaluate(() => document.querySelector('[data-nt="teste"]').click()); await page.waitForTimeout(1200); check(caixa.length === 1 && (await lidas())[0].titulo === 'Notificação de teste', 'o botão de teste manda a notificação ao aparelho');
+await page.evaluate(() => { const e = document.getElementById('ntEsconder'); e.checked = true; e.dispatchEvent(new Event('change', { bubbles: true })); }); await page.waitForTimeout(600);
+j = await (await api('GET', '/api/notif/estado')).json(); check(j.config.esconder === true, 'as preferências (esconder nomes e valores) ficam salvas');
+await page.evaluate(() => document.querySelector('[data-nt="desativar"]').click()); await page.waitForTimeout(1200);
+j = await (await api('GET', '/api/notif/estado')).json(); check(j.aparelhos === 0, 'Desativar remove o aparelho');
+await page.screenshot({ path: '/tmp/wr/nt-tela.png' });
+check(erros.length === 0, 'sem erros de script' + (erros.length ? ' -> ' + erros.join(' | ') : ''));
+await br.close(); srv.close(); console.log(falhas ? falhas + ' FALHAS' : 'tudo ok'); process.exit(falhas ? 1 : 0);
